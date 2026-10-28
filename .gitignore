@@ -6,3 +6,7 @@
 /*.rbxl.lock
 
 sourcemap.json
+
+# Тестовая сборка и типы для проверки кода (scripts/check.ps1)
+/test.rbxl
+/.luau-lsp/

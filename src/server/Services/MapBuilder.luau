@@ -175,7 +175,7 @@ end
 
 -- Куда ставить персонажа при входе в зону
 function MapBuilder.GetZoneEntryCFrame()
-	return CFrame.new(MapConfig.Zone.EntryPosition + Vector3.new(0, MapConfig.Zone.EntrySpawnHeight, 0))
+	return CFrame.new(zoneEntryPart.Position + Vector3.new(0, MapConfig.Zone.EntrySpawnHeight, 0))
 end
 
 -- Меняет текст подписи, созданной addLabel
