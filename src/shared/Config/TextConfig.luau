@@ -31,6 +31,15 @@ TextConfig.PedestalFull = "%s Aura (FULL)" -- накоплено до преде
 TextConfig.PickupAction = "Pick up"
 TextConfig.CollectAction = "Collect"
 
+-- HUD (клиент)
+TextConfig.HudBaseCaption = "SAFE AT BASE"
+TextConfig.HudBaseValue = "%s Aura" -- %s — число Aura на базе
+TextConfig.HudHandsCaption = "IN HANDS · LOST IF YOU DIE"
+TextConfig.HudHandsValue = "In hands: %d/%d" -- сколько несёшь / сколько можно
+TextConfig.ExtractMarker = "▼ EXTRACT ▼"
+TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
+TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
+
 -- Имена мемлингов: ключ — Id из MemelingConfig
 TextConfig.MemelingNames = {
 	ToastPaw = "Toast Paw",

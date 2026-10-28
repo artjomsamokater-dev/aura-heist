@@ -69,7 +69,7 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
 
 ## Где остановились
 
-Задачи 0.1–1.5 готовы:
+Задачи 0.1–1.6 готовы (фаза 1 закрыта):
 - Фаза 0 (0.1–0.6): Studio, VS Code, Rojo, rojo init, связь со Studio, GitHub,
   Test place «AURA HEIST TEST» (private), Config-модули.
 - 1.1: серый прототип карты из кода (хаб, 8 участков с постаментами, портал,
@@ -87,6 +87,10 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   над ним видно накопленное. Collect — ProximityPrompt, проверка на сервере (владелец, дистанция,
   rate limit), начисление только через новый сервис Economy (BankedAura в памяти сервера).
   Игроку числа показываются округлёнными вниз (shared/Util/FormatNumber).
+- 1.6: HUD на клиенте (client/Controllers/HudController): слева сверху золотая карточка
+  «SAFE AT BASE» (BankedAura) и синяя «In hands: N/M · LOST IF YOU DIE». В InRaid — маркер
+  «EXTRACT» над площадкой (виден сквозь стены) и стрелка у края экрана, если площадка за кадром.
+  Клиент только читает атрибуты игрока (BankedAura, CarriedCount, CarrySlots, RaidState).
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1`
 (luau-lsp analyze с типами Roblox + rojo build в test.rbxl).
@@ -94,4 +98,4 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
 После 1.4: тексты для игрока вынесены в TextConfig, потерянные мемлинги возвращаются
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
-Следующая задача — 1.6.
+Следующая задача — 2.1 (PlayerData на ProfileStore).

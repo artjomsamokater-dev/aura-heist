@@ -230,6 +230,7 @@ end
 
 local function onPlayerAdded(player: Player)
 	player:SetAttribute("CarriedCount", 0)
+	player:SetAttribute("CarrySlots", getCarrySlots(player))
 	player.CharacterAdded:Connect(function(character)
 		onCharacterAdded(player, character)
 	end)
