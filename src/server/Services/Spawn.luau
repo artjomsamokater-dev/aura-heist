@@ -10,6 +10,7 @@ local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
+local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
 
 local Spawn = {}
@@ -74,7 +75,7 @@ end
 local function spawnAt(memelingId: string, floorPosition: Vector3): Record
 	nextNumber += 1
 	local instanceId = "M" .. nextNumber
-	local size = MapConfig.Memeling.Size
+	local size = StyleConfig.Memeling.Size
 	local displayName = TextConfig.MemelingNames[memelingId] or memelingId
 
 	-- Мемлинг смотрит на запад — туда, откуда игрок приходит в зону
@@ -87,7 +88,7 @@ local function spawnAt(memelingId: string, floorPosition: Vector3): Record
 	)
 	part:SetAttribute("InstanceId", instanceId)
 	part:SetAttribute("MemelingId", memelingId)
-	MapBuilder.AddLabel(part, displayName)
+	MapBuilder.AddLabel(part, displayName, { MaxDistance = StyleConfig.Label.MemelingMaxDistance })
 	addPickupPrompt(part, instanceId, displayName)
 
 	local record: Record = {

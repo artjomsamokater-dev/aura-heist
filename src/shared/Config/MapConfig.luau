@@ -92,30 +92,5 @@ MapConfig.Zone = {
 	},
 }
 
--- Мемлинг: круглое тело и два глаза (белок + зрачок), смотрит в сторону -Z.
--- Смещения глаз — от центра тела.
-MapConfig.Memeling = {
-	Size = Vector3.new(3, 3, 3),
-	EyeSize = 0.9,
-	PupilSize = 0.45,
-	EyeOffsets = {
-		Vector3.new(-0.6, 0.35, -1.25),
-		Vector3.new(0.6, 0.35, -1.25),
-	},
-	PupilForward = 0.35, -- на сколько зрачок выступает вперёд от центра глаза
-	-- Где мемлинг висит, когда его несут: относительно HumanoidRootPart (-Z = перед персонажем)
-	CarryOffset = Vector3.new(0, 0, -2.5),
-	CarryStackStep = Vector3.new(0, 3.2, 0), -- каждый следующий мемлинг в руках — выше предыдущего
-}
-
--- Подписи над объектами (BillboardGui), размеры в студах
-MapConfig.Label = {
-	WidthStuds = 12,
-	HeightStuds = 3,
-	MaxDistance = 200,
-	-- Имя владельца на табличке участка — крупнее обычной подписи
-	SignWidthStuds = 22,
-	SignHeightStuds = 5,
-}
 
 return deepFreeze(MapConfig)

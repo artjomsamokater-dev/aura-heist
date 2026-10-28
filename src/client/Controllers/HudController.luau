@@ -3,9 +3,11 @@
 -- Клиент только ЧИТАЕТ атрибуты игрока, которые выставляет сервер:
 -- BankedAura (Economy), CarriedCount / CarrySlots / RaidState (Raid). Никаких RemoteEvent.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
@@ -17,17 +19,15 @@ local HudController = {}
 
 local player = Players.LocalPlayer
 
--- Размеры HUD: крупно, чтобы читалось на телефоне. Цвета и шрифт — в StyleConfig.Hud
-local CARD_WIDTH = 300
-local CAPTION_SIZE = 18
-local VALUE_SIZE = 34
-local MARGIN = 12
-local BASE_COLOR = StyleConfig.Hud.BaseCard
-local HANDS_COLOR = StyleConfig.Hud.HandsCard
-local TEXT_DARK = StyleConfig.Hud.TextDark
-local TEXT_LIGHT = StyleConfig.Hud.TextLight
-local MARKER_HEIGHT = 6 -- на сколько студов над площадкой висит маркер
-local EDGE_PADDING = 70 -- отступ стрелки от края экрана, в пикселях
+-- Все размеры и цвета HUD — в StyleConfig.Hud
+local HUD = StyleConfig.Hud
+local CARD_WIDTH = HUD.CardWidth
+local CAPTION_SIZE = HUD.CaptionSize
+local VALUE_SIZE = HUD.ValueSize
+local BASE_COLOR = HUD.BaseCard
+local HANDS_COLOR = HUD.HandsCard
+local TEXT_DARK = HUD.TextDark
+local TEXT_LIGHT = HUD.TextLight
 
 local function readNumber(name: string): number
 	return tonumber(player:GetAttribute(name)) or 0
@@ -82,15 +82,34 @@ local function buildHud(playerGui: Instance)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Hud"
 	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true -- отступ от панели Roblox считаем сами (см. placeColumn)
 	gui.Parent = playerGui
 
 	local column = Instance.new("Frame")
 	column.Name = "TopLeft"
 	column.BackgroundTransparency = 1
-	column.Position = UDim2.fromOffset(MARGIN, MARGIN)
 	column.Size = UDim2.fromOffset(CARD_WIDTH, 0)
 	column.AutomaticSize = Enum.AutomaticSize.Y
 	column.Parent = gui
+
+	local scale = Instance.new("UIScale")
+	scale.Parent = column
+
+	-- Ниже панели Roblox и окна чата слева сверху; на маленьком экране HUD чуть меньше
+	local function placeColumn()
+		local topInset = GuiService:GetGuiInset()
+		local chatReserve = if UserInputService.TouchEnabled then HUD.ChatReserveTouch else HUD.ChatReserveDesktop
+		column.Position = UDim2.fromOffset(HUD.Margin, topInset.Y + chatReserve)
+
+		local camera = Workspace.CurrentCamera
+		local small = camera ~= nil and camera.ViewportSize.Y < HUD.SmallScreenHeight
+		scale.Scale = if small then HUD.SmallScreenScale else 1
+	end
+	placeColumn()
+	local camera = Workspace.CurrentCamera
+	if camera then
+		camera:GetPropertyChangedSignal("ViewportSize"):Connect(placeColumn)
+	end
 
 	local layout = Instance.new("UIListLayout")
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -112,10 +131,11 @@ local function buildHud(playerGui: Instance)
 	refresh()
 end
 
--- Указатель на EXTRACT: маркер над площадкой (виден сквозь стены)
+-- Указатель на EXTRACT: маркер высоко над площадкой (виден сквозь стены, единственный «поверх всего»)
 -- и стрелка у края экрана, когда площадка за кадром. Только в состоянии InRaid.
+-- Вблизи маркер прячется, чтобы не закрывать имена мемлингов: площадку и так видно.
 local function buildExtractPointer(playerGui: Instance)
-	local target = MapConfig.Zone.ExtractionPosition + Vector3.new(0, MARKER_HEIGHT, 0)
+	local target = MapConfig.Zone.ExtractionPosition + Vector3.new(0, HUD.MarkerHeight, 0)
 
 	-- Невидимая точка-якорь только на этом клиенте: не зависит от того, загружена ли зона (streaming)
 	local anchor = Instance.new("Part")
@@ -144,11 +164,11 @@ local function buildExtractPointer(playerGui: Instance)
 	markerLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	markerLayout.Parent = marker
 
-	local title = makeLabel(marker, TextConfig.ExtractMarker, 30, TEXT_LIGHT)
+	local title = makeLabel(marker, TextConfig.ExtractMarker, HUD.MarkerTitleSize, TEXT_LIGHT)
 	title.TextXAlignment = Enum.TextXAlignment.Center
 	title.TextStrokeTransparency = 0
 	title.LayoutOrder = 1
-	local distance = makeLabel(marker, "", 22, TEXT_LIGHT)
+	local distance = makeLabel(marker, "", HUD.MarkerDistanceSize, TEXT_LIGHT)
 	distance.TextXAlignment = Enum.TextXAlignment.Center
 	distance.TextStrokeTransparency = 0
 	distance.LayoutOrder = 2
@@ -162,9 +182,9 @@ local function buildExtractPointer(playerGui: Instance)
 	local arrow = Instance.new("TextLabel")
 	arrow.BackgroundTransparency = 1
 	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
-	arrow.Size = UDim2.fromOffset(70, 70)
+	arrow.Size = UDim2.fromOffset(HUD.EdgeArrowSize + 14, HUD.EdgeArrowSize + 14)
 	arrow.Font = StyleConfig.Fonts.Hud
-	arrow.TextSize = 56
+	arrow.TextSize = HUD.EdgeArrowSize
 	arrow.TextColor3 = TEXT_LIGHT
 	arrow.TextStrokeTransparency = 0
 	arrow.Text = TextConfig.ExtractEdgeArrow
@@ -173,18 +193,23 @@ local function buildExtractPointer(playerGui: Instance)
 
 	RunService.RenderStepped:Connect(function()
 		local inRaid = player:GetAttribute("RaidState") == "InRaid"
-		marker.Enabled = inRaid
 		local camera = Workspace.CurrentCamera
 		if not inRaid or camera == nil then
+			marker.Enabled = false
 			arrow.Visible = false
 			return
 		end
 
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local far = true
 		if root and root:IsA("BasePart") then
-			distance.Text = string.format(TextConfig.ExtractMarkerDistance, formatNumber((root.Position - target).Magnitude))
+			local flatOffset = root.Position - MapConfig.Zone.ExtractionPosition
+			local flatDistance = Vector3.new(flatOffset.X, 0, flatOffset.Z).Magnitude
+			far = flatDistance > HUD.MarkerHideDistance
+			distance.Text = string.format(TextConfig.ExtractMarkerDistance, formatNumber(flatDistance))
 		end
+		marker.Enabled = far
 
 		local screenPoint, onScreen = camera:WorldToViewportPoint(target)
 		if onScreen then
@@ -204,7 +229,7 @@ local function buildExtractPointer(playerGui: Instance)
 		end
 		direction = direction.Unit
 
-		local radius = math.min(viewport.X, viewport.Y) / 2 - EDGE_PADDING
+		local radius = math.min(viewport.X, viewport.Y) / 2 - HUD.EdgePadding
 		local position = center + direction * radius
 		arrow.Position = UDim2.fromOffset(position.X, position.Y)
 		arrow.Rotation = math.deg(math.atan2(direction.Y, direction.X)) + 90 -- «▲» смотрит вверх при 0°

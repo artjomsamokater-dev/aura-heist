@@ -69,19 +69,12 @@ local function addParticles(part: BasePart, spec: StyleConfig.Particles): Partic
 	return emitter
 end
 
--- Вешает над деталью подпись, которая всегда повёрнута к камере.
--- heightAbovePart — на сколько студов поднять подпись над центром детали (по умолчанию — над её верхом).
--- sizeStuds — размер подписи в студах (по умолчанию обычная подпись из MapConfig.Label).
-local function addLabel(part: BasePart, text: string, heightAbovePart: number?, sizeStuds: Vector2?)
-	local size = sizeStuds or Vector2.new(MapConfig.Label.WidthStuds, MapConfig.Label.HeightStuds)
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "Label"
-	gui.Size = UDim2.fromScale(size.X, size.Y)
-	local height = heightAbovePart or (part.Size.Y / 2 + size.Y / 2)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, height, 0)
-	gui.MaxDistance = MapConfig.Label.MaxDistance
-	gui.Parent = part
+export type LabelOptions = {
+	Height: number?, -- на сколько студов над центром детали (по умолчанию — сразу над её верхом)
+	MaxDistance: number?, -- с какого расстояния видно (по умолчанию StyleConfig.Label.MaxDistance)
+}
 
+local function makeLabelText(gui: Instance, text: string)
 	local label = Instance.new("TextLabel")
 	label.Name = "Text"
 	label.Size = UDim2.fromScale(1, 1)
@@ -93,6 +86,35 @@ local function addLabel(part: BasePart, text: string, heightAbovePart: number?, 
 	label.TextStrokeTransparency = 0
 	label.Text = text
 	label.Parent = gui
+end
+
+-- Вешает над деталью подпись, которая всегда повёрнута к камере.
+-- Подписи не «всегда сверху»: их закрывают стены и предметы (поверх всего — только маркер EXTRACT в HUD).
+local function addLabel(part: BasePart, text: string, options: LabelOptions?)
+	local style = StyleConfig.Label
+	local height = (options and options.Height) or (part.Size.Y / 2 + style.HeightStuds / 2)
+
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Label"
+	gui.Size = UDim2.fromScale(style.WidthStuds, style.HeightStuds)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, height, 0)
+	gui.MaxDistance = (options and options.MaxDistance) or style.MaxDistance
+	gui.AlwaysOnTop = false
+	gui.Parent = part
+	makeLabelText(gui, text)
+end
+
+-- Надпись прямо на табличке, на обеих сторонах: крупно и не висит в воздухе
+local function addSignText(sign: BasePart, text: string)
+	for _, face in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back }) do
+		local gui = Instance.new("SurfaceGui")
+		gui.Name = "Label"
+		gui.Face = face
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = StyleConfig.Label.SignPixelsPerStud
+		gui.Parent = sign
+		makeLabelText(gui, text)
+	end
 end
 
 -- Мелкая деталь мемлинга: не мешает физике и не даёт тени
@@ -117,9 +139,9 @@ end
 -- глаза приварены к нему, поэтому двигаются вместе с телом.
 -- Тело смотрит глазами в сторону -Z переданного cframe.
 local function makeMemeling(name: string, memelingId: string, cframe: CFrame, parent: Instance): Part
-	local cfg = MapConfig.Memeling
+	local cfg = StyleConfig.Memeling
 	local memeling = MemelingConfig.Memelings[memelingId]
-	local style = (memeling and StyleConfig.Memeling.Rarities[memeling.Rarity]) or StyleConfig.Memeling.Rarities.Common
+	local style = (memeling and cfg.Rarities[memeling.Rarity]) or cfg.Rarities.Common
 
 	local body = makePart(name, cfg.Size, cframe, style.Body, parent)
 	body.Shape = Enum.PartType.Ball
@@ -127,15 +149,26 @@ local function makeMemeling(name: string, memelingId: string, cframe: CFrame, pa
 
 	for i, offset in ipairs(cfg.EyeOffsets) do
 		local eyeCFrame = cframe * CFrame.new(offset)
-		makeDetail("Eye" .. i, cfg.EyeSize, eyeCFrame, StyleConfig.Memeling.EyeWhite, body)
-		makeDetail("Pupil" .. i, cfg.PupilSize, eyeCFrame * CFrame.new(0, 0, -cfg.PupilForward), StyleConfig.Memeling.Pupil, body)
+		makeDetail("Eye" .. i, cfg.EyeSize, eyeCFrame, cfg.EyeWhite, body)
+		makeDetail("Pupil" .. i, cfg.PupilSize, eyeCFrame * CFrame.new(0, 0, -cfg.PupilForward), cfg.Pupil, body)
+	end
+
+	if style.Outline then
+		-- Только контур, без заливки; сквозь стены не виден
+		local outline = Instance.new("Highlight")
+		outline.FillTransparency = 1
+		outline.OutlineColor = style.Outline
+		outline.OutlineTransparency = 0
+		outline.DepthMode = Enum.HighlightDepthMode.Occluded
+		outline.Adornee = body
+		outline.Parent = body
 	end
 
 	if style.Glow then
 		local light = Instance.new("PointLight")
 		light.Color = style.Body
-		light.Brightness = StyleConfig.Memeling.Light.Brightness
-		light.Range = StyleConfig.Memeling.Light.Range
+		light.Brightness = cfg.Light.Brightness
+		light.Range = cfg.Light.Range
 		light.Shadows = false
 		light.Parent = body
 	end
@@ -143,6 +176,19 @@ local function makeMemeling(name: string, memelingId: string, cframe: CFrame, pa
 		addParticles(body, style.Particles)
 	end
 	return body
+end
+
+-- Узор плиткой на верхней грани пола зоны
+local function addFloorTexture(floor: BasePart)
+	local style = StyleConfig.Zone
+	local texture = Instance.new("Texture")
+	texture.Texture = style.FloorTexture
+	texture.Face = Enum.NormalId.Top
+	texture.StudsPerTileU = style.FloorTextureStuds
+	texture.StudsPerTileV = style.FloorTextureStuds
+	texture.Transparency = style.FloorTextureTransparency
+	texture.Color3 = style.FloorTextureColor
+	texture.Parent = floor
 end
 
 local function paintGround()
@@ -169,6 +215,7 @@ local function buildHub()
 	spawn.TopSurface = Enum.SurfaceType.Smooth
 	spawn.Anchored = true
 	spawn.Neutral = true
+	spawn.Duration = StyleConfig.Hub.SpawnForceFieldSeconds -- 0 = без силового поля
 	spawn.Parent = folder
 
 	local portal = makePart(
@@ -207,7 +254,7 @@ local function buildPlots()
 		model.PrimaryPart = floor
 
 		local sign = makePart("Sign", cfg.SignSize, plotCFrame * CFrame.new(cfg.SignOffset), colors.Accent, model)
-		addLabel(sign, TextConfig.FreePlot, nil, Vector2.new(MapConfig.Label.SignWidthStuds, MapConfig.Label.SignHeightStuds))
+		addSignText(sign, TextConfig.FreePlot)
 
 		local pedestals = Instance.new("Folder")
 		pedestals.Name = "Pedestals"
@@ -253,6 +300,8 @@ local function buildZone()
 		folder
 	)
 	addLabel(dangerFloor, TextConfig.ZoneDanger)
+	addFloorTexture(safeFloor)
+	addFloorTexture(dangerFloor)
 
 	-- Плоская плитка на полу: сюда портал переносит игрока
 	local entry = makePart(
@@ -283,7 +332,7 @@ local function buildZone()
 	makeGlow(pad, StyleConfig.Extraction.Transparency)
 	local sparks = addParticles(pad, StyleConfig.Extraction.Particles)
 	sparks.EmissionDirection = Enum.NormalId.Right -- после поворота «право» цилиндра смотрит вверх
-	addLabel(pad, TextConfig.Extraction, MapConfig.Label.HeightStuds)
+	addLabel(pad, TextConfig.Extraction, { Height = StyleConfig.Label.HeightStuds })
 	extractionPad = pad
 
 	-- Невидимые стены по четырём краям пола, чтобы из зоны нельзя было выпасть
@@ -355,12 +404,18 @@ MapBuilder.MakePart = makePart
 MapBuilder.AddLabel = addLabel
 MapBuilder.MakeMemeling = makeMemeling
 
--- Меняет текст подписи, созданной addLabel
+-- Меняет текст подписи, созданной addLabel или addSignText (у таблички их две — с обеих сторон)
 function MapBuilder.SetLabelText(part: Instance?, text: string)
-	local gui = part and part:FindFirstChild("Label")
-	local label = gui and gui:FindFirstChild("Text")
-	if label and label:IsA("TextLabel") then
-		label.Text = text
+	if part == nil then
+		return
+	end
+	for _, gui in ipairs(part:GetChildren()) do
+		if gui.Name == "Label" then
+			local label = gui:FindFirstChild("Text")
+			if label and label:IsA("TextLabel") then
+				label.Text = text
+			end
+		end
 	end
 end
 

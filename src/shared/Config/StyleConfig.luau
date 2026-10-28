@@ -1,6 +1,6 @@
 --!strict
--- StyleConfig: ВЕСЬ внешний вид в одном месте — палитра, материалы, частицы, свет, шрифты, цвета HUD.
--- Формы и размеры — в MapConfig, тексты — в TextConfig.
+-- StyleConfig: ВЕСЬ внешний вид в одном месте — палитра, материалы, частицы, свет, шрифты,
+-- размеры мемлинга и подписей, раскладка HUD. Позиции карты — в MapConfig, тексты — в TextConfig.
 -- Правило для телефонов: частиц мало, мелкие детали без теней.
 
 -- table.freeze замораживает только верхний уровень, поэтому замораживаем всё дерево
@@ -27,6 +27,7 @@ export type Particles = {
 
 export type RarityStyle = {
 	Body: Color3,
+	Outline: Color3?, -- цветная обводка (Highlight), чтобы светлое тело не терялось на светлом полу
 	Glow: boolean, -- PointLight и частицы
 	Particles: Particles?,
 }
@@ -40,23 +41,30 @@ StyleConfig.GlowMaterial = Enum.Material.Neon
 StyleConfig.ParticleTexture = SPARKLE_TEXTURE
 
 StyleConfig.Fonts = {
-	Label = Enum.Font.FredokaOne, -- подписи над объектами
+	Label = Enum.Font.FredokaOne, -- подписи над объектами и на табличках
 	Hud = Enum.Font.FredokaOne,
 }
 
--- Подписи над объектами
+-- Подписи над объектами (BillboardGui), размеры в студах
 StyleConfig.Label = {
 	Text = rgb(255, 255, 255),
 	Stroke = rgb(40, 20, 60),
+	WidthStuds = 12,
+	HeightStuds = 3,
+	MaxDistance = 200, -- обычные подписи (портал, зона, EXTRACT)
+	MemelingMaxDistance = 35, -- имена мемлингов видны только вблизи, чтобы не было каши из надписей
+	PedestalAuraGap = 2.5, -- насколько подпись «накоплено» выше подписи мемлинга на постаменте
+	SignPixelsPerStud = 40, -- чёткость имени владельца на табличке (SurfaceGui)
 }
 
 -- Земля вокруг (Baseplate)
 StyleConfig.Ground = rgb(110, 205, 95)
 
--- Хаб: тёплый солнечный
+-- Хаб: насыщенный тёплый, не белёсый
 StyleConfig.Hub = {
-	Floor = rgb(255, 205, 110),
-	Spawn = rgb(255, 245, 215),
+	Floor = rgb(235, 140, 55),
+	Spawn = rgb(250, 195, 95),
+	SpawnForceFieldSeconds = 0, -- без силового поля при появлении
 }
 
 -- Портал: яркий неон и искры
@@ -86,11 +94,16 @@ StyleConfig.Plots = {
 	{ Floor = rgb(255, 160, 220), Accent = rgb(215, 60, 165) }, -- жвачка
 }
 
--- Meme Zone: сразу видно, что это другое место. Опасная часть — тревожная
+-- Meme Zone: тёмный спокойный пол с узором плиткой; опасная часть — тёмно-красная
 StyleConfig.Zone = {
-	SafeFloor = rgb(70, 200, 185),
-	DangerFloor = rgb(235, 70, 55),
+	SafeFloor = rgb(45, 95, 105),
+	DangerFloor = rgb(120, 28, 34),
 	Entry = rgb(255, 255, 255),
+	-- Узор плиткой поверх пола (Texture на верхней грани)
+	FloorTexture = "rbxassetid://6372755229", -- сетка-плитка из стандартного Baseplate Roblox
+	FloorTextureStuds = 8, -- размер одной плитки
+	FloorTextureTransparency = 0.7,
+	FloorTextureColor = rgb(255, 255, 255),
 }
 
 -- Площадка EXTRACT: неон и искры вверх
@@ -108,13 +121,26 @@ StyleConfig.Extraction = {
 	},
 }
 
--- Мемлинги: цвет тела по редкости; у Epic и Legendary — свет и лёгкие искры
+-- Мемлинги: круглое тело и два глаза (белок + зрачок), смотрят в сторону -Z.
+-- Цвет тела по редкости; у Epic и Legendary — свет и лёгкие искры.
 StyleConfig.Memeling = {
+	Size = Vector3.new(6, 6, 6),
+	EyeSize = 1.7,
+	PupilSize = 0.85,
+	EyeOffsets = { -- от центра тела, на его поверхности спереди
+		Vector3.new(-1.2, 0.7, -2.45),
+		Vector3.new(1.2, 0.7, -2.45),
+	},
+	PupilForward = 0.6, -- на сколько зрачок выступает вперёд от центра глаза
+	-- Где мемлинг висит, когда его несут: относительно HumanoidRootPart (-Z = перед персонажем)
+	CarryOffset = Vector3.new(0, 0.5, -4.5),
+	CarryStackStep = Vector3.new(0, 6.2, 0), -- каждый следующий мемлинг в руках — выше предыдущего
+
 	EyeWhite = rgb(255, 255, 255),
 	Pupil = rgb(25, 20, 35),
-	Light = { Brightness = 2, Range = 10 },
+	Light = { Brightness = 2, Range = 14 },
 	Rarities = {
-		Common = { Body = rgb(225, 225, 232), Glow = false },
+		Common = { Body = rgb(205, 208, 215), Outline = rgb(255, 120, 40), Glow = false },
 		Rare = { Body = rgb(40, 125, 255), Glow = false },
 		Epic = {
 			Body = rgb(165, 70, 255),
@@ -124,7 +150,7 @@ StyleConfig.Memeling = {
 				Rate = 2,
 				Lifetime = NumberRange.new(0.8, 1.2),
 				Speed = NumberRange.new(1, 2),
-				Size = 0.5,
+				Size = 0.8,
 				SpreadAngle = 180,
 				LightEmission = 1,
 			},
@@ -137,7 +163,7 @@ StyleConfig.Memeling = {
 				Rate = 4,
 				Lifetime = NumberRange.new(0.8, 1.4),
 				Speed = NumberRange.new(1, 2.5),
-				Size = 0.6,
+				Size = 1,
 				SpreadAngle = 180,
 				LightEmission = 1,
 			},
@@ -145,13 +171,13 @@ StyleConfig.Memeling = {
 	} :: { [string]: RarityStyle },
 }
 
--- Свет: яркий солнечный день, сочные цвета
+-- Свет: яркий день без пересвета
 StyleConfig.Lighting = {
 	ClockTime = 14,
-	Brightness = 3,
-	Ambient = rgb(140, 125, 120),
-	OutdoorAmbient = rgb(160, 150, 150),
-	ExposureCompensation = 0.1,
+	Brightness = 2.5,
+	Ambient = rgb(130, 115, 110),
+	OutdoorAmbient = rgb(145, 135, 135),
+	ExposureCompensation = -0.15,
 	EnvironmentDiffuseScale = 0.5,
 	EnvironmentSpecularScale = 0.5,
 	ShadowSoftness = 0.25,
@@ -160,14 +186,14 @@ StyleConfig.Lighting = {
 		Offset = 0.2,
 		Color = rgb(200, 225, 255),
 		Decay = rgb(255, 210, 170),
-		Glare = 0.3,
+		Glare = 0.2,
 		Haze = 0.8,
 	},
-	Bloom = { Intensity = 0.6, Size = 24, Threshold = 1.1 },
+	Bloom = { Intensity = 0.25, Size = 12, Threshold = 1.3 },
 	ColorCorrection = {
 		Saturation = 0.25,
-		Contrast = 0.08,
-		Brightness = 0.02,
+		Contrast = 0.1,
+		Brightness = -0.02,
 		TintColor = rgb(255, 250, 240),
 	},
 	Sky = { SunAngularSize = 14, StarCount = 0 },
@@ -179,6 +205,23 @@ StyleConfig.Hud = {
 	HandsCard = rgb(60, 150, 255), -- «в руках»: синий, можно потерять
 	TextDark = rgb(25, 25, 25),
 	TextLight = rgb(255, 255, 255),
+
+	CardWidth = 300,
+	CaptionSize = 18,
+	ValueSize = 34,
+	Margin = 12, -- отступ от левого края
+	-- Сверху HUD ставим под панелью Roblox (GuiService:GetGuiInset) и под окном чата
+	ChatReserveDesktop = 210, -- высота окна чата на компьютере, в пикселях
+	ChatReserveTouch = 12, -- на телефоне окно чата закрыто, пока его не откроют
+	SmallScreenHeight = 500, -- экран ниже этого (телефон боком) — HUD чуть меньше
+	SmallScreenScale = 0.8,
+
+	MarkerHeight = 14, -- на сколько студов над площадкой висит маркер EXTRACT
+	MarkerHideDistance = 45, -- ближе этого маркер прячется: площадку и так видно
+	MarkerTitleSize = 30,
+	MarkerDistanceSize = 22,
+	EdgeArrowSize = 56,
+	EdgePadding = 70, -- отступ стрелки от края экрана, в пикселях
 }
 
 return deepFreeze(StyleConfig)

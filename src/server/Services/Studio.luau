@@ -17,6 +17,7 @@ local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
 local EconomyConfig = require(ReplicatedStorage.Shared.Config.EconomyConfig)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
+local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
 local MapBuilder = require(script.Parent.MapBuilder)
 local Economy = require(script.Parent.Economy)
@@ -107,7 +108,8 @@ local function placeOnPedestal(player: Player, plotIndex: number, pedestalIndex:
 		return
 	end
 
-	local size = MapConfig.Memeling.Size
+	local size = StyleConfig.Memeling.Size
+	local labelStyle = StyleConfig.Label
 	-- Постамент повёрнут как участок: -Z смотрит на хаб, туда же смотрит и мемлинг
 	local cube = MapBuilder.MakeMemeling(
 		"Memeling",
@@ -117,10 +119,16 @@ local function placeOnPedestal(player: Player, plotIndex: number, pedestalIndex:
 	)
 	cube:SetAttribute("MemelingId", memelingId)
 	local name = TextConfig.MemelingNames[memelingId] or memelingId
-	MapBuilder.AddLabel(cube, string.format(TextConfig.PedestalMemeling, name, getRate(memelingId)))
+	MapBuilder.AddLabel(
+		cube,
+		string.format(TextConfig.PedestalMemeling, name, getRate(memelingId)),
+		{ MaxDistance = labelStyle.MemelingMaxDistance }
+	)
 
-	-- Подпись «накоплено» висит над подписью мемлинга
-	MapBuilder.AddLabel(pedestal, "", pedestal.Size.Y / 2 + size.Y + MapConfig.Label.HeightStuds * 1.5)
+	-- Подпись «накоплено» висит выше подписи мемлинга, с зазором
+	MapBuilder.AddLabel(pedestal, "", {
+		Height = pedestal.Size.Y / 2 + size.Y + labelStyle.HeightStuds * 1.5 + labelStyle.PedestalAuraGap,
+	})
 
 	local slot: Slot = { MemelingId = memelingId, StartedAt = now(), Cube = cube }
 	slots[player] = slots[player] or {}

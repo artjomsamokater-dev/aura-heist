@@ -96,6 +96,11 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   и зоны; у зоны безопасная половина (бирюза) и опасная (красная, восточнее MapConfig.Zone.DangerFromX).
   Неон + частицы у портала и EXTRACT. Мемлинги — круглое тело цвета редкости + два глаза,
   у Epic/Legendary свет и искры. Свет (Atmosphere, Bloom, ColorCorrection, Sky) — сервис LightingSetup.
+- 1.7b (правки визуала по скриншотам): HUD ниже панели Roblox и окна чата; свет без пересвета;
+  без силового поля при появлении; пол зоны тёмный с узором плиткой, опасная часть тёмно-красная;
+  имена мемлингов видны только вблизи (35 студов), имя владельца — на самой табличке (SurfaceGui),
+  маркер EXTRACT прячется вблизи; мемлинги в 2 раза крупнее, Common с оранжевым контуром.
+  Размеры мемлинга и подписей переехали из MapConfig в StyleConfig.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1`
 (luau-lsp analyze с типами Roblox + rojo build в test.rbxl).

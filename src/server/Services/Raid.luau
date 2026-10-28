@@ -11,6 +11,7 @@ local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
+local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
 local Spawn = require(script.Parent.Spawn)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
@@ -78,7 +79,7 @@ end
 -- Мемлинг едет вместе с персонажем: приварен к HumanoidRootPart и лежит внутри модели персонажа.
 -- Развёрнут на 180°, чтобы глазами смотрел на игрока (камера обычно сзади).
 local function attachToCharacter(part: Part, character: Model, root: BasePart, slotIndex: number)
-	local offset = MapConfig.Memeling.CarryOffset + MapConfig.Memeling.CarryStackStep * (slotIndex - 1)
+	local offset = StyleConfig.Memeling.CarryOffset + StyleConfig.Memeling.CarryStackStep * (slotIndex - 1)
 	part.Anchored = false
 	part.CanCollide = false
 	part.Massless = true
