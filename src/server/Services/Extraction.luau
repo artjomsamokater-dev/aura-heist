@@ -11,6 +11,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
+local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
 local Raid = require(script.Parent.Raid)
 local Studio = require(script.Parent.Studio)
@@ -57,9 +58,9 @@ local function updateLabel(now: number)
 		end
 	end
 
-	local text = MapConfig.Text.Extraction
+	local text = TextConfig.Extraction
 	if bestRemaining ~= nil then
-		text = string.format(MapConfig.Text.ExtractionProgress, math.max(1, math.ceil(bestRemaining)))
+		text = string.format(TextConfig.ExtractionProgress, math.max(1, math.ceil(bestRemaining)))
 	end
 	if text ~= lastLabelText then
 		lastLabelText = text

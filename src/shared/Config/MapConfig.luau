@@ -104,18 +104,6 @@ MapConfig.Label = {
 	MaxDistance = 200,
 }
 
--- Тексты подписей в игре
-MapConfig.Text = {
-	FreePlot = "Free Studio",
-	OwnedPlot = "%s's Studio", -- %s заменяется на имя игрока
-	Portal = "MEME ZONE",
-	Zone = "MEME ZONE",
-	Entry = "Entry",
-	PickupAction = "Pick up",
-	Extraction = "EXTRACT",
-	ExtractionProgress = "EXTRACTING... %d", -- %d — сколько секунд осталось
-}
-
 -- Серые цвета прототипа
 MapConfig.Colors = {
 	Hub = Color3.fromRGB(150, 150, 150),

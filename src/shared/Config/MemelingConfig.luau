@@ -13,7 +13,6 @@ local function deepFreeze<T>(t: T): T
 end
 
 export type Memeling = {
-	DisplayName: string,
 	Rarity: string,
 }
 
@@ -33,20 +32,20 @@ MemelingConfig.Rarities = {
 }
 
 -- 8 оригинальных мемлингов MVP: 3 Common, 2 Rare, 2 Epic, 1 Legendary.
--- Id никогда не меняем (он попадёт в сохранения), DisplayName можно.
+-- Id никогда не меняем (он попадёт в сохранения). Имена для игрока — в TextConfig.MemelingNames.
 MemelingConfig.Memelings = {
 	-- Common
-	ToastPaw = { DisplayName = "Toast Paw", Rarity = "Common" },
-	SirWobbleton = { DisplayName = "Sir Wobbleton", Rarity = "Common" },
-	Grumbloaf = { DisplayName = "Grumbloaf", Rarity = "Common" },
+	ToastPaw = { Rarity = "Common" },
+	SirWobbleton = { Rarity = "Common" },
+	Grumbloaf = { Rarity = "Common" },
 	-- Rare
-	NoodleNinja = { DisplayName = "Noodle Ninja", Rarity = "Rare" },
-	CaptainSockbeard = { DisplayName = "Captain Sockbeard", Rarity = "Rare" },
+	NoodleNinja = { Rarity = "Rare" },
+	CaptainSockbeard = { Rarity = "Rare" },
 	-- Epic
-	DiscoPickle = { DisplayName = "Disco Pickle", Rarity = "Epic" },
-	ProfessorBonk = { DisplayName = "Professor Bonk", Rarity = "Epic" },
+	DiscoPickle = { Rarity = "Epic" },
+	ProfessorBonk = { Rarity = "Epic" },
 	-- Legendary
-	MegaSnoozeasaurus = { DisplayName = "Mega Snoozeasaurus", Rarity = "Legendary" },
+	MegaSnoozeasaurus = { Rarity = "Legendary" },
 } :: { [string]: Memeling }
 
 return deepFreeze(MemelingConfig)

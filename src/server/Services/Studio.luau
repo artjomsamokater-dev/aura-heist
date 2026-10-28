@@ -8,7 +8,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
+local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
 
 local Studio = {}
@@ -28,7 +28,7 @@ local function assignPlot(player: Player)
 			playerPlots[player] = index
 			plot:SetAttribute("OwnerUserId", player.UserId)
 			player:SetAttribute("StudioIndex", index)
-			MapBuilder.SetLabelText(plot:FindFirstChild("Sign"), string.format(MapConfig.Text.OwnedPlot, player.DisplayName))
+			MapBuilder.SetLabelText(plot:FindFirstChild("Sign"), string.format(TextConfig.OwnedPlot, player.DisplayName))
 			print(string.format("[Studio] %s получил участок %d", player.Name, index))
 			return
 		end
@@ -51,7 +51,7 @@ local function releasePlot(player: Player)
 	local plot = MapBuilder.GetPlots()[index]
 	if plot then
 		plot:SetAttribute("OwnerUserId", 0)
-		MapBuilder.SetLabelText(plot:FindFirstChild("Sign"), MapConfig.Text.FreePlot)
+		MapBuilder.SetLabelText(plot:FindFirstChild("Sign"), TextConfig.FreePlot)
 	end
 	print(string.format("[Studio] Участок %d освобождён (%s вышел)", index, player.Name))
 end

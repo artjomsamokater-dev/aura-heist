@@ -1,6 +1,7 @@
 --!strict
 -- Raid: состояние игрока (InHub / InRaid), портал в зону и мемлинги «в руках» (Carried).
--- Carried живут только в памяти сервера: при смерти, новом персонаже или выходе — теряются.
+-- Carried живут только в памяти сервера: при смерти, новом персонаже или выходе — теряются
+-- (потерянный мемлинг через ZoneConfig.LostRespawnSeconds возвращается на свою точку спавна).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -69,7 +70,7 @@ local function loseCarried(player: Player, reason: string)
 		return
 	end
 	for _, instanceId in ipairs(list) do
-		Spawn.Despawn(instanceId)
+		Spawn.Lose(instanceId)
 	end
 	print(string.format("[Raid] %s потерял мемлингов: %d (%s)", player.Name, #list, reason))
 end

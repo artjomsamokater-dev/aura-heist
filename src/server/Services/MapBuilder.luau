@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
+local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 
 local MapBuilder = {}
 
@@ -93,7 +94,7 @@ local function buildHub()
 	portal.Material = Enum.Material.Neon
 	portal.Transparency = 0.3
 	portal.CanCollide = false -- сквозь портал проходят
-	addLabel(portal, MapConfig.Text.Portal)
+	addLabel(portal, TextConfig.Portal)
 	portalPart = portal
 end
 
@@ -117,7 +118,7 @@ local function buildPlots()
 		model.PrimaryPart = floor
 
 		local sign = makePart("Sign", cfg.SignSize, plotCFrame * CFrame.new(cfg.SignOffset), MapConfig.Colors.Sign, model)
-		addLabel(sign, MapConfig.Text.FreePlot)
+		addLabel(sign, TextConfig.FreePlot)
 
 		local pedestals = Instance.new("Folder")
 		pedestals.Name = "Pedestals"
@@ -144,7 +145,7 @@ local function buildZone()
 	local zone = MapConfig.Zone
 
 	local floor = makePart("Floor", zone.Size, CFrame.new(zone.Center), MapConfig.Colors.Zone, folder)
-	addLabel(floor, MapConfig.Text.Zone)
+	addLabel(floor, TextConfig.Zone)
 
 	-- Плоская плитка на полу: сюда портал переносит игрока
 	local entry = makePart(
@@ -155,7 +156,7 @@ local function buildZone()
 		folder
 	)
 	entry.CanCollide = false
-	addLabel(entry, MapConfig.Text.Entry)
+	addLabel(entry, TextConfig.Entry)
 	zoneEntryPart = entry
 
 	-- Круглая площадка эвакуации: её радиус совпадает с дистанцией из ZoneConfig.
@@ -171,7 +172,7 @@ local function buildZone()
 	)
 	pad.Shape = Enum.PartType.Cylinder
 	pad.CanCollide = false
-	addLabel(pad, MapConfig.Text.Extraction, MapConfig.Label.HeightStuds)
+	addLabel(pad, TextConfig.Extraction, MapConfig.Label.HeightStuds)
 	extractionPad = pad
 
 	-- Невидимые стены по четырём краям пола, чтобы из зоны нельзя было выпасть

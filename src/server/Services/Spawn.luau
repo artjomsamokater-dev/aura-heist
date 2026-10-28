@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
+local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
 
 local Spawn = {}
@@ -25,6 +26,7 @@ export type Record = {
 	State: string,
 	Part: Part,
 	Owner: Player?,
+	SpawnPoint: Vector3, -- точка спавна, куда мемлинг вернётся, если его потеряют
 }
 
 type PickupHandler = (player: Player, instanceId: string) -> ()
@@ -54,7 +56,7 @@ end
 local function addPickupPrompt(part: Part, instanceId: string, displayName: string)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "PickupPrompt"
-	prompt.ActionText = MapConfig.Text.PickupAction
+	prompt.ActionText = TextConfig.PickupAction
 	prompt.ObjectText = displayName
 	prompt.MaxActivationDistance = ZoneConfig.PickupDistance
 	prompt.HoldDuration = 0
@@ -73,7 +75,7 @@ local function spawnAt(memelingId: string, floorPosition: Vector3): Record
 	nextNumber += 1
 	local instanceId = "M" .. nextNumber
 	local size = MapConfig.Memeling.Size
-	local displayName = MemelingConfig.Memelings[memelingId].DisplayName
+	local displayName = TextConfig.MemelingNames[memelingId] or memelingId
 
 	local part = MapBuilder.MakePart(
 		instanceId,
@@ -93,6 +95,7 @@ local function spawnAt(memelingId: string, floorPosition: Vector3): Record
 		State = Spawn.State.InZone,
 		Part = part,
 		Owner = nil,
+		SpawnPoint = floorPosition,
 	}
 	memelings[instanceId] = record
 	return record
@@ -125,7 +128,7 @@ function Spawn.MarkCarried(instanceId: string, owner: Player): boolean
 	return true
 end
 
--- Убирает мемлинга из мира насовсем (потерян или вынесен из зоны)
+-- Убирает мемлинга из мира насовсем (вынесен из зоны через эвакуацию)
 function Spawn.Despawn(instanceId: string)
 	local record = memelings[instanceId]
 	if record == nil then
@@ -133,6 +136,20 @@ function Spawn.Despawn(instanceId: string)
 	end
 	memelings[instanceId] = nil
 	record.Part:Destroy()
+end
+
+-- Мемлинга потеряли (смерть, выход): он пропадает и через ZoneConfig.LostRespawnSeconds
+-- появляется снова на своей точке спавна — тот же мемлинг, новый InstanceId
+function Spawn.Lose(instanceId: string)
+	local record = memelings[instanceId]
+	if record == nil then
+		return
+	end
+	Spawn.Despawn(instanceId)
+
+	task.delay(ZoneConfig.LostRespawnSeconds, function()
+		spawnAt(record.MemelingId, record.SpawnPoint)
+	end)
 end
 
 function Spawn.Start()
@@ -150,7 +167,7 @@ function Spawn.Start()
 	for _, point in ipairs(MapConfig.Zone.SpawnPoints) do
 		spawnAt(ids[random:NextInteger(1, #ids)], point)
 	end
-	print(string.format("[Spawn] В зоне появилось мемлингов: %d (%s)", nextNumber, SPAWN_RARITY))
+	print(string.format("[Spawn] В зоне появилось мемлингов: %d (%s)", #MapConfig.Zone.SpawnPoints, SPAWN_RARITY))
 end
 
 return Spawn
