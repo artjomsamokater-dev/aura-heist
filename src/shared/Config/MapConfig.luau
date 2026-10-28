@@ -78,6 +78,9 @@ MapConfig.Zone = {
 -- Вид мемлинга в сером прототипе: просто куб с подписью-именем
 MapConfig.Memeling = {
 	Size = Vector3.new(3, 3, 3),
+	-- Где куб висит, когда его несут: относительно HumanoidRootPart (-Z = перед персонажем)
+	CarryOffset = Vector3.new(0, 0, -2.5),
+	CarryStackStep = Vector3.new(0, 3.2, 0), -- каждый следующий куб в руках — выше предыдущего
 }
 
 -- Подписи над объектами (BillboardGui), размеры в студах
@@ -94,6 +97,7 @@ MapConfig.Text = {
 	Portal = "MEME ZONE",
 	Zone = "MEME ZONE",
 	Entry = "Entry",
+	PickupAction = "Pick up",
 }
 
 -- Серые цвета прототипа
