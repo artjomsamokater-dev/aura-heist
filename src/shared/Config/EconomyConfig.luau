@@ -23,6 +23,7 @@ EconomyConfig.SquadBonus = {
 EconomyConfig.AutosaveSeconds = 90 -- как часто сохраняем профиль игрока
 
 EconomyConfig.CollectDistance = 10 -- максимум студов до постамента, чтобы собрать с него Aura
+EconomyConfig.ButtonDistance = 8 -- максимум студов до кнопки улучшения на участке
 EconomyConfig.PedestalLabelUpdateSeconds = 0.5 -- как часто обновляем подпись «накоплено» над постаментами
 
 return deepFreeze(EconomyConfig)

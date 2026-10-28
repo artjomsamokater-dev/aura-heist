@@ -97,6 +97,17 @@ StyleConfig.Plots = {
 	{ Floor = rgb(255, 160, 220), Accent = rgb(215, 60, 165) }, -- жвачка
 }
 
+-- Детали участка
+StyleConfig.PlotParts = {
+	UpgradeButton = rgb(255, 205, 40), -- кнопки улучшений: золотые, видно, что их можно нажать
+	LockedPedestalTransparency = 0.75, -- некупленный постамент — полупрозрачный «призрак»
+}
+
+-- Кнопки ProximityPrompt
+StyleConfig.Prompts = {
+	BuyHoldSeconds = 0.3, -- короткое удержание, чтобы не купить случайно
+}
+
 -- Meme Zone: тёмный спокойный пол с узором плиткой; опасная часть — тёмно-красная
 StyleConfig.Zone = {
 	SafeFloor = rgb(45, 95, 105),

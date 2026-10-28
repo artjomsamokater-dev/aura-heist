@@ -109,6 +109,11 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   lastCollect}, reserve {memelingId}, upgrades {pedestals, carrySlots, storage}, stats.
   Economy и Studio работают с данными профиля; накопление постамента — shared/Util/PedestalMath
   (от lastCollect, не больше лимита — так же считается офлайн-доход). В портал нельзя без профиля.
+- 2.2: улучшения. На участке 6 мест под постаменты (некупленные — полупрозрачные), ряд золотых
+  кнопок Pedestal / Backpack / Storage с ценой следующего уровня. Покупка: ProximityPrompt «Buy»
+  с удержанием → сервер проверяет владельца, дистанцию, rate limit, уровень и цену (shared/Util/UpgradeValues
+  из UpgradeConfig), списывает только через Economy.TrySpend; после покупки 1 с паузы, чтобы
+  двойной клик не купил два уровня. Новый постамент сразу забирает мемлинга из запаса.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1`
 (luau-lsp analyze с типами Roblox + rojo build в test.rbxl).
@@ -116,4 +121,4 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
 После 1.4: тексты для игрока вынесены в TextConfig, потерянные мемлинги возвращаются
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
-Следующая задача — 2.2 (покупка улучшений).
+Следующая задача — 2.3 (продажа мемлинга).

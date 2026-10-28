@@ -275,6 +275,23 @@ local function buildPlots()
 			pedestal:SetAttribute("PedestalIndex", p)
 		end
 
+		-- Кнопки-площадки улучшений; подписи и кнопку «Buy» на них вешает Studio
+		local buttons = Instance.new("Folder")
+		buttons.Name = "Buttons"
+		buttons.Parent = model
+		for upgradeId, offset in cfg.UpgradeButtonOffsets do
+			local button = makePart(
+				"Upgrade_" .. upgradeId,
+				cfg.ButtonSize,
+				plotCFrame * CFrame.new(offset),
+				StyleConfig.PlotParts.UpgradeButton,
+				buttons
+			)
+			button.CastShadow = false
+			button:SetAttribute("UpgradeId", upgradeId)
+			addLabel(button, "")
+		end
+
 		model.Parent = folder
 		plots[i] = model
 	end

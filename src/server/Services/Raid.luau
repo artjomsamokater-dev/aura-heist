@@ -9,7 +9,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
-local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
+local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
@@ -49,9 +49,15 @@ function Raid.GetState(player: Player): string?
 	return states[player]
 end
 
--- Сколько мемлингов игрок может нести. Улучшение слотов появится позже (задачи 2.2 и 3.3).
-local function getCarrySlots(_player: Player): number
-	return UpgradeConfig.CarrySlots.StartCount
+-- Сколько мемлингов игрок может нести: стартовое число или купленный уровень рюкзака
+local function getCarrySlots(player: Player): number
+	local data = PlayerData.GetData(player)
+	return UpgradeValues.CarrySlots(if data then data.upgrades.carrySlots else 0)
+end
+
+-- Обновить атрибут CarrySlots для HUD (после загрузки профиля и после покупки слота)
+function Raid.RefreshCarrySlots(player: Player)
+	player:SetAttribute("CarrySlots", getCarrySlots(player))
 end
 
 local function getCarried(player: Player): { string }
@@ -264,6 +270,9 @@ function Raid.Start()
 	for _, player in ipairs(Players:GetPlayers()) do
 		task.spawn(onPlayerAdded, player)
 	end
+	PlayerData.OnLoaded(function(player)
+		Raid.RefreshCarrySlots(player)
+	end)
 
 	task.spawn(function()
 		while true do

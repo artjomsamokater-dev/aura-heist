@@ -44,11 +44,23 @@ MapConfig.Plots = {
 	SignSize = Vector3.new(10, 5, 1),
 	SignOffset = Vector3.new(0, 3, -19), -- табличка у края, ближнего к хабу
 	PedestalSize = Vector3.new(4, 2, 4),
+	-- Все места под постаменты: первые StartCount доступны сразу, остальные открываются улучшением.
+	-- Мест должно быть столько, сколько даёт максимальный уровень в UpgradeConfig.Pedestals
 	PedestalOffsets = {
-		Vector3.new(-12, 1.5, 8),
-		Vector3.new(0, 1.5, 8),
-		Vector3.new(12, 1.5, 8),
+		Vector3.new(-12, 1.5, 6),
+		Vector3.new(0, 1.5, 6),
+		Vector3.new(12, 1.5, 6),
+		Vector3.new(-12, 1.5, 16),
+		Vector3.new(0, 1.5, 16),
+		Vector3.new(12, 1.5, 16),
 	},
+	-- Кнопки-площадки улучшений: ряд между табличкой и постаментами
+	ButtonSize = Vector3.new(5, 0.6, 5),
+	UpgradeButtonOffsets = {
+		pedestals = Vector3.new(-6, 0.8, -8),
+		carrySlots = Vector3.new(6, 0.8, -8),
+		storage = Vector3.new(18, 0.8, -8),
+	} :: { [string]: Vector3 },
 }
 
 -- Meme Zone: отдельная площадка в стороне от хаба, поднятая в воздух.

@@ -31,6 +31,20 @@ TextConfig.PedestalFull = "%s Aura (FULL)" -- накоплено до преде
 -- Кнопки
 TextConfig.PickupAction = "Pick up"
 TextConfig.CollectAction = "Collect"
+TextConfig.BuyAction = "Buy"
+TextConfig.PriceTag = "%s Aura" -- цена на кнопке покупки
+
+-- Кнопки улучшений на участке: что даст следующий уровень и цена (%d — новое значение, %s — цена)
+TextConfig.UpgradeLabels = {
+	pedestals = "Pedestal #%d\n%s Aura",
+	carrySlots = "Backpack: %d slots\n%s Aura",
+	storage = "Storage x%d\n%s Aura",
+} :: { [string]: string }
+TextConfig.UpgradeMaxed = {
+	pedestals = "Pedestals\nMAX",
+	carrySlots = "Backpack\nMAX",
+	storage = "Storage\nMAX",
+} :: { [string]: string }
 
 -- HUD (клиент)
 TextConfig.HudBaseCaption = "SAFE AT BASE"

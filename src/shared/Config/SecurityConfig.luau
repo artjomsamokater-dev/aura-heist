@@ -20,6 +20,11 @@ SecurityConfig.DistanceToleranceStuds = 2 -- запас к дистанциям 
 SecurityConfig.RateLimits = {
 	Pickup = { MaxRequests = 4, WindowSeconds = 1 },
 	Collect = { MaxRequests = 4, WindowSeconds = 1 },
+	Buy = { MaxRequests = 3, WindowSeconds = 1 },
 }
+
+-- После покупки улучшения следующая покупка у этого игрока ждёт столько секунд:
+-- быстрый двойной клик не купит два уровня подряд
+SecurityConfig.PurchaseCooldownSeconds = 1
 
 return deepFreeze(SecurityConfig)
