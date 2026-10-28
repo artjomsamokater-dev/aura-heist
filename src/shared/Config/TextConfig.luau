@@ -20,6 +20,7 @@ TextConfig.FreePlot = "Free Studio"
 TextConfig.OwnedPlot = "%s's Studio" -- %s заменяется на имя игрока
 TextConfig.Portal = "MEME ZONE"
 TextConfig.Zone = "MEME ZONE"
+TextConfig.ZoneDanger = "DANGER"
 TextConfig.Entry = "Entry"
 TextConfig.Extraction = "EXTRACT"
 TextConfig.ExtractionProgress = "EXTRACTING... %d" -- %d — сколько секунд осталось

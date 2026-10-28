@@ -77,11 +77,12 @@ local function spawnAt(memelingId: string, floorPosition: Vector3): Record
 	local size = MapConfig.Memeling.Size
 	local displayName = TextConfig.MemelingNames[memelingId] or memelingId
 
-	local part = MapBuilder.MakePart(
+	-- Мемлинг смотрит на запад — туда, откуда игрок приходит в зону
+	local position = floorPosition + Vector3.new(0, size.Y / 2, 0)
+	local part = MapBuilder.MakeMemeling(
 		instanceId,
-		size,
-		CFrame.new(floorPosition + Vector3.new(0, size.Y / 2, 0)),
-		MapConfig.Colors.Memeling,
+		memelingId,
+		CFrame.lookAt(position, position - Vector3.xAxis),
 		(assert(memelingsFolder, "Spawn.Start() ещё не вызван"))
 	)
 	part:SetAttribute("InstanceId", instanceId)

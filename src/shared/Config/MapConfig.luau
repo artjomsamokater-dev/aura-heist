@@ -1,5 +1,5 @@
 --!strict
--- MapConfig: размеры, позиции и цвета серого прототипа карты.
+-- MapConfig: размеры и позиции карты (цвета и материалы — в StyleConfig).
 -- Все полы толщиной 1 студ. Хаб и участки стоят верхней гранью на y = 1 (Baseplate кончается на y = 0),
 -- зона поднята на ZONE_FLOOR_Y.
 
@@ -59,6 +59,9 @@ local ZONE_TOP = Vector3.new(500, ZONE_FLOOR_Y + 1, 0) -- центр верхн�
 MapConfig.Zone = {
 	Center = ZONE_TOP - Vector3.new(0, 0.5, 0),
 	Size = Vector3.new(160, 1, 160),
+	-- Пол делится на две части: от входа (запад) — безопасная, восточнее этой линии — опасная.
+	-- Число — смещение по X от центра зоны. Пока это только цвет, правила частей — задача 3.1.
+	DangerFromX = 10,
 	EntryPosition = ZONE_TOP + Vector3.new(-60, 0, 0), -- точка входа на полу зоны (западный край)
 	EntryMarkerSize = Vector3.new(8, 0.2, 8),
 	EntrySpawnHeight = 4, -- на сколько студов выше точки входа ставим персонажа
@@ -89,12 +92,20 @@ MapConfig.Zone = {
 	},
 }
 
--- Вид мемлинга в сером прототипе: просто куб с подписью-именем
+-- Мемлинг: круглое тело и два глаза (белок + зрачок), смотрит в сторону -Z.
+-- Смещения глаз — от центра тела.
 MapConfig.Memeling = {
 	Size = Vector3.new(3, 3, 3),
-	-- Где куб висит, когда его несут: относительно HumanoidRootPart (-Z = перед персонажем)
+	EyeSize = 0.9,
+	PupilSize = 0.45,
+	EyeOffsets = {
+		Vector3.new(-0.6, 0.35, -1.25),
+		Vector3.new(0.6, 0.35, -1.25),
+	},
+	PupilForward = 0.35, -- на сколько зрачок выступает вперёд от центра глаза
+	-- Где мемлинг висит, когда его несут: относительно HumanoidRootPart (-Z = перед персонажем)
 	CarryOffset = Vector3.new(0, 0, -2.5),
-	CarryStackStep = Vector3.new(0, 3.2, 0), -- каждый следующий куб в руках — выше предыдущего
+	CarryStackStep = Vector3.new(0, 3.2, 0), -- каждый следующий мемлинг в руках — выше предыдущего
 }
 
 -- Подписи над объектами (BillboardGui), размеры в студах
@@ -102,20 +113,9 @@ MapConfig.Label = {
 	WidthStuds = 12,
 	HeightStuds = 3,
 	MaxDistance = 200,
-}
-
--- Серые цвета прототипа
-MapConfig.Colors = {
-	Hub = Color3.fromRGB(150, 150, 150),
-	Spawn = Color3.fromRGB(185, 185, 185),
-	Portal = Color3.fromRGB(210, 210, 210),
-	Plot = Color3.fromRGB(120, 120, 120),
-	Sign = Color3.fromRGB(70, 70, 70),
-	Pedestal = Color3.fromRGB(95, 95, 95),
-	Zone = Color3.fromRGB(105, 105, 105),
-	Entry = Color3.fromRGB(175, 175, 175),
-	Memeling = Color3.fromRGB(200, 200, 200),
-	Extraction = Color3.fromRGB(230, 230, 230),
+	-- Имя владельца на табличке участка — крупнее обычной подписи
+	SignWidthStuds = 22,
+	SignHeightStuds = 5,
 }
 
 return deepFreeze(MapConfig)

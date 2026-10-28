@@ -27,6 +27,7 @@ print(
 )
 
 local Services = script.Services
+local LightingSetup = require(Services.LightingSetup)
 local MapBuilder = require(Services.MapBuilder)
 local Economy = require(Services.Economy)
 local Studio = require(Services.Studio)
@@ -35,6 +36,7 @@ local Spawn = require(Services.Spawn)
 local Extraction = require(Services.Extraction)
 
 -- Порядок важен: сначала карта, потом сервисы, которые её используют
+LightingSetup.Apply()
 MapBuilder.Build()
 Economy.Start()
 Studio.Start()

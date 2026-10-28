@@ -91,6 +91,11 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   «SAFE AT BASE» (BankedAura) и синяя «In hands: N/M · LOST IF YOU DIE». В InRaid — маркер
   «EXTRACT» над площадкой (виден сквозь стены) и стрелка у края экрана, если площадка за кадром.
   Клиент только читает атрибуты игрока (BankedAura, CarriedCount, CarrySlots, RaidState).
+- 1.7 (визуальный проход, вне плана): весь вид — в `src/shared/Config/StyleConfig.luau`
+  (палитра, материалы, частицы, свет, шрифт, цвета HUD). Яркие цвета: свой у хаба, каждого участка
+  и зоны; у зоны безопасная половина (бирюза) и опасная (красная, восточнее MapConfig.Zone.DangerFromX).
+  Неон + частицы у портала и EXTRACT. Мемлинги — круглое тело цвета редкости + два глаза,
+  у Epic/Legendary свет и искры. Свет (Atmosphere, Bloom, ColorCorrection, Sky) — сервис LightingSetup.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1`
 (luau-lsp analyze с типами Roblox + rojo build в test.rbxl).

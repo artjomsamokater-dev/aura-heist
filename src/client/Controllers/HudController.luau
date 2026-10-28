@@ -10,21 +10,22 @@ local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
+local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
 
 local HudController = {}
 
 local player = Players.LocalPlayer
 
--- Внешний вид HUD (не баланс): крупно, чтобы читалось на телефоне
+-- Размеры HUD: крупно, чтобы читалось на телефоне. Цвета и шрифт — в StyleConfig.Hud
 local CARD_WIDTH = 300
 local CAPTION_SIZE = 18
 local VALUE_SIZE = 34
 local MARGIN = 12
-local BASE_COLOR = Color3.fromRGB(255, 196, 40) -- «на базе»: золотой, в безопасности
-local HANDS_COLOR = Color3.fromRGB(60, 150, 255) -- «в руках»: синий, можно потерять
-local TEXT_DARK = Color3.fromRGB(25, 25, 25)
-local TEXT_LIGHT = Color3.fromRGB(255, 255, 255)
+local BASE_COLOR = StyleConfig.Hud.BaseCard
+local HANDS_COLOR = StyleConfig.Hud.HandsCard
+local TEXT_DARK = StyleConfig.Hud.TextDark
+local TEXT_LIGHT = StyleConfig.Hud.TextLight
 local MARKER_HEIGHT = 6 -- на сколько студов над площадкой висит маркер
 local EDGE_PADDING = 70 -- отступ стрелки от края экрана, в пикселях
 
@@ -35,7 +36,7 @@ end
 local function makeLabel(parent: Instance, text: string, size: number, color: Color3): TextLabel
 	local label = Instance.new("TextLabel")
 	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.GothamBlack
+	label.Font = StyleConfig.Fonts.Hud
 	label.TextSize = size
 	label.TextColor3 = color
 	label.TextXAlignment = Enum.TextXAlignment.Left
@@ -162,7 +163,7 @@ local function buildExtractPointer(playerGui: Instance)
 	arrow.BackgroundTransparency = 1
 	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
 	arrow.Size = UDim2.fromOffset(70, 70)
-	arrow.Font = Enum.Font.GothamBlack
+	arrow.Font = StyleConfig.Fonts.Hud
 	arrow.TextSize = 56
 	arrow.TextColor3 = TEXT_LIGHT
 	arrow.TextStrokeTransparency = 0

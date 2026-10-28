@@ -100,7 +100,7 @@ local function updatePedestalLabel(pedestal: Part, slot: Slot, at: number)
 	MapBuilder.SetLabelText(pedestal, string.format(format, formatNumber(stored)))
 end
 
--- Ставит мемлинга на постамент: серый куб с именем и доходом, над ним — накоплено
+-- Ставит мемлинга на постамент: мемлинг с именем и доходом, над ним — накоплено
 local function placeOnPedestal(player: Player, plotIndex: number, pedestalIndex: number, memelingId: string)
 	local pedestal = getPedestal(plotIndex, pedestalIndex)
 	if pedestal == nil then
@@ -108,18 +108,18 @@ local function placeOnPedestal(player: Player, plotIndex: number, pedestalIndex:
 	end
 
 	local size = MapConfig.Memeling.Size
-	local cube = MapBuilder.MakePart(
+	-- Постамент повёрнут как участок: -Z смотрит на хаб, туда же смотрит и мемлинг
+	local cube = MapBuilder.MakeMemeling(
 		"Memeling",
-		size,
+		memelingId,
 		pedestal.CFrame * CFrame.new(0, pedestal.Size.Y / 2 + size.Y / 2, 0),
-		MapConfig.Colors.Memeling,
 		pedestal
 	)
 	cube:SetAttribute("MemelingId", memelingId)
 	local name = TextConfig.MemelingNames[memelingId] or memelingId
 	MapBuilder.AddLabel(cube, string.format(TextConfig.PedestalMemeling, name, getRate(memelingId)))
 
-	-- Подпись «накоплено» висит над подписью куба
+	-- Подпись «накоплено» висит над подписью мемлинга
 	MapBuilder.AddLabel(pedestal, "", pedestal.Size.Y / 2 + size.Y + MapConfig.Label.HeightStuds * 1.5)
 
 	local slot: Slot = { MemelingId = memelingId, StartedAt = now(), Cube = cube }

@@ -75,13 +75,14 @@ local function loseCarried(player: Player, reason: string)
 	print(string.format("[Raid] %s потерял мемлингов: %d (%s)", player.Name, #list, reason))
 end
 
--- Куб едет вместе с персонажем: приварен к HumanoidRootPart и лежит внутри модели персонажа
+-- Мемлинг едет вместе с персонажем: приварен к HumanoidRootPart и лежит внутри модели персонажа.
+-- Развёрнут на 180°, чтобы глазами смотрел на игрока (камера обычно сзади).
 local function attachToCharacter(part: Part, character: Model, root: BasePart, slotIndex: number)
 	local offset = MapConfig.Memeling.CarryOffset + MapConfig.Memeling.CarryStackStep * (slotIndex - 1)
 	part.Anchored = false
 	part.CanCollide = false
 	part.Massless = true
-	part.CFrame = root.CFrame * CFrame.new(offset)
+	part.CFrame = root.CFrame * CFrame.new(offset) * CFrame.Angles(0, math.pi, 0)
 
 	local weld = Instance.new("WeldConstraint")
 	weld.Part0 = root
