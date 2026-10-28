@@ -14,11 +14,12 @@ end
 local SecurityConfig = {}
 
 SecurityConfig.MaxIdLength = 32 -- ID длиннее этого — точно мусор
-SecurityConfig.DistanceToleranceStuds = 2 -- запас к дистанциям из ZoneConfig на задержку сети
+SecurityConfig.DistanceToleranceStuds = 2 -- запас к дистанциям из Config на задержку сети
 
 -- Не больше MaxRequests запросов за WindowSeconds секунд на одного игрока
 SecurityConfig.RateLimits = {
 	Pickup = { MaxRequests = 4, WindowSeconds = 1 },
+	Collect = { MaxRequests = 4, WindowSeconds = 1 },
 }
 
 return deepFreeze(SecurityConfig)

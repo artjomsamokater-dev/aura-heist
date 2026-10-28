@@ -28,6 +28,7 @@ print(
 
 local Services = script.Services
 local MapBuilder = require(Services.MapBuilder)
+local Economy = require(Services.Economy)
 local Studio = require(Services.Studio)
 local Raid = require(Services.Raid)
 local Spawn = require(Services.Spawn)
@@ -35,9 +36,10 @@ local Extraction = require(Services.Extraction)
 
 -- Порядок важен: сначала карта, потом сервисы, которые её используют
 MapBuilder.Build()
+Economy.Start()
 Studio.Start()
 Raid.Start()
 Spawn.Start()
 Extraction.Start()
 
-print("[Server] Сервисы запущены: MapBuilder, Studio, Raid, Spawn, Extraction")
+print("[Server] Сервисы запущены: MapBuilder, Economy, Studio, Raid, Spawn, Extraction")

@@ -23,9 +23,13 @@ TextConfig.Zone = "MEME ZONE"
 TextConfig.Entry = "Entry"
 TextConfig.Extraction = "EXTRACT"
 TextConfig.ExtractionProgress = "EXTRACTING... %d" -- %d — сколько секунд осталось
+TextConfig.PedestalMemeling = "%s\n+%d/s" -- имя мемлинга и доход в секунду
+TextConfig.PedestalStored = "%s Aura" -- сколько накоплено на постаменте
+TextConfig.PedestalFull = "%s Aura (FULL)" -- накоплено до предела хранилища
 
 -- Кнопки
 TextConfig.PickupAction = "Pick up"
+TextConfig.CollectAction = "Collect"
 
 -- Имена мемлингов: ключ — Id из MemelingConfig
 TextConfig.MemelingNames = {
