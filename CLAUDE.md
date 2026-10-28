@@ -63,10 +63,14 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
 
 ## Где остановились
 
-Задачи 0.1–1.1 готовы:
+Задачи 0.1–1.2 готовы:
 - Фаза 0 (0.1–0.6): Studio, VS Code, Rojo, rojo init, связь со Studio, GitHub,
   Test place «AURA HEIST TEST» (private), Config-модули.
 - 1.1: серый прототип карты из кода (хаб, 8 участков с постаментами, портал,
   зона на высоте Y = 300), сервисы MapBuilder, Studio, Raid (InHub / InRaid).
+- 1.2: сервис Spawn ставит Common-мемлингов (серые кубы с именем) на точки спавна из MapConfig.
 
-Следующая задача — 1.2.
+Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1`
+(luau-lsp analyze с типами Roblox + rojo build в test.rbxl).
+
+Следующая задача — 1.3.

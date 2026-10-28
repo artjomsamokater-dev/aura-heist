@@ -1,3 +1,4 @@
+--!strict
 -- MapBuilder: при старте сервера строит серый прототип карты по MapConfig.
 -- Хаб → Workspace.Hub, участки → Workspace.PlayerStudios, зона → Workspace.RaidZone.
 
@@ -9,12 +10,13 @@ local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local MapBuilder = {}
 
 local built = false
-local plots = {} -- [номер участка] = Model участка
-local portalPart = nil
-local zoneEntryPart = nil
+local plots: { Model } = {} -- [номер участка] = Model участка
+local portalPart: Part? = nil
+local zoneFolder: Folder? = nil
+local zoneEntryPart: Part? = nil
 
 -- Создаёт папку в Workspace; старую с тем же именем удаляет, чтобы не было дублей
-local function makeFolder(name)
+local function makeFolder(name: string): Folder
 	local old = Workspace:FindFirstChild(name)
 	if old then
 		old:Destroy()
@@ -25,7 +27,7 @@ local function makeFolder(name)
 	return folder
 end
 
-local function makePart(name, size, cframe, color, parent)
+local function makePart(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
 	local part = Instance.new("Part")
 	part.Name = name
 	part.Size = size
@@ -40,7 +42,7 @@ local function makePart(name, size, cframe, color, parent)
 end
 
 -- Вешает над деталью подпись, которая всегда повёрнута к камере
-local function addLabel(part, text)
+local function addLabel(part: BasePart, text: string)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
 	gui.Size = UDim2.fromScale(MapConfig.Label.WidthStuds, MapConfig.Label.HeightStuds)
@@ -134,6 +136,7 @@ end
 
 local function buildZone()
 	local folder = makeFolder("RaidZone")
+	zoneFolder = folder
 	local zone = MapConfig.Zone
 
 	local floor = makePart("Floor", zone.Size, CFrame.new(zone.Center), MapConfig.Colors.Zone, folder)
@@ -165,24 +168,34 @@ function MapBuilder.Build()
 end
 
 -- Список участков по порядку (Model)
-function MapBuilder.GetPlots()
+function MapBuilder.GetPlots(): { Model }
 	return plots
 end
 
-function MapBuilder.GetPortal()
-	return portalPart
+function MapBuilder.GetPortal(): Part
+	return assert(portalPart, "MapBuilder.Build() ещё не вызван")
+end
+
+-- Папка Workspace.RaidZone
+function MapBuilder.GetZoneFolder(): Folder
+	return assert(zoneFolder, "MapBuilder.Build() ещё не вызван")
 end
 
 -- Куда ставить персонажа при входе в зону
-function MapBuilder.GetZoneEntryCFrame()
-	return CFrame.new(zoneEntryPart.Position + Vector3.new(0, MapConfig.Zone.EntrySpawnHeight, 0))
+function MapBuilder.GetZoneEntryCFrame(): CFrame
+	local entry = assert(zoneEntryPart, "MapBuilder.Build() ещё не вызван")
+	return CFrame.new(entry.Position + Vector3.new(0, MapConfig.Zone.EntrySpawnHeight, 0))
 end
 
+-- Те же помощники для других сервисов (серые детали и подписи)
+MapBuilder.MakePart = makePart
+MapBuilder.AddLabel = addLabel
+
 -- Меняет текст подписи, созданной addLabel
-function MapBuilder.SetLabelText(part, text)
-	local gui = part:FindFirstChild("Label")
+function MapBuilder.SetLabelText(part: Instance?, text: string)
+	local gui = part and part:FindFirstChild("Label")
 	local label = gui and gui:FindFirstChild("Text")
-	if label then
+	if label and label:IsA("TextLabel") then
 		label.Text = text
 	end
 end

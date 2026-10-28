@@ -12,6 +12,11 @@ local function deepFreeze<T>(t: T): T
 	return table.freeze(t :: any) :: any
 end
 
+export type Memeling = {
+	DisplayName: string,
+	Rarity: string,
+}
+
 local MemelingConfig = {}
 
 -- Порядок редкостей от слабой к сильной (у словаря порядка нет, поэтому отдельный список)
@@ -42,6 +47,6 @@ MemelingConfig.Memelings = {
 	ProfessorBonk = { DisplayName = "Professor Bonk", Rarity = "Epic" },
 	-- Legendary
 	MegaSnoozeasaurus = { DisplayName = "Mega Snoozeasaurus", Rarity = "Legendary" },
-}
+} :: { [string]: Memeling }
 
 return deepFreeze(MemelingConfig)

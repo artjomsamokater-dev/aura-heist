@@ -53,13 +53,31 @@ MapConfig.Plots = {
 -- Meme Zone: отдельная площадка в стороне от хаба, поднятая в воздух.
 -- Пешком или прыжком туда не попасть, только через портал.
 local ZONE_FLOOR_Y = 300 -- высота нижней грани пола зоны
+local ZONE_TOP = Vector3.new(500, ZONE_FLOOR_Y + 1, 0) -- центр верхней грани пола зоны; от него считаем точки
 
 MapConfig.Zone = {
-	Center = Vector3.new(500, ZONE_FLOOR_Y + 0.5, 0),
+	Center = ZONE_TOP - Vector3.new(0, 0.5, 0),
 	Size = Vector3.new(160, 1, 160),
-	EntryPosition = Vector3.new(440, ZONE_FLOOR_Y + 1, 0), -- точка входа на верхней грани пола зоны
+	EntryPosition = ZONE_TOP + Vector3.new(-60, 0, 0), -- точка входа на полу зоны (западный край)
 	EntryMarkerSize = Vector3.new(8, 0.2, 8),
 	EntrySpawnHeight = 4, -- на сколько студов выше точки входа ставим персонажа
+
+	-- Точки спавна мемлингов на полу зоны: на каждой появляется один мемлинг
+	SpawnPoints = {
+		ZONE_TOP + Vector3.new(-40, 0, -30),
+		ZONE_TOP + Vector3.new(-40, 0, 30),
+		ZONE_TOP + Vector3.new(-10, 0, -55),
+		ZONE_TOP + Vector3.new(-10, 0, 0),
+		ZONE_TOP + Vector3.new(-10, 0, 55),
+		ZONE_TOP + Vector3.new(20, 0, -35),
+		ZONE_TOP + Vector3.new(20, 0, 35),
+		ZONE_TOP + Vector3.new(35, 0, 0),
+	},
+}
+
+-- Вид мемлинга в сером прототипе: просто куб с подписью-именем
+MapConfig.Memeling = {
+	Size = Vector3.new(3, 3, 3),
 }
 
 -- Подписи над объектами (BillboardGui), размеры в студах
@@ -88,6 +106,7 @@ MapConfig.Colors = {
 	Pedestal = Color3.fromRGB(95, 95, 95),
 	Zone = Color3.fromRGB(105, 105, 105),
 	Entry = Color3.fromRGB(175, 175, 175),
+	Memeling = Color3.fromRGB(200, 200, 200),
 }
 
 return deepFreeze(MapConfig)

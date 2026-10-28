@@ -1,3 +1,4 @@
+--!strict
 -- Studio: раздаёт игрокам участки баз (студии).
 -- Вошёл — получил первый свободный участок, вышел — участок снова свободен.
 -- Если свободных нет, игрок просто играет без участка.
@@ -24,7 +25,7 @@ local function assignPlot(player)
 			playerPlots[player] = index
 			plot:SetAttribute("OwnerUserId", player.UserId)
 			player:SetAttribute("StudioIndex", index)
-			MapBuilder.SetLabelText(plot.Sign, string.format(MapConfig.Text.OwnedPlot, player.DisplayName))
+			MapBuilder.SetLabelText(plot:FindFirstChild("Sign"), string.format(MapConfig.Text.OwnedPlot, player.DisplayName))
 			print(string.format("[Studio] %s получил участок %d", player.Name, index))
 			return
 		end
@@ -45,7 +46,7 @@ local function releasePlot(player)
 	local plot = MapBuilder.GetPlots()[index]
 	if plot then
 		plot:SetAttribute("OwnerUserId", 0)
-		MapBuilder.SetLabelText(plot.Sign, MapConfig.Text.FreePlot)
+		MapBuilder.SetLabelText(plot:FindFirstChild("Sign"), MapConfig.Text.FreePlot)
 	end
 	print(string.format("[Studio] Участок %d освобождён (%s вышел)", index, player.Name))
 end

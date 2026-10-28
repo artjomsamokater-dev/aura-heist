@@ -1,3 +1,4 @@
+--!strict
 -- Точка входа сервера: проверяет Config и запускает сервисы по порядку.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,10 +30,12 @@ local Services = script.Services
 local MapBuilder = require(Services.MapBuilder)
 local Studio = require(Services.Studio)
 local Raid = require(Services.Raid)
+local Spawn = require(Services.Spawn)
 
 -- Порядок важен: сначала карта, потом сервисы, которые её используют
 MapBuilder.Build()
 Studio.Start()
 Raid.Start()
+Spawn.Start()
 
-print("[Server] Сервисы запущены: MapBuilder, Studio, Raid")
+print("[Server] Сервисы запущены: MapBuilder, Studio, Raid, Spawn")
