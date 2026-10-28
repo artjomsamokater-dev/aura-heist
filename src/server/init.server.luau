@@ -29,6 +29,7 @@ print(
 local Services = script.Services
 local LightingSetup = require(Services.LightingSetup)
 local MapBuilder = require(Services.MapBuilder)
+local PlayerData = require(Services.PlayerData)
 local Economy = require(Services.Economy)
 local Studio = require(Services.Studio)
 local Raid = require(Services.Raid)
@@ -43,5 +44,7 @@ Studio.Start()
 Raid.Start()
 Spawn.Start()
 Extraction.Start()
+-- Последним: все сервисы уже подписались на PlayerData.OnLoaded
+PlayerData.Start()
 
-print("[Server] Сервисы запущены: MapBuilder, Economy, Studio, Raid, Spawn, Extraction")
+print("[Server] Сервисы запущены: MapBuilder, Economy, Studio, Raid, Spawn, Extraction, PlayerData")

@@ -2,9 +2,11 @@
 -- Studio: участки баз (студии), постаменты и витрина.
 -- Вошёл — получил первый свободный участок, вышел — участок снова свободен.
 -- Если свободных нет, игрок просто играет без участка.
--- Вынесенные мемлинги встают на свободные постаменты своего участка, остальные — «в запас».
--- Постамент копит Aura по доходу редкости, но не больше UpgradeConfig.Storage.StartSeconds секунд дохода.
--- Собранная Aura начисляется только через Economy. Всё пока в памяти сервера (сохранение — задача 2.1).
+--
+-- Витрина и запас живут в профиле игрока (PlayerData): data.showcase и data.reserve.
+-- Здесь в памяти только то, что нарисовано в мире (мемлинги на постаментах).
+-- Постамент копит Aura от lastCollect (PedestalMath), поэтому офлайн-доход считается сам
+-- и упирается в лимит хранилища. Собранная Aura начисляется только через Economy.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,24 +21,26 @@ local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
+local PedestalMath = require(ReplicatedStorage.Shared.Util.PedestalMath)
 local MapBuilder = require(script.Parent.MapBuilder)
+local PlayerData = require(script.Parent.PlayerData)
 local Economy = require(script.Parent.Economy)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 local RateLimiter = require(ServerScriptService.Server.Security.RateLimiter)
 
 local Studio = {}
 
--- Мемлинг на постаменте
+type ShowcaseEntry = PlayerData.ShowcaseEntry
+
+-- Мемлинг, нарисованный на постаменте: строка профиля + его модель в мире
 type Slot = {
-	MemelingId: string,
-	StartedAt: number, -- с какого момента (время сервера) копится Aura; сбор сдвигает его вперёд
-	Cube: Part,
+	Entry: ShowcaseEntry,
+	Body: Part,
 }
 
 local plotOwners: { [number]: Player? } = {} -- [номер участка] = Player
 local playerPlots: { [Player]: number } = {} -- [Player] = номер участка
-local slots: { [Player]: { [number]: Slot } } = {} -- [Player][номер постамента] = Slot
-local reserves: { [Player]: { string } } = {} -- [Player] = MemelingId «в запасе» (не хватило постаментов)
+local rendered: { [Player]: { [number]: Slot } } = {} -- [Player][номер постамента] = Slot
 
 local collectLimiter =
 	RateLimiter.new(SecurityConfig.RateLimits.Collect.MaxRequests, SecurityConfig.RateLimits.Collect.WindowSeconds)
@@ -45,9 +49,16 @@ local function now(): number
 	return Workspace:GetServerTimeNow()
 end
 
+-- ── Числа постаментов ──────────────────────────────────────────────────────
+
 -- Сколько постаментов игрок может занять (улучшения — задача 2.2)
-local function getPedestalCount(): number
+local function getPedestalCount(_data: PlayerData.Data): number
 	return math.min(UpgradeConfig.Pedestals.StartCount, #MapConfig.Plots.PedestalOffsets)
+end
+
+-- Лимит хранилища в секундах дохода (улучшение — задача 2.2)
+local function getStorageSeconds(_data: PlayerData.Data): number
+	return UpgradeConfig.Storage.StartSeconds
 end
 
 local function getRate(memelingId: string): number
@@ -56,15 +67,7 @@ local function getRate(memelingId: string): number
 	return if rarity then rarity.AuraPerSecond else 0
 end
 
-local function getCapacity(memelingId: string): number
-	return getRate(memelingId) * UpgradeConfig.Storage.StartSeconds
-end
-
--- Сколько Aura накоплено на постаменте сейчас (может быть дробным; игроку показываем вниз)
-local function getStored(slot: Slot, at: number): number
-	local stored = (at - slot.StartedAt) * getRate(slot.MemelingId)
-	return math.clamp(stored, 0, getCapacity(slot.MemelingId))
-end
+-- ── Мир: постаменты участка ────────────────────────────────────────────────
 
 local function getPedestal(plotIndex: number, pedestalIndex: number): Part?
 	local plot = MapBuilder.GetPlots()[plotIndex]
@@ -76,52 +79,49 @@ local function getPedestal(plotIndex: number, pedestalIndex: number): Part?
 	return nil
 end
 
-local function setPromptEnabled(pedestal: Part, enabled: boolean)
-	local prompt = pedestal:FindFirstChild("CollectPrompt")
+local function setPromptEnabled(pedestal: Part, name: string, enabled: boolean)
+	local prompt = pedestal:FindFirstChild(name)
 	if prompt and prompt:IsA("ProximityPrompt") then
 		prompt.Enabled = enabled
 	end
 end
 
 local function publishCounts(player: Player)
-	local placed = 0
-	local playerSlots = slots[player]
-	if playerSlots then
-		for _ in playerSlots do
-			placed += 1
-		end
-	end
-	player:SetAttribute("PedestalMemelings", placed)
-	player:SetAttribute("ReserveCount", #(reserves[player] or {}))
+	local data = PlayerData.GetData(player)
+	player:SetAttribute("PedestalMemelings", if data then #data.showcase else 0)
+	player:SetAttribute("ReserveCount", if data then #data.reserve else 0)
 end
 
-local function updatePedestalLabel(pedestal: Part, slot: Slot, at: number)
-	local stored = getStored(slot, at)
-	local format = if stored >= getCapacity(slot.MemelingId) then TextConfig.PedestalFull else TextConfig.PedestalStored
+local function updatePedestalLabel(pedestal: Part, entry: ShowcaseEntry, data: PlayerData.Data, at: number)
+	local rate = getRate(entry.memelingId)
+	local storageSeconds = getStorageSeconds(data)
+	local stored = PedestalMath.GetStored(rate, entry.lastCollect, at, storageSeconds)
+	local full = stored >= rate * storageSeconds
+	local format = if full then TextConfig.PedestalFull else TextConfig.PedestalStored
 	MapBuilder.SetLabelText(pedestal, string.format(format, formatNumber(stored)))
 end
 
--- Ставит мемлинга на постамент: мемлинг с именем и доходом, над ним — накоплено
-local function placeOnPedestal(player: Player, plotIndex: number, pedestalIndex: number, memelingId: string)
-	local pedestal = getPedestal(plotIndex, pedestalIndex)
-	if pedestal == nil then
+-- Рисует мемлинга на постаменте: мемлинг с именем и доходом, над ним — накоплено
+local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEntry, data: PlayerData.Data)
+	local pedestal = getPedestal(plotIndex, entry.pedestal)
+	if pedestal == nil or MemelingConfig.Memelings[entry.memelingId] == nil then
 		return
 	end
 
 	local size = StyleConfig.Memeling.Size
 	local labelStyle = StyleConfig.Label
 	-- Постамент повёрнут как участок: -Z смотрит на хаб, туда же смотрит и мемлинг
-	local cube = MapBuilder.MakeMemeling(
+	local body = MapBuilder.MakeMemeling(
 		"Memeling",
-		memelingId,
+		entry.memelingId,
 		pedestal.CFrame * CFrame.new(0, pedestal.Size.Y / 2 + size.Y / 2, 0),
 		pedestal
 	)
-	cube:SetAttribute("MemelingId", memelingId)
-	local name = TextConfig.MemelingNames[memelingId] or memelingId
+	body:SetAttribute("MemelingId", entry.memelingId)
+	local name = TextConfig.MemelingNames[entry.memelingId] or entry.memelingId
 	MapBuilder.AddLabel(
-		cube,
-		string.format(TextConfig.PedestalMemeling, name, getRate(memelingId)),
+		body,
+		string.format(TextConfig.PedestalMemeling, name, getRate(entry.memelingId)),
 		{ MaxDistance = labelStyle.MemelingMaxDistance }
 	)
 
@@ -130,33 +130,56 @@ local function placeOnPedestal(player: Player, plotIndex: number, pedestalIndex:
 		Height = pedestal.Size.Y / 2 + size.Y + labelStyle.HeightStuds * 1.5 + labelStyle.PedestalAuraGap,
 	})
 
-	local slot: Slot = { MemelingId = memelingId, StartedAt = now(), Cube = cube }
-	slots[player] = slots[player] or {}
-	slots[player][pedestalIndex] = slot
-	updatePedestalLabel(pedestal, slot, now())
-	setPromptEnabled(pedestal, true)
+	rendered[player] = rendered[player] or {}
+	rendered[player][entry.pedestal] = { Entry = entry, Body = body }
+	updatePedestalLabel(pedestal, entry, data, now())
+	setPromptEnabled(pedestal, "CollectPrompt", true)
 end
 
--- Убирает всё с постаментов игрока (при выходе)
-local function clearPedestals(player: Player, plotIndex: number?)
-	local playerSlots = slots[player]
-	slots[player] = nil
-	reserves[player] = nil
-	if playerSlots == nil or plotIndex == nil then
-		return
+-- Убирает мемлинга с постамента в мире (профиль не трогает)
+local function unrenderPedestal(player: Player, plotIndex: number, pedestalIndex: number)
+	local playerSlots = rendered[player]
+	local slot = playerSlots and playerSlots[pedestalIndex]
+	if slot then
+		slot.Body:Destroy()
+		playerSlots[pedestalIndex] = nil
 	end
-	for pedestalIndex, slot in playerSlots do
-		slot.Cube:Destroy()
-		local pedestal = getPedestal(plotIndex, pedestalIndex)
-		if pedestal then
-			local label = pedestal:FindFirstChild("Label")
-			if label then
-				label:Destroy()
-			end
-			setPromptEnabled(pedestal, false)
+	local pedestal = getPedestal(plotIndex, pedestalIndex)
+	if pedestal then
+		local label = pedestal:FindFirstChild("Label")
+		if label then
+			label:Destroy()
 		end
+		setPromptEnabled(pedestal, "CollectPrompt", false)
 	end
 end
+
+-- Рисует всю витрину игрока на его участке (после загрузки профиля)
+local function renderShowcase(player: Player)
+	local plotIndex = playerPlots[player]
+	local data = PlayerData.GetData(player)
+	if plotIndex == nil or data == nil then
+		return
+	end
+	for _, entry in ipairs(data.showcase) do
+		if rendered[player] == nil or rendered[player][entry.pedestal] == nil then
+			renderEntry(player, plotIndex, entry, data)
+		end
+	end
+	publishCounts(player)
+end
+
+local function clearPlot(player: Player, plotIndex: number)
+	local playerSlots = rendered[player]
+	if playerSlots then
+		for pedestalIndex in playerSlots do
+			unrenderPedestal(player, plotIndex, pedestalIndex)
+		end
+	end
+	rendered[player] = nil
+end
+
+-- ── Сбор Aura ──────────────────────────────────────────────────────────────
 
 -- Игрок нажал «Collect» на постаменте. Все проверки — на сервере.
 local function tryCollect(player: Player, plotIndex: number, pedestalIndex: number)
@@ -167,12 +190,10 @@ local function tryCollect(player: Player, plotIndex: number, pedestalIndex: numb
 		return -- чужой участок
 	end
 	local _, root = RemoteGuard.GetAliveCharacter(player)
-	if root == nil then
-		return
-	end
+	local data = PlayerData.GetData(player)
 	local pedestal = getPedestal(plotIndex, pedestalIndex)
-	local slot = slots[player] and slots[player][pedestalIndex]
-	if pedestal == nil or slot == nil then
+	local slot = rendered[player] and rendered[player][pedestalIndex]
+	if root == nil or data == nil or pedestal == nil or slot == nil then
 		return
 	end
 	if not RemoteGuard.IsNear(root, pedestal.Position, EconomyConfig.CollectDistance) then
@@ -180,15 +201,16 @@ local function tryCollect(player: Player, plotIndex: number, pedestalIndex: numb
 	end
 
 	local at = now()
-	local stored = getStored(slot, at)
-	local amount = math.floor(stored)
+	local entry = slot.Entry
+	local amount, newLastCollect =
+		PedestalMath.Collect(getRate(entry.memelingId), entry.lastCollect, at, getStorageSeconds(data))
 	if amount < 1 then
 		return
 	end
 
-	-- Сначала забираем Aura с постамента (дробный остаток остаётся копиться), потом начисляем
-	slot.StartedAt = at - (stored - amount) / getRate(slot.MemelingId)
-	updatePedestalLabel(pedestal, slot, at)
+	-- Сначала забираем Aura с постамента, потом начисляем: повторное нажатие уже ничего не найдёт
+	entry.lastCollect = newLastCollect
+	updatePedestalLabel(pedestal, entry, data, at)
 	Economy.AddBankedAura(player, amount, "сбор с постамента " .. pedestalIndex)
 end
 
@@ -213,6 +235,8 @@ local function addCollectPrompts()
 	end
 end
 
+-- ── Участки ────────────────────────────────────────────────────────────────
+
 local function assignPlot(player: Player)
 	if playerPlots[player] then
 		return
@@ -225,22 +249,22 @@ local function assignPlot(player: Player)
 			plot:SetAttribute("OwnerUserId", player.UserId)
 			player:SetAttribute("StudioIndex", index)
 			MapBuilder.SetLabelText(plot:FindFirstChild("Sign"), string.format(TextConfig.OwnedPlot, player.DisplayName))
-			publishCounts(player)
 			print(string.format("[Studio] %s получил участок %d", player.Name, index))
+			renderShowcase(player) -- если профиль уже загружен
 			return
 		end
 	end
 
-	publishCounts(player)
 	warn(string.format("[Studio] Свободных участков нет, %s играет без участка", player.Name))
 end
 
 local function releasePlot(player: Player)
 	local index = playerPlots[player]
-	clearPedestals(player, index)
 	if not index then
+		rendered[player] = nil
 		return
 	end
+	clearPlot(player, index)
 
 	playerPlots[player] = nil
 	plotOwners[index] = nil
@@ -259,30 +283,42 @@ function Studio.GetPlot(player: Player): Model?
 	return index and MapBuilder.GetPlots()[index] or nil
 end
 
+-- ── Витрина ────────────────────────────────────────────────────────────────
+
+-- Первый свободный постамент из доступных игроку или nil
+local function findFreePedestal(data: PlayerData.Data): number?
+	local taken: { [number]: boolean } = {}
+	for _, entry in ipairs(data.showcase) do
+		taken[entry.pedestal] = true
+	end
+	for pedestalIndex = 1, getPedestalCount(data) do
+		if not taken[pedestalIndex] then
+			return pedestalIndex
+		end
+	end
+	return nil
+end
+
 -- Вынесенные мемлинги: на свободные постаменты, остальные — в запас (вызывает Extraction)
 function Studio.AddToShowcase(player: Player, memelingIds: { string })
+	local data = PlayerData.GetData(player)
+	if data == nil then
+		warn(string.format("[Studio] Профиль %s не загружен — мемлинги не сохранены", player.Name))
+		return
+	end
 	local plotIndex = playerPlots[player]
-	local playerSlots = slots[player] or {}
-	local reserve = reserves[player] or {}
-	reserves[player] = reserve
 
 	for _, memelingId in ipairs(memelingIds) do
-		local freeIndex: number? = nil
-		if plotIndex then
-			for pedestalIndex = 1, getPedestalCount() do
-				if playerSlots[pedestalIndex] == nil then
-					freeIndex = pedestalIndex
-					break
-				end
+		local freeIndex = findFreePedestal(data)
+		if freeIndex then
+			local entry: ShowcaseEntry = { pedestal = freeIndex, memelingId = memelingId, lastCollect = now() }
+			table.insert(data.showcase, entry)
+			if plotIndex then
+				renderEntry(player, plotIndex, entry, data)
 			end
-		end
-
-		if plotIndex and freeIndex then
-			placeOnPedestal(player, plotIndex, freeIndex, memelingId)
-			playerSlots = slots[player] or playerSlots
 			print(string.format("[Studio] %s: %s на постаменте %d", player.Name, memelingId, freeIndex))
 		else
-			table.insert(reserve, memelingId)
+			table.insert(data.reserve, memelingId)
 			print(string.format("[Studio] %s: %s в запасе (нет свободного постамента)", player.Name, memelingId))
 		end
 	end
@@ -291,13 +327,14 @@ end
 
 local function updateAllLabels()
 	local at = now()
-	for player, playerSlots in slots do
+	for player, playerSlots in rendered do
 		local plotIndex = playerPlots[player]
-		if plotIndex then
+		local data = PlayerData.GetData(player)
+		if plotIndex and data then
 			for pedestalIndex, slot in playerSlots do
 				local pedestal = getPedestal(plotIndex, pedestalIndex)
 				if pedestal then
-					updatePedestalLabel(pedestal, slot, at)
+					updatePedestalLabel(pedestal, slot.Entry, data, at)
 				end
 			end
 		end
@@ -309,6 +346,9 @@ function Studio.Start()
 
 	Players.PlayerAdded:Connect(assignPlot)
 	Players.PlayerRemoving:Connect(releasePlot)
+	PlayerData.OnLoaded(function(player)
+		renderShowcase(player)
+	end)
 
 	-- Игроки, которые успели зайти до запуска сервиса
 	for _, player in ipairs(Players:GetPlayers()) do

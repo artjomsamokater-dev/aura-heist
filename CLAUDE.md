@@ -101,6 +101,14 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   имена мемлингов видны только вблизи (35 студов), имя владельца — на самой табличке (SurfaceGui),
   маркер EXTRACT прячется вблизи; мемлинги в 2 раза крупнее, Common с оранжевым контуром.
   Размеры мемлинга и подписей переехали из MapConfig в StyleConfig.
+- 2.1: сохранение. ProfileStore (loleris, Apache 2.0) вшит в `src/server/Packages/ProfileStore.luau`
+  с коммита 45c9847, лицензия — `licenses/ProfileStore-LICENSE.txt`; check.ps1 его не проверяет.
+  Сервис PlayerData: профиль `Player_<UserId>` в DataStore `PlayerProfiles`, блокировка сессии,
+  автосейв по EconomyConfig.AutosaveSeconds, сохранение при выходе и BindToClose; не загрузился —
+  кик с текстом из TextConfig. Схема (schemaVersion 1): bankedAura, showcase {pedestal, memelingId,
+  lastCollect}, reserve {memelingId}, upgrades {pedestals, carrySlots, storage}, stats.
+  Economy и Studio работают с данными профиля; накопление постамента — shared/Util/PedestalMath
+  (от lastCollect, не больше лимита — так же считается офлайн-доход). В портал нельзя без профиля.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1`
 (luau-lsp analyze с типами Roblox + rojo build в test.rbxl).
@@ -108,4 +116,4 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
 После 1.4: тексты для игрока вынесены в TextConfig, потерянные мемлинги возвращаются
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
-Следующая задача — 2.1 (PlayerData на ProfileStore).
+Следующая задача — 2.2 (покупка улучшений).

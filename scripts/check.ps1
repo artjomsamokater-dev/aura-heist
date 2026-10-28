@@ -22,7 +22,8 @@ rojo sourcemap default.project.json --output sourcemap.json
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== luau-lsp analyze"
-luau-lsp analyze --platform=roblox --sourcemap=sourcemap.json "--definitions=@roblox=$defs" src
+# Чужие библиотеки в src/server/Packages (ProfileStore) не проверяем: их код не правим
+luau-lsp analyze --platform=roblox --sourcemap=sourcemap.json "--definitions=@roblox=$defs" "--ignore=**/Packages/**" src
 $analyzeCode = $LASTEXITCODE
 
 Write-Host "== rojo build"

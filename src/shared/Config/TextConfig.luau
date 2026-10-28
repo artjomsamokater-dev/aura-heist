@@ -41,6 +41,11 @@ TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
 
+-- Сообщения при кике (сохранение)
+TextConfig.KickProfileLoadFailed = "We couldn't load your save. Your progress is safe — please rejoin in a minute."
+TextConfig.KickProfileNewer = "This server is outdated. Please rejoin to get the latest version."
+TextConfig.KickSessionEnded = "Your save was opened on another server. Please rejoin."
+
 -- Имена мемлингов: ключ — Id из MemelingConfig
 TextConfig.MemelingNames = {
 	ToastPaw = "Toast Paw",

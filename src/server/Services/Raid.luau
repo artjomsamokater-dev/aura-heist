@@ -13,6 +13,7 @@ local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
+local PlayerData = require(script.Parent.PlayerData)
 local Spawn = require(script.Parent.Spawn)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 local RateLimiter = require(ServerScriptService.Server.Security.RateLimiter)
@@ -144,6 +145,11 @@ local function onPortalTouched(hit: BasePart)
 	if portalBusy[player] or states[player] ~= Raid.State.InHub then
 		return
 	end
+	-- Пока профиль не загружен, в зону не пускаем: вынесенное было бы некуда сохранить
+	local data = PlayerData.GetData(player)
+	if data == nil then
+		return
+	end
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid == nil or humanoid.Health <= 0 then
@@ -153,6 +159,7 @@ local function onPortalTouched(hit: BasePart)
 	portalBusy[player] = true
 	character:PivotTo(MapBuilder.GetZoneEntryCFrame())
 	runs[player] = { Rewarded = false }
+	data.stats.raids += 1
 	setState(player, Raid.State.InRaid)
 	print(string.format("[Raid] %s вошёл в зону", player.Name))
 

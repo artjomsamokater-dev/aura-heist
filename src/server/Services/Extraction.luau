@@ -15,6 +15,7 @@ local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
 local Raid = require(script.Parent.Raid)
 local Studio = require(script.Parent.Studio)
+local PlayerData = require(script.Parent.PlayerData)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
 local Extraction = {}
@@ -37,6 +38,11 @@ local function complete(player: Player)
 		return -- награда за эту вылазку уже выдана
 	end
 	Studio.AddToShowcase(player, memelingIds)
+	local data = PlayerData.GetData(player)
+	if data then
+		data.stats.extractions += 1
+		data.stats.memelingsExtracted += #memelingIds
+	end
 	Raid.ReturnToHub(player)
 	print(
 		string.format(
