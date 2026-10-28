@@ -49,6 +49,8 @@ local lastPurchaseAt: { [Player]: number } = {} -- когда игрок пос�
 local collectLimiter =
 	RateLimiter.new(SecurityConfig.RateLimits.Collect.MaxRequests, SecurityConfig.RateLimits.Collect.WindowSeconds)
 local buyLimiter = RateLimiter.new(SecurityConfig.RateLimits.Buy.MaxRequests, SecurityConfig.RateLimits.Buy.WindowSeconds)
+local sellLimiter =
+	RateLimiter.new(SecurityConfig.RateLimits.Sell.MaxRequests, SecurityConfig.RateLimits.Sell.WindowSeconds)
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -158,10 +160,47 @@ local function refreshButtons(plotIndex: number, data: PlayerData.Data?)
 	end
 end
 
+-- Цена продажи — только из MemelingConfig (0, если мемлинга нет в конфиге)
+local function getSellPrice(memelingId: string): number
+	local memeling = MemelingConfig.Memelings[memelingId]
+	local rarity = memeling and MemelingConfig.Rarities[memeling.Rarity]
+	return if rarity then rarity.SellPrice else 0
+end
+
+local function getReservePad(plotIndex: number): Part?
+	local plot = MapBuilder.GetPlots()[plotIndex]
+	local folder = plot and plot:FindFirstChild("Buttons")
+	local pad = folder and folder:FindFirstChild("Reserve")
+	if pad and pad:IsA("Part") then
+		return pad
+	end
+	return nil
+end
+
+-- Подпись площадки запаса и кнопка «Sell» (продаёт самого старого мемлинга из запаса)
+local function refreshReserve(plotIndex: number, data: PlayerData.Data?)
+	local pad = getReservePad(plotIndex)
+	if pad == nil then
+		return
+	end
+	local count = if data then #data.reserve else 0
+	MapBuilder.SetLabelText(pad, string.format(TextConfig.ReserveLabel, count))
+	local prompt = pad:FindFirstChild("SellPrompt")
+	if prompt and prompt:IsA("ProximityPrompt") then
+		prompt.Enabled = count > 0
+		local first = data and data.reserve[1]
+		prompt.ObjectText = if first then string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(first))) else ""
+	end
+end
+
 local function publishCounts(player: Player)
 	local data = PlayerData.GetData(player)
 	player:SetAttribute("PedestalMemelings", if data then #data.showcase else 0)
 	player:SetAttribute("ReserveCount", if data then #data.reserve else 0)
+	local plotIndex = playerPlots[player]
+	if plotIndex then
+		refreshReserve(plotIndex, data)
+	end
 end
 
 local function updatePedestalLabel(pedestal: Part, entry: ShowcaseEntry, data: PlayerData.Data, at: number)
@@ -206,6 +245,11 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 	rendered[player][entry.pedestal] = { Entry = entry, Body = body }
 	updatePedestalLabel(pedestal, entry, data, now())
 	setPromptEnabled(pedestal, "CollectPrompt", true)
+	setPromptEnabled(pedestal, "SellPrompt", true)
+	local sellPrompt = pedestal:FindFirstChild("SellPrompt")
+	if sellPrompt and sellPrompt:IsA("ProximityPrompt") then
+		sellPrompt.ObjectText = string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(entry.memelingId)))
+	end
 end
 
 -- Убирает мемлинга с постамента в мире (профиль не трогает)
@@ -223,6 +267,7 @@ local function unrenderPedestal(player: Player, plotIndex: number, pedestalIndex
 			label:Destroy()
 		end
 		setPromptEnabled(pedestal, "CollectPrompt", false)
+		setPromptEnabled(pedestal, "SellPrompt", false)
 	end
 end
 
@@ -341,6 +386,7 @@ local function releasePlot(player: Player)
 	clearPlot(player, index)
 	refreshPedestalLocks(index, nil)
 	refreshButtons(index, nil)
+	refreshReserve(index, nil)
 	lastPurchaseAt[player] = nil
 
 	playerPlots[player] = nil
@@ -419,6 +465,115 @@ local function fillFromReserve(player: Player, data: PlayerData.Data)
 		print(string.format("[Studio] %s: %s из запаса на постамент %d", player.Name, memelingId, freeIndex))
 	end
 	publishCounts(player)
+end
+
+-- ── Продажа ────────────────────────────────────────────────────────────────
+
+-- Общие проверки действия на своём участке: rate limit, свой участок, живой персонаж рядом с деталью.
+-- Вернёт данные профиля или nil, если действие нельзя выполнить.
+local function checkPlotAction(
+	player: Player,
+	limiter: RateLimiter.Limiter,
+	plotIndex: number,
+	target: BasePart?,
+	maxDistance: number
+): PlayerData.Data?
+	if not limiter.Allow(player) then
+		return nil
+	end
+	if playerPlots[player] ~= plotIndex or target == nil then
+		return nil -- чужой участок
+	end
+	local _, root = RemoteGuard.GetAliveCharacter(player)
+	local data = PlayerData.GetData(player)
+	if root == nil or data == nil or not RemoteGuard.IsNear(root, target.Position, maxDistance) then
+		return nil
+	end
+	return data
+end
+
+-- Игрок держит «Sell» на постаменте: мемлинг продаётся, накопленная на постаменте Aura тоже начисляется
+local function trySellFromPedestal(player: Player, plotIndex: number, pedestalIndex: number)
+	local pedestal = getPedestal(plotIndex, pedestalIndex)
+	local data = checkPlotAction(player, sellLimiter, plotIndex, pedestal, EconomyConfig.CollectDistance)
+	local slot = rendered[player] and rendered[player][pedestalIndex]
+	if data == nil or slot == nil then
+		return
+	end
+	local entry = slot.Entry
+	local position = table.find(data.showcase, entry)
+	if position == nil then
+		return
+	end
+
+	local price = getSellPrice(entry.memelingId)
+	local collected = PedestalMath.Collect(getRate(entry.memelingId), entry.lastCollect, now(), getStorageSeconds(data))
+
+	-- Сначала мемлинг уходит из профиля, потом начисление: повторное нажатие уже ничего не найдёт
+	table.remove(data.showcase, position)
+	unrenderPedestal(player, plotIndex, pedestalIndex)
+	data.stats.memelingsSold += 1
+	if price > 0 then
+		Economy.AddBankedAura(player, price, "продажа " .. entry.memelingId)
+	end
+	if collected > 0 then
+		Economy.AddBankedAura(player, collected, "сбор при продаже")
+	end
+	print(string.format("[Studio] %s продал %s с постамента %d", player.Name, entry.memelingId, pedestalIndex))
+
+	fillFromReserve(player, data) -- освободившийся постамент занимает мемлинг из запаса
+end
+
+-- Игрок держит «Sell» на площадке запаса: продаётся самый старый мемлинг из запаса
+local function trySellFromReserve(player: Player, plotIndex: number)
+	local data = checkPlotAction(player, sellLimiter, plotIndex, getReservePad(plotIndex), EconomyConfig.ButtonDistance)
+	if data == nil or #data.reserve == 0 then
+		return
+	end
+
+	local memelingId = table.remove(data.reserve, 1) :: string
+	data.stats.memelingsSold += 1
+	local price = getSellPrice(memelingId)
+	if price > 0 then
+		Economy.AddBankedAura(player, price, "продажа из запаса " .. memelingId)
+	end
+	print(string.format("[Studio] %s продал %s из запаса", player.Name, memelingId))
+	publishCounts(player)
+end
+
+local function addSellPrompt(parent: BasePart, maxDistance: number, onTriggered: (player: Player) -> ())
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "SellPrompt"
+	prompt.ActionText = TextConfig.SellAction
+	prompt.MaxActivationDistance = maxDistance
+	prompt.HoldDuration = StyleConfig.Prompts.SellHoldSeconds
+	prompt.KeyboardKeyCode = Enum.KeyCode.F -- E занят кнопкой «Collect» на том же постаменте
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonY
+	prompt.UIOffset = Vector2.new(0, StyleConfig.Prompts.SecondaryOffsetY)
+	prompt.RequiresLineOfSight = false
+	prompt.Enabled = false -- включается, когда есть что продать
+	prompt.Parent = parent
+	prompt.Triggered:Connect(onTriggered)
+end
+
+local function addSellPrompts()
+	for plotIndex = 1, #MapBuilder.GetPlots() do
+		for pedestalIndex = 1, #MapConfig.Plots.PedestalOffsets do
+			local pedestal = getPedestal(plotIndex, pedestalIndex)
+			if pedestal then
+				addSellPrompt(pedestal, EconomyConfig.CollectDistance, function(player)
+					trySellFromPedestal(player, plotIndex, pedestalIndex)
+				end)
+			end
+		end
+		local pad = getReservePad(plotIndex)
+		if pad then
+			addSellPrompt(pad, EconomyConfig.ButtonDistance, function(player)
+				trySellFromReserve(player, plotIndex)
+			end)
+		end
+		refreshReserve(plotIndex, nil)
+	end
 end
 
 -- ── Улучшения ──────────────────────────────────────────────────────────────
@@ -509,6 +664,7 @@ end
 function Studio.Start()
 	addCollectPrompts()
 	addBuyPrompts()
+	addSellPrompts()
 
 	Players.PlayerAdded:Connect(assignPlot)
 	Players.PlayerRemoving:Connect(releasePlot)

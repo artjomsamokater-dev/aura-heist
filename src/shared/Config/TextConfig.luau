@@ -33,6 +33,9 @@ TextConfig.PickupAction = "Pick up"
 TextConfig.CollectAction = "Collect"
 TextConfig.BuyAction = "Buy"
 TextConfig.PriceTag = "%s Aura" -- цена на кнопке покупки
+TextConfig.SellAction = "Sell"
+TextConfig.SellPriceTag = "+%s Aura" -- сколько получишь за продажу
+TextConfig.ReserveLabel = "Reserve: %d" -- сколько мемлингов в запасе
 
 -- Кнопки улучшений на участке: что даст следующий уровень и цена (%d — новое значение, %s — цена)
 TextConfig.UpgradeLabels = {

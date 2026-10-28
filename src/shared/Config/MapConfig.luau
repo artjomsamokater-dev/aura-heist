@@ -61,6 +61,8 @@ MapConfig.Plots = {
 		carrySlots = Vector3.new(6, 0.8, -8),
 		storage = Vector3.new(18, 0.8, -8),
 	} :: { [string]: Vector3 },
+	-- Площадка запаса: мемлинги, которым не хватило постамента (продаются отсюда)
+	ReserveOffset = Vector3.new(-18, 0.8, -8),
 }
 
 -- Meme Zone: отдельная площадка в стороне от хаба, поднятая в воздух.

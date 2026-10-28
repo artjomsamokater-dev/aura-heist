@@ -100,12 +100,15 @@ StyleConfig.Plots = {
 -- Детали участка
 StyleConfig.PlotParts = {
 	UpgradeButton = rgb(255, 205, 40), -- кнопки улучшений: золотые, видно, что их можно нажать
+	ReservePad = rgb(70, 160, 255), -- площадка запаса: синяя
 	LockedPedestalTransparency = 0.75, -- некупленный постамент — полупрозрачный «призрак»
 }
 
 -- Кнопки ProximityPrompt
 StyleConfig.Prompts = {
 	BuyHoldSeconds = 0.3, -- короткое удержание, чтобы не купить случайно
+	SellHoldSeconds = 0.6, -- продажу держать дольше: её не отменить
+	SecondaryOffsetY = 90, -- вторая кнопка на том же постаменте (Sell) — ниже первой (Collect), в пикселях
 }
 
 -- Meme Zone: тёмный спокойный пол с узором плиткой; опасная часть — тёмно-красная

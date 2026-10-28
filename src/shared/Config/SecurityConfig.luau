@@ -21,6 +21,7 @@ SecurityConfig.RateLimits = {
 	Pickup = { MaxRequests = 4, WindowSeconds = 1 },
 	Collect = { MaxRequests = 4, WindowSeconds = 1 },
 	Buy = { MaxRequests = 3, WindowSeconds = 1 },
+	Sell = { MaxRequests = 2, WindowSeconds = 1 },
 }
 
 -- После покупки улучшения следующая покупка у этого игрока ждёт столько секунд:

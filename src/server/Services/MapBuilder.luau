@@ -292,6 +292,17 @@ local function buildPlots()
 			addLabel(button, "")
 		end
 
+		-- Площадка запаса; подпись и кнопку «Sell» на неё вешает Studio
+		local reserve = makePart(
+			"Reserve",
+			cfg.ButtonSize,
+			plotCFrame * CFrame.new(cfg.ReserveOffset),
+			StyleConfig.PlotParts.ReservePad,
+			buttons
+		)
+		reserve.CastShadow = false
+		addLabel(reserve, "")
+
 		model.Parent = folder
 		plots[i] = model
 	end
