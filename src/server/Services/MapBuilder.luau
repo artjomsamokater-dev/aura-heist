@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
+local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 
 local MapBuilder = {}
 
@@ -14,6 +15,7 @@ local plots: { Model } = {} -- [номер участка] = Model участк�
 local portalPart: Part? = nil
 local zoneFolder: Folder? = nil
 local zoneEntryPart: Part? = nil
+local extractionPad: Part? = nil
 
 -- Создаёт папку в Workspace; старую с тем же именем удаляет, чтобы не было дублей
 local function makeFolder(name: string): Folder
@@ -41,12 +43,14 @@ local function makePart(name: string, size: Vector3, cframe: CFrame, color: Colo
 	return part
 end
 
--- Вешает над деталью подпись, которая всегда повёрнута к камере
-local function addLabel(part: BasePart, text: string)
+-- Вешает над деталью подпись, которая всегда повёрнута к камере.
+-- heightAbovePart — на сколько студов поднять подпись над центром детали (по умолчанию — над её верхом)
+local function addLabel(part: BasePart, text: string, heightAbovePart: number?)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
 	gui.Size = UDim2.fromScale(MapConfig.Label.WidthStuds, MapConfig.Label.HeightStuds)
-	gui.StudsOffset = Vector3.new(0, part.Size.Y / 2 + MapConfig.Label.HeightStuds / 2, 0)
+	local height = heightAbovePart or (part.Size.Y / 2 + MapConfig.Label.HeightStuds / 2)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, height, 0)
 	gui.MaxDistance = MapConfig.Label.MaxDistance
 	gui.Parent = part
 
@@ -153,6 +157,42 @@ local function buildZone()
 	entry.CanCollide = false
 	addLabel(entry, MapConfig.Text.Entry)
 	zoneEntryPart = entry
+
+	-- Круглая площадка эвакуации: её радиус совпадает с дистанцией из ZoneConfig.
+	-- Цилиндр в Roblox лежит вдоль оси X, поэтому поворачиваем его на 90°, чтобы он стал «блином».
+	local diameter = ZoneConfig.EvacuationDistance * 2
+	local pad = makePart(
+		"ExtractionPoint",
+		Vector3.new(zone.ExtractionPadThickness, diameter, diameter),
+		CFrame.new(zone.ExtractionPosition + Vector3.new(0, zone.ExtractionPadThickness / 2, 0))
+			* CFrame.Angles(0, 0, math.rad(90)),
+		MapConfig.Colors.Extraction,
+		folder
+	)
+	pad.Shape = Enum.PartType.Cylinder
+	pad.CanCollide = false
+	addLabel(pad, MapConfig.Text.Extraction, MapConfig.Label.HeightStuds)
+	extractionPad = pad
+
+	-- Невидимые стены по четырём краям пола, чтобы из зоны нельзя было выпасть
+	local walls = Instance.new("Folder")
+	walls.Name = "Walls"
+	walls.Parent = folder
+	local half = zone.Size / 2
+	local t = zone.WallThickness
+	local h = zone.WallHeight
+	local wallBase = zone.Center + Vector3.new(0, zone.Size.Y / 2 + h / 2, 0)
+	local wallSpecs = {
+		{ Name = "North", Size = Vector3.new(zone.Size.X + t * 2, h, t), Offset = Vector3.new(0, 0, -(half.Z + t / 2)) },
+		{ Name = "South", Size = Vector3.new(zone.Size.X + t * 2, h, t), Offset = Vector3.new(0, 0, half.Z + t / 2) },
+		{ Name = "West", Size = Vector3.new(t, h, zone.Size.Z), Offset = Vector3.new(-(half.X + t / 2), 0, 0) },
+		{ Name = "East", Size = Vector3.new(t, h, zone.Size.Z), Offset = Vector3.new(half.X + t / 2, 0, 0) },
+	}
+	for _, spec in ipairs(wallSpecs) do
+		local wall = makePart(spec.Name, spec.Size, CFrame.new(wallBase + spec.Offset), MapConfig.Colors.Zone, walls)
+		wall.Transparency = 1
+		wall.CastShadow = false
+	end
 end
 
 function MapBuilder.Build()
@@ -185,6 +225,16 @@ end
 function MapBuilder.GetZoneEntryCFrame(): CFrame
 	local entry = assert(zoneEntryPart, "MapBuilder.Build() ещё не вызван")
 	return CFrame.new(entry.Position + Vector3.new(0, MapConfig.Zone.EntrySpawnHeight, 0))
+end
+
+-- Куда ставить персонажа при возвращении в хаб (после эвакуации)
+function MapBuilder.GetHubArrivalCFrame(): CFrame
+	return CFrame.new(MapConfig.Spawn.Position + Vector3.new(0, MapConfig.Spawn.ArrivalHeight, 0))
+end
+
+-- Площадка эвакуации в зоне (на ней же подпись с прогрессом)
+function MapBuilder.GetExtractionPad(): Part
+	return (assert(extractionPad, "MapBuilder.Build() ещё не вызван"))
 end
 
 -- Те же помощники для других сервисов (серые детали и подписи)

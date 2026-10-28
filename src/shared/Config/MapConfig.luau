@@ -25,6 +25,7 @@ MapConfig.Hub = {
 MapConfig.Spawn = {
 	Position = Vector3.new(0, 1.5, 0),
 	Size = Vector3.new(12, 1, 12),
+	ArrivalHeight = 4, -- на сколько студов выше точки появления ставим персонажа после эвакуации
 }
 
 -- Портал в зону: стоит на краю хаба, сквозь него можно пройти
@@ -62,6 +63,19 @@ MapConfig.Zone = {
 	EntryMarkerSize = Vector3.new(8, 0.2, 8),
 	EntrySpawnHeight = 4, -- на сколько студов выше точки входа ставим персонажа
 
+	-- Точка эвакуации на полу зоны (восточный край). Радиус площадки = ZoneConfig.EvacuationDistance
+	ExtractionPosition = ZONE_TOP + Vector3.new(60, 0, 0),
+	ExtractionPadThickness = 0.2,
+	ExtractionMaxHeight = 10, -- выше этого над площадкой (прыжок не в счёт) игрок уже не «на точке»
+
+	-- Граница зоны: невидимые стены по краям пола
+	WallHeight = 40,
+	WallThickness = 2,
+
+	-- Страховка: игрок InRaid ниже пола зоны на столько студов — возвращаем в хаб
+	FallLimitStuds = 20,
+	FallCheckSeconds = 0.5,
+
 	-- Точки спавна мемлингов на полу зоны: на каждой появляется один мемлинг
 	SpawnPoints = {
 		ZONE_TOP + Vector3.new(-40, 0, -30),
@@ -98,6 +112,8 @@ MapConfig.Text = {
 	Zone = "MEME ZONE",
 	Entry = "Entry",
 	PickupAction = "Pick up",
+	Extraction = "EXTRACT",
+	ExtractionProgress = "EXTRACTING... %d", -- %d — сколько секунд осталось
 }
 
 -- Серые цвета прототипа
@@ -111,6 +127,7 @@ MapConfig.Colors = {
 	Zone = Color3.fromRGB(105, 105, 105),
 	Entry = Color3.fromRGB(175, 175, 175),
 	Memeling = Color3.fromRGB(200, 200, 200),
+	Extraction = Color3.fromRGB(230, 230, 230),
 }
 
 return deepFreeze(MapConfig)

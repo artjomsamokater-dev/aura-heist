@@ -2,6 +2,8 @@
 -- Studio: раздаёт игрокам участки баз (студии).
 -- Вошёл — получил первый свободный участок, вышел — участок снова свободен.
 -- Если свободных нет, игрок просто играет без участка.
+-- Ещё Studio хранит список мемлингов «на витрине» — пока только в памяти сервера
+-- (постаменты — задача 1.5, сохранение — задача 2.1).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,10 +13,11 @@ local MapBuilder = require(script.Parent.MapBuilder)
 
 local Studio = {}
 
-local plotOwners = {} -- [номер участка] = Player
-local playerPlots = {} -- [Player] = номер участка
+local plotOwners: { [number]: Player? } = {} -- [номер участка] = Player
+local playerPlots: { [Player]: number } = {} -- [Player] = номер участка
+local showcases: { [Player]: { string } } = {} -- [Player] = MemelingId мемлингов на витрине
 
-local function assignPlot(player)
+local function assignPlot(player: Player)
 	if playerPlots[player] then
 		return
 	end
@@ -34,7 +37,9 @@ local function assignPlot(player)
 	warn(string.format("[Studio] Свободных участков нет, %s играет без участка", player.Name))
 end
 
-local function releasePlot(player)
+local function releasePlot(player: Player)
+	showcases[player] = nil
+
 	local index = playerPlots[player]
 	if not index then
 		return
@@ -52,9 +57,27 @@ local function releasePlot(player)
 end
 
 -- Model участка игрока или nil, если участка нет
-function Studio.GetPlot(player)
+function Studio.GetPlot(player: Player): Model?
 	local index = playerPlots[player]
 	return index and MapBuilder.GetPlots()[index] or nil
+end
+
+-- Добавляет мемлингов на витрину игрока (вызывает Extraction после успешной эвакуации)
+function Studio.AddToShowcase(player: Player, memelingIds: { string })
+	local list = showcases[player]
+	if list == nil then
+		list = {}
+		showcases[player] = list
+	end
+	for _, memelingId in ipairs(memelingIds) do
+		table.insert(list, memelingId)
+	end
+	player:SetAttribute("ShowcaseCount", #list)
+end
+
+-- Копия списка витрины (MemelingId по порядку добавления)
+function Studio.GetShowcase(player: Player): { string }
+	return table.clone(showcases[player] or {})
 end
 
 function Studio.Start()

@@ -31,11 +31,13 @@ local MapBuilder = require(Services.MapBuilder)
 local Studio = require(Services.Studio)
 local Raid = require(Services.Raid)
 local Spawn = require(Services.Spawn)
+local Extraction = require(Services.Extraction)
 
 -- Порядок важен: сначала карта, потом сервисы, которые её используют
 MapBuilder.Build()
 Studio.Start()
 Raid.Start()
 Spawn.Start()
+Extraction.Start()
 
-print("[Server] Сервисы запущены: MapBuilder, Studio, Raid, Spawn")
+print("[Server] Сервисы запущены: MapBuilder, Studio, Raid, Spawn, Extraction")

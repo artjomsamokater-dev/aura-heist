@@ -26,6 +26,13 @@ local states: { [Player]: string } = {}
 local portalBusy: { [Player]: boolean } = {} -- защита портала от повторного срабатывания
 local carried: { [Player]: { string } } = {} -- InstanceId мемлингов в руках, по порядку подбора
 
+-- Текущая вылазка игрока: создаётся при входе через портал.
+-- Rewarded — флаг «награда за эту вылазку выдана», ставится ДО выдачи.
+type Run = {
+	Rewarded: boolean,
+}
+local runs: { [Player]: Run } = {}
+
 local pickupLimiter =
 	RateLimiter.new(SecurityConfig.RateLimits.Pickup.MaxRequests, SecurityConfig.RateLimits.Pickup.WindowSeconds)
 
@@ -142,6 +149,7 @@ local function onPortalTouched(hit: BasePart)
 
 	portalBusy[player] = true
 	character:PivotTo(MapBuilder.GetZoneEntryCFrame())
+	runs[player] = { Rewarded = false }
 	setState(player, Raid.State.InRaid)
 	print(string.format("[Raid] %s вошёл в зону", player.Name))
 
@@ -150,9 +158,65 @@ local function onPortalTouched(hit: BasePart)
 	end)
 end
 
+-- Забирает добычу успешной эвакуации. Вернёт MemelingId всего, что было в руках,
+-- или nil, если игрок не в вылазке или награда за эту вылазку уже выдана.
+function Raid.ClaimExtraction(player: Player): { string }?
+	local run = runs[player]
+	if states[player] ~= Raid.State.InRaid or run == nil or run.Rewarded then
+		return nil
+	end
+	run.Rewarded = true -- флаг до выдачи: второй вызов получит nil
+
+	local list = carried[player] or {}
+	carried[player] = nil
+	player:SetAttribute("CarriedCount", 0)
+
+	local memelingIds = {}
+	for _, instanceId in ipairs(list) do
+		local record = Spawn.Get(instanceId)
+		if record then
+			table.insert(memelingIds, record.MemelingId)
+		end
+		Spawn.Despawn(instanceId)
+	end
+	return memelingIds
+end
+
+-- Переносит живого персонажа в хаб и ставит InHub (после эвакуации)
+function Raid.ReturnToHub(player: Player)
+	runs[player] = nil
+	setState(player, Raid.State.InHub)
+	local character = RemoteGuard.GetAliveCharacter(player)
+	if character then
+		character:PivotTo(MapBuilder.GetHubArrivalCFrame())
+	end
+end
+
+-- Страховка: игрок InRaid провалился ниже пола зоны — как после смерти:
+-- всё из рук теряется, новый персонаж появляется в хабе
+local function checkFallenPlayers()
+	local zone = MapConfig.Zone
+	local limitY = zone.Center.Y + zone.Size.Y / 2 - zone.FallLimitStuds
+	for player, state in states do
+		if state == Raid.State.InRaid then
+			local _, root = RemoteGuard.GetAliveCharacter(player)
+			if root and root.Position.Y < limitY then
+				print(string.format("[Raid] %s выпал из зоны, возвращаем в хаб", player.Name))
+				loseCarried(player, "выпал из зоны")
+				runs[player] = nil
+				setState(player, Raid.State.InHub)
+				task.spawn(function()
+					player:LoadCharacterAsync()
+				end)
+			end
+		end
+	end
+end
+
 local function onCharacterAdded(player: Player, character: Model)
 	-- Новый персонаж всегда появляется на SpawnLocation в хабе и ничего не несёт
 	loseCarried(player, "новый персонаж")
+	runs[player] = nil
 	setState(player, Raid.State.InHub)
 
 	local humanoid = character:WaitForChild("Humanoid", 10)
@@ -177,6 +241,7 @@ local function onPlayerRemoving(player: Player)
 	loseCarried(player, "выход из игры")
 	states[player] = nil
 	portalBusy[player] = nil
+	runs[player] = nil
 end
 
 function Raid.Start()
@@ -188,6 +253,13 @@ function Raid.Start()
 	for _, player in ipairs(Players:GetPlayers()) do
 		task.spawn(onPlayerAdded, player)
 	end
+
+	task.spawn(function()
+		while true do
+			task.wait(MapConfig.Zone.FallCheckSeconds)
+			checkFallenPlayers()
+		end
+	end)
 end
 
 return Raid

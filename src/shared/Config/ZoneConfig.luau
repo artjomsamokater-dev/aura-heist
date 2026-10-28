@@ -23,5 +23,6 @@ ZoneConfig.RestockSeconds = 180 -- через сколько секунд зон
 ZoneConfig.EvacuationSeconds = 3 -- сколько секунд длится эвакуация
 ZoneConfig.PickupDistance = 10 -- максимум студов до мемлинга, чтобы его подобрать
 ZoneConfig.EvacuationDistance = 12 -- максимум студов до точки эвакуации
+ZoneConfig.EvacuationCheckSeconds = 0.1 -- как часто сервер проверяет, кто стоит на точке эвакуации
 
 return deepFreeze(ZoneConfig)
