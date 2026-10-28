@@ -72,6 +72,7 @@ end
 export type LabelOptions = {
 	Height: number?, -- на сколько студов над центром детали (по умолчанию — сразу над её верхом)
 	MaxDistance: number?, -- с какого расстояния видно (по умолчанию StyleConfig.Label.MaxDistance)
+	Scale: number?, -- во сколько раз подпись больше или меньше обычной (по умолчанию 1)
 }
 
 local function makeLabelText(gui: Instance, text: string)
@@ -80,6 +81,7 @@ local function makeLabelText(gui: Instance, text: string)
 	label.Size = UDim2.fromScale(1, 1)
 	label.BackgroundTransparency = 1
 	label.TextScaled = true
+	label.TextWrapped = true -- длинное имя переносится на вторую строку, а не мельчает
 	label.Font = StyleConfig.Fonts.Label
 	label.TextColor3 = StyleConfig.Label.Text
 	label.TextStrokeColor3 = StyleConfig.Label.Stroke
@@ -92,11 +94,14 @@ end
 -- Подписи не «всегда сверху»: их закрывают стены и предметы (поверх всего — только маркер EXTRACT в HUD).
 local function addLabel(part: BasePart, text: string, options: LabelOptions?)
 	local style = StyleConfig.Label
-	local height = (options and options.Height) or (part.Size.Y / 2 + style.HeightStuds / 2)
+	local scale = (options and options.Scale) or 1
+	local width = style.WidthStuds * scale
+	local labelHeight = style.HeightStuds * scale
+	local height = (options and options.Height) or (part.Size.Y / 2 + labelHeight / 2)
 
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
-	gui.Size = UDim2.fromScale(style.WidthStuds, style.HeightStuds)
+	gui.Size = UDim2.fromScale(width, labelHeight)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, height, 0)
 	gui.MaxDistance = (options and options.MaxDistance) or style.MaxDistance
 	gui.AlwaysOnTop = false
@@ -313,7 +318,7 @@ local function buildZone()
 	)
 	entry.CanCollide = false
 	entry.CastShadow = false
-	addLabel(entry, TextConfig.Entry)
+	addLabel(entry, TextConfig.Entry, { Scale = StyleConfig.Label.EntryScale })
 	zoneEntryPart = entry
 
 	-- Круглая площадка эвакуации: её радиус совпадает с дистанцией из ZoneConfig.
