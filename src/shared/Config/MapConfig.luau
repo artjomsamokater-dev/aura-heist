@@ -1,0 +1,93 @@
+--!strict
+-- MapConfig: размеры, позиции и цвета серого прототипа карты.
+-- Все полы толщиной 1 студ. Хаб и участки стоят верхней гранью на y = 1 (Baseplate кончается на y = 0),
+-- зона поднята на ZONE_FLOOR_Y.
+
+-- table.freeze замораживает только верхний уровень, поэтому замораживаем всё дерево
+local function deepFreeze<T>(t: T): T
+	for _, value in t :: any do
+		if type(value) == "table" and not table.isfrozen(value) then
+			deepFreeze(value)
+		end
+	end
+	return table.freeze(t :: any) :: any
+end
+
+local MapConfig = {}
+
+-- Хаб: центральная площадка, где игроки появляются
+MapConfig.Hub = {
+	Center = Vector3.new(0, 0.5, 0),
+	Size = Vector3.new(80, 1, 80),
+}
+
+-- Точка появления в центре хаба
+MapConfig.Spawn = {
+	Position = Vector3.new(0, 1.5, 0),
+	Size = Vector3.new(12, 1, 12),
+}
+
+-- Портал в зону: стоит на краю хаба, сквозь него можно пройти
+MapConfig.Portal = {
+	Position = Vector3.new(0, 7, 34),
+	Size = Vector3.new(10, 12, 2),
+	CooldownSeconds = 2, -- защита от повторного срабатывания для одного игрока
+}
+
+-- Участки баз (студии): стоят кольцом вокруг хаба, лицом к нему.
+-- Смещения ниже — относительно центра участка: -Z смотрит на хаб, +Z — от хаба.
+MapConfig.Plots = {
+	Count = 8,
+	RingRadius = 120, -- расстояние от центра хаба до центра участка
+	Size = Vector3.new(44, 1, 44),
+	SignSize = Vector3.new(10, 5, 1),
+	SignOffset = Vector3.new(0, 3, -19), -- табличка у края, ближнего к хабу
+	PedestalSize = Vector3.new(4, 2, 4),
+	PedestalOffsets = {
+		Vector3.new(-12, 1.5, 8),
+		Vector3.new(0, 1.5, 8),
+		Vector3.new(12, 1.5, 8),
+	},
+}
+
+-- Meme Zone: отдельная площадка в стороне от хаба, поднятая в воздух.
+-- Пешком или прыжком туда не попасть, только через портал.
+local ZONE_FLOOR_Y = 300 -- высота нижней грани пола зоны
+
+MapConfig.Zone = {
+	Center = Vector3.new(500, ZONE_FLOOR_Y + 0.5, 0),
+	Size = Vector3.new(160, 1, 160),
+	EntryPosition = Vector3.new(440, ZONE_FLOOR_Y + 1, 0), -- точка входа на верхней грани пола зоны
+	EntryMarkerSize = Vector3.new(8, 0.2, 8),
+	EntrySpawnHeight = 4, -- на сколько студов выше точки входа ставим персонажа
+}
+
+-- Подписи над объектами (BillboardGui), размеры в студах
+MapConfig.Label = {
+	WidthStuds = 12,
+	HeightStuds = 3,
+	MaxDistance = 200,
+}
+
+-- Тексты подписей в игре
+MapConfig.Text = {
+	FreePlot = "Free Studio",
+	OwnedPlot = "%s's Studio", -- %s заменяется на имя игрока
+	Portal = "MEME ZONE",
+	Zone = "MEME ZONE",
+	Entry = "Entry",
+}
+
+-- Серые цвета прототипа
+MapConfig.Colors = {
+	Hub = Color3.fromRGB(150, 150, 150),
+	Spawn = Color3.fromRGB(185, 185, 185),
+	Portal = Color3.fromRGB(210, 210, 210),
+	Plot = Color3.fromRGB(120, 120, 120),
+	Sign = Color3.fromRGB(70, 70, 70),
+	Pedestal = Color3.fromRGB(95, 95, 95),
+	Zone = Color3.fromRGB(105, 105, 105),
+	Entry = Color3.fromRGB(175, 175, 175),
+}
+
+return deepFreeze(MapConfig)

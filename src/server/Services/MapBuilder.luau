@@ -1,0 +1,190 @@
+-- MapBuilder: при старте сервера строит серый прототип карты по MapConfig.
+-- Хаб → Workspace.Hub, участки → Workspace.PlayerStudios, зона → Workspace.RaidZone.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
+
+local MapBuilder = {}
+
+local built = false
+local plots = {} -- [номер участка] = Model участка
+local portalPart = nil
+local zoneEntryPart = nil
+
+-- Создаёт папку в Workspace; старую с тем же именем удаляет, чтобы не было дублей
+local function makeFolder(name)
+	local old = Workspace:FindFirstChild(name)
+	if old then
+		old:Destroy()
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = name
+	folder.Parent = Workspace
+	return folder
+end
+
+local function makePart(name, size, cframe, color, parent)
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Size = size
+	part.CFrame = cframe
+	part.Color = color
+	part.Material = Enum.Material.SmoothPlastic
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.Anchored = true
+	part.Parent = parent
+	return part
+end
+
+-- Вешает над деталью подпись, которая всегда повёрнута к камере
+local function addLabel(part, text)
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Label"
+	gui.Size = UDim2.fromScale(MapConfig.Label.WidthStuds, MapConfig.Label.HeightStuds)
+	gui.StudsOffset = Vector3.new(0, part.Size.Y / 2 + MapConfig.Label.HeightStuds / 2, 0)
+	gui.MaxDistance = MapConfig.Label.MaxDistance
+	gui.Parent = part
+
+	local label = Instance.new("TextLabel")
+	label.Name = "Text"
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.TextScaled = true
+	label.Font = Enum.Font.GothamBold
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.TextStrokeTransparency = 0
+	label.Text = text
+	label.Parent = gui
+end
+
+local function buildHub()
+	local folder = makeFolder("Hub")
+	local hub = MapConfig.Hub
+
+	makePart("Floor", hub.Size, CFrame.new(hub.Center), MapConfig.Colors.Hub, folder)
+
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "HubSpawn"
+	spawn.Size = MapConfig.Spawn.Size
+	spawn.CFrame = CFrame.new(MapConfig.Spawn.Position)
+	spawn.Color = MapConfig.Colors.Spawn
+	spawn.Material = Enum.Material.SmoothPlastic
+	spawn.TopSurface = Enum.SurfaceType.Smooth
+	spawn.Anchored = true
+	spawn.Neutral = true
+	spawn.Parent = folder
+
+	local portal = makePart(
+		"Portal",
+		MapConfig.Portal.Size,
+		CFrame.new(MapConfig.Portal.Position),
+		MapConfig.Colors.Portal,
+		folder
+	)
+	portal.Material = Enum.Material.Neon
+	portal.Transparency = 0.3
+	portal.CanCollide = false -- сквозь портал проходят
+	addLabel(portal, MapConfig.Text.Portal)
+	portalPart = portal
+end
+
+local function buildPlots()
+	local folder = makeFolder("PlayerStudios")
+	local cfg = MapConfig.Plots
+	local hubCenter = MapConfig.Hub.Center
+
+	for i = 1, cfg.Count do
+		-- Участки равномерно по кругу; каждый повёрнут лицом к хабу
+		local angle = (i - 1) * (2 * math.pi / cfg.Count)
+		local center = hubCenter + Vector3.new(math.cos(angle), 0, math.sin(angle)) * cfg.RingRadius
+		local plotCFrame = CFrame.lookAt(center, hubCenter)
+
+		local model = Instance.new("Model")
+		model.Name = "Studio" .. i
+		model:SetAttribute("PlotIndex", i)
+		model:SetAttribute("OwnerUserId", 0) -- 0 = участок свободен
+
+		local floor = makePart("Floor", cfg.Size, plotCFrame, MapConfig.Colors.Plot, model)
+		model.PrimaryPart = floor
+
+		local sign = makePart("Sign", cfg.SignSize, plotCFrame * CFrame.new(cfg.SignOffset), MapConfig.Colors.Sign, model)
+		addLabel(sign, MapConfig.Text.FreePlot)
+
+		local pedestals = Instance.new("Folder")
+		pedestals.Name = "Pedestals"
+		pedestals.Parent = model
+		for p, offset in ipairs(cfg.PedestalOffsets) do
+			local pedestal = makePart(
+				"Pedestal" .. p,
+				cfg.PedestalSize,
+				plotCFrame * CFrame.new(offset),
+				MapConfig.Colors.Pedestal,
+				pedestals
+			)
+			pedestal:SetAttribute("PedestalIndex", p)
+		end
+
+		model.Parent = folder
+		plots[i] = model
+	end
+end
+
+local function buildZone()
+	local folder = makeFolder("RaidZone")
+	local zone = MapConfig.Zone
+
+	local floor = makePart("Floor", zone.Size, CFrame.new(zone.Center), MapConfig.Colors.Zone, folder)
+	addLabel(floor, MapConfig.Text.Zone)
+
+	-- Плоская плитка на полу: сюда портал переносит игрока
+	local entry = makePart(
+		"EntryPoint",
+		zone.EntryMarkerSize,
+		CFrame.new(zone.EntryPosition + Vector3.new(0, zone.EntryMarkerSize.Y / 2, 0)),
+		MapConfig.Colors.Entry,
+		folder
+	)
+	entry.CanCollide = false
+	addLabel(entry, MapConfig.Text.Entry)
+	zoneEntryPart = entry
+end
+
+function MapBuilder.Build()
+	if built then
+		return
+	end
+	built = true
+
+	buildHub()
+	buildPlots()
+	buildZone()
+	print(string.format("[MapBuilder] Карта построена: хаб, %d участков, зона", #plots))
+end
+
+-- Список участков по порядку (Model)
+function MapBuilder.GetPlots()
+	return plots
+end
+
+function MapBuilder.GetPortal()
+	return portalPart
+end
+
+-- Куда ставить персонажа при входе в зону
+function MapBuilder.GetZoneEntryCFrame()
+	return CFrame.new(MapConfig.Zone.EntryPosition + Vector3.new(0, MapConfig.Zone.EntrySpawnHeight, 0))
+end
+
+-- Меняет текст подписи, созданной addLabel
+function MapBuilder.SetLabelText(part, text)
+	local gui = part:FindFirstChild("Label")
+	local label = gui and gui:FindFirstChild("Text")
+	if label then
+		label.Text = text
+	end
+end
+
+return MapBuilder
