@@ -251,6 +251,18 @@ function Raid.ReturnToHub(player: Player)
 	end
 end
 
+-- Смерть (ловушка, враг, Reset или падение из зоны): всё из рук теряется, вылазка закрыта —
+-- награду за неё уже не выдать. Витрину и Aura смерть не трогает. Считаем в stats.deaths.
+local function onDeath(player: Player, cause: string)
+	loseCarried(player, "смерть: " .. cause)
+	runs[player] = nil
+	local data = PlayerData.GetData(player)
+	if data then
+		data.stats.deaths += 1
+	end
+	print(string.format("[Raid] %s погиб (%s), смертей всего %d", player.Name, cause, if data then data.stats.deaths else 0))
+end
+
 -- Страховка: игрок InRaid провалился ниже пола зоны — как после смерти:
 -- всё из рук теряется, новый персонаж появляется в хабе
 local function checkFallenPlayers()
@@ -261,8 +273,7 @@ local function checkFallenPlayers()
 			local _, root = RemoteGuard.GetAliveCharacter(player)
 			if root and root.Position.Y < limitY then
 				print(string.format("[Raid] %s выпал из зоны, возвращаем в хаб", player.Name))
-				loseCarried(player, "выпал из зоны")
-				runs[player] = nil
+				onDeath(player, "выпал из зоны")
 				setState(player, Raid.State.InHub)
 				task.spawn(function()
 					player:LoadCharacterAsync()
@@ -285,7 +296,9 @@ local function onCharacterAdded(player: Player, character: Model)
 			humanoid:SetAttribute("BaseWalkSpeed", humanoid.WalkSpeed)
 		end
 		humanoid.Died:Connect(function()
-			loseCarried(player, "смерть")
+			-- Источник последнего урона записывает сервис Damage; нет его — значит, Reset
+			local source = humanoid:GetAttribute("LastDamageSource")
+			onDeath(player, if type(source) == "string" then source else "Reset")
 		end)
 	end
 end

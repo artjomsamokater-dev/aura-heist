@@ -45,6 +45,7 @@ export type Data = {
 		memelingsExtracted: number,
 		memelingsSold: number,
 		auraEarned: number,
+		deaths: number, -- смерти (ловушки, враги, Reset, падение из зоны)
 	},
 }
 
@@ -54,7 +55,7 @@ local TEMPLATE: Data = {
 	showcase = {},
 	reserve = {},
 	upgrades = { pedestals = 0, carrySlots = 0, storage = 0 },
-	stats = { raids = 0, extractions = 0, memelingsExtracted = 0, memelingsSold = 0, auraEarned = 0 },
+	stats = { raids = 0, extractions = 0, memelingsExtracted = 0, memelingsSold = 0, auraEarned = 0, deaths = 0 },
 }
 
 type Profile = ProfileStore.Profile<Data>
