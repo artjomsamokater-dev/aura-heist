@@ -118,11 +118,15 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   потом начисляется цена из MemelingConfig.Rarities[].SellPrice и накопленная на постаменте Aura;
   освободившийся постамент занимает мемлинг из запаса. Синяя площадка «Reserve: N» на участке
   продаёт самого старого мемлинга из запаса. Общие проверки действий на участке — checkPlotAction в Studio.
+- 2.4: офлайн-доход проверен автотестами `tests/PedestalMath.spec.luau` (консольный luau 0.744.0 через Rokit):
+  10 минут и сутки офлайн — не больше лимита хранилища (Common 120, Legendary 7200, ×2 → 240),
+  время «назад» не даёт минус, дробный остаток после сбора копится дальше, повторный сбор — ноль.
 
-Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1`
-(luau-lsp analyze с типами Roblox + rojo build в test.rbxl).
+Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
+luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
+тесты `luau tests/run.luau`, rojo build в test.rbxl. Новые тесты подключать в `tests/run.luau`.
 
 После 1.4: тексты для игрока вынесены в TextConfig, потерянные мемлинги возвращаются
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
-Следующая задача — 2.4 (проверка офлайн-дохода и лимита хранилища).
+Следующая задача — 2.5 (RemoteGuard и RateLimiter на все события).

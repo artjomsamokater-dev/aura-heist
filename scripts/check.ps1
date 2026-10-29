@@ -1,4 +1,4 @@
-﻿# Проверка кода без Studio: типы Luau (luau-lsp) + сборка места (rojo).
+﻿# Проверка кода без Studio: типы Luau (luau-lsp), кодировка, тесты чистой логики (luau), сборка места (rojo).
 # Запуск из корня проекта:  powershell -ExecutionPolicy Bypass -File scripts/check.ps1
 
 $ErrorActionPreference = "Stop"
@@ -26,12 +26,32 @@ Write-Host "== luau-lsp analyze"
 luau-lsp analyze --platform=roblox --sourcemap=sourcemap.json "--definitions=@roblox=$defs" "--ignore=**/Packages/**" src
 $analyzeCode = $LASTEXITCODE
 
+Write-Host "== кодировка файлов"
+# Luau-файлы — UTF-8 без BOM; «Ð»/«Ñ» в тексте значит, что русский текст испортила неверная кодировка
+$encodingCode = 0
+foreach ($file in Get-ChildItem -Path src, tests -Recurse -Filter *.luau) {
+	$bytes = [IO.File]::ReadAllBytes($file.FullName)
+	$text = [Text.Encoding]::UTF8.GetString($bytes)
+	if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+		Write-Host "  BOM в начале файла: $($file.FullName)"
+		$encodingCode = 1
+	}
+	if ($text -match "[ÐÑ][\u0080-¿‘-›]") {
+		Write-Host "  испорченная кодировка (кракозябры): $($file.FullName)"
+		$encodingCode = 1
+	}
+}
+
+Write-Host "== тесты (luau tests/run.luau)"
+luau tests/run.luau
+$testsCode = $LASTEXITCODE
+
 Write-Host "== rojo build"
 rojo build default.project.json --output test.rbxl
 $buildCode = $LASTEXITCODE
 
-if ($analyzeCode -ne 0 -or $buildCode -ne 0) {
-	Write-Host "ПРОВЕРКА НЕ ПРОШЛА (analyze: $analyzeCode, build: $buildCode)"
+if ($analyzeCode -ne 0 -or $encodingCode -ne 0 -or $testsCode -ne 0 -or $buildCode -ne 0) {
+	Write-Host "ПРОВЕРКА НЕ ПРОШЛА (analyze: $analyzeCode, encoding: $encodingCode, tests: $testsCode, build: $buildCode)"
 	exit 1
 }
-Write-Host "Всё чисто: типы в порядке, место собирается."
+Write-Host "Всё чисто: типы в порядке, кодировка в порядке, тесты прошли, место собирается."
