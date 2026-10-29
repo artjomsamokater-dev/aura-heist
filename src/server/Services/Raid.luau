@@ -9,7 +9,9 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
+local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
+local CarrySpeed = require(ReplicatedStorage.Shared.Util.CarrySpeed)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
@@ -69,11 +71,40 @@ local function getCarried(player: Player): { string }
 	return list
 end
 
+local function getHumanoid(player: Player): Humanoid?
+	local character = player.Character
+	return character and character:FindFirstChildOfClass("Humanoid") or nil
+end
+
+-- Скорость шага по тому, что в руках (CarrySpeed): самая медленная редкость, пустые руки — обычная.
+-- Обычная скорость запоминается на Humanoid при появлении персонажа (атрибут BaseWalkSpeed).
+local function updateCarrySpeed(player: Player)
+	local humanoid = getHumanoid(player)
+	if humanoid == nil then
+		return
+	end
+	local base = humanoid:GetAttribute("BaseWalkSpeed")
+	if type(base) ~= "number" then
+		return
+	end
+	local speeds: { number } = {}
+	for _, instanceId in ipairs(carried[player] or {}) do
+		local record = Spawn.Get(instanceId)
+		local memeling = record and MemelingConfig.Memelings[record.MemelingId]
+		local rarity = memeling and MemelingConfig.Rarities[memeling.Rarity]
+		if rarity then
+			table.insert(speeds, rarity.CarrySpeed)
+		end
+	end
+	humanoid.WalkSpeed = CarrySpeed.Compute(base, speeds)
+end
+
 -- Всё, что было в руках, пропадает из мира
 local function loseCarried(player: Player, reason: string)
 	local list = carried[player]
 	carried[player] = nil
 	player:SetAttribute("CarriedCount", 0)
+	updateCarrySpeed(player)
 	if list == nil or #list == 0 then
 		return
 	end
@@ -138,6 +169,7 @@ local function tryPickup(player: Player, instanceId: string)
 	table.insert(list, instanceId)
 	attachToCharacter(record.Part, character, root, #list)
 	player:SetAttribute("CarriedCount", #list)
+	updateCarrySpeed(player)
 	print(string.format("[Raid] %s подобрал %s (%s)", player.Name, record.MemelingId, instanceId))
 end
 
@@ -195,6 +227,7 @@ function Raid.ClaimExtraction(player: Player): { string }?
 		end
 		Spawn.Despawn(instanceId)
 	end
+	updateCarrySpeed(player) -- руки пустые — обычная скорость
 	return memelingIds
 end
 
@@ -237,6 +270,10 @@ local function onCharacterAdded(player: Player, character: Model)
 
 	local humanoid = character:WaitForChild("Humanoid", 10)
 	if humanoid and humanoid:IsA("Humanoid") then
+		-- Новый персонаж ещё ничего не несёт: его скорость и есть обычная
+		if humanoid:GetAttribute("BaseWalkSpeed") == nil then
+			humanoid:SetAttribute("BaseWalkSpeed", humanoid.WalkSpeed)
+		end
 		humanoid.Died:Connect(function()
 			loseCarried(player, "смерть")
 		end)
