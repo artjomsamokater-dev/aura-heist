@@ -137,6 +137,25 @@ StyleConfig.Hazards = {
 	SlamPopSeconds = 0.15,
 }
 
+-- Враг Grumblob: ядовито-зелёный, не похож ни на одну редкость мемлингов
+StyleConfig.Enemy = {
+	Body = rgb(120, 230, 60),
+	Brow = rgb(200, 20, 30), -- сердитые брови
+	BrowSize = Vector3.new(1.6, 0.35, 0.4),
+	BrowOffsets = { -- от центра тела; брови наклонены к центру
+		{ Position = Vector3.new(-0.9, 1.45, -2.2), Tilt = -20 },
+		{ Position = Vector3.new(0.9, 1.45, -2.2), Tilt = 20 },
+	},
+	EyeSize = 1.4,
+	PupilSize = 0.7,
+	EyeOffsets = {
+		Vector3.new(-0.9, 0.6, -2.0),
+		Vector3.new(0.9, 0.6, -2.0),
+	},
+	PupilForward = 0.5,
+	LabelMaxDistance = 60,
+}
+
 -- Площадка EXTRACT: неон и искры вверх
 StyleConfig.Extraction = {
 	Color = rgb(80, 255, 120),

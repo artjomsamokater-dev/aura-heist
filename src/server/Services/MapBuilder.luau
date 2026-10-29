@@ -436,6 +436,7 @@ end
 MapBuilder.MakePart = makePart
 MapBuilder.AddLabel = addLabel
 MapBuilder.MakeMemeling = makeMemeling
+MapBuilder.MakeDetail = makeDetail -- круглая мелкая деталь, приваренная к телу (глаза)
 
 -- Меняет текст подписи, созданной addLabel или addSignText (у таблички их две — с обеих сторон)
 function MapBuilder.SetLabelText(part: Instance?, text: string)

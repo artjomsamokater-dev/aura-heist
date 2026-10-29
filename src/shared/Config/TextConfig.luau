@@ -58,6 +58,10 @@ TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
 
+-- Враги
+TextConfig.EnemyNames = { Chaser = "Grumblob" }
+TextConfig.EnemySleeping = "Grumblob\nZzz..." -- подпись спящего врага
+
 -- Сообщения при кике (сохранение)
 TextConfig.KickProfileLoadFailed = "We couldn't load your save. Your progress is safe — please rejoin in a minute."
 TextConfig.KickProfileNewer = "This server is outdated. Please rejoin to get the latest version."
