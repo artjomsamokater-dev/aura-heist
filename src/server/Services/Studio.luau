@@ -346,7 +346,7 @@ local function addCollectPrompts()
 				prompt.RequiresLineOfSight = false
 				prompt.Enabled = false -- включается, когда на постаменте стоит мемлинг
 				prompt.Parent = pedestal
-				prompt.Triggered:Connect(function(player: Player)
+				RemoteGuard.ConnectPrompt(prompt, "сбор", function(player: Player)
 					tryCollect(player, plotIndex, pedestalIndex)
 				end)
 			end
@@ -553,7 +553,7 @@ local function addSellPrompt(parent: BasePart, maxDistance: number, onTriggered:
 	prompt.RequiresLineOfSight = false
 	prompt.Enabled = false -- включается, когда есть что продать
 	prompt.Parent = parent
-	prompt.Triggered:Connect(onTriggered)
+	RemoteGuard.ConnectPrompt(prompt, "продажа", onTriggered)
 end
 
 local function addSellPrompts()
@@ -635,7 +635,7 @@ local function addBuyPrompts()
 				prompt.HoldDuration = StyleConfig.Prompts.BuyHoldSeconds
 				prompt.RequiresLineOfSight = false
 				prompt.Parent = button
-				prompt.Triggered:Connect(function(player: Player)
+				RemoteGuard.ConnectPrompt(prompt, "покупка", function(player: Player)
 					tryBuy(player, plotIndex, id)
 				end)
 			end

@@ -22,7 +22,12 @@ SecurityConfig.RateLimits = {
 	Collect = { MaxRequests = 4, WindowSeconds = 1 },
 	Buy = { MaxRequests = 3, WindowSeconds = 1 },
 	Sell = { MaxRequests = 2, WindowSeconds = 1 },
+	-- Общий лимит на ЛЮБЫЕ кнопки одного игрока вместе (RemoteGuard.ConnectPrompt)
+	AnyAction = { MaxRequests = 8, WindowSeconds = 1 },
 }
+
+-- Предупреждение о спаме в Output — не чаще раза в столько секунд на игрока
+SecurityConfig.SpamWarnSeconds = 10
 
 -- После покупки улучшения следующая покупка у этого игрока ждёт столько секунд:
 -- быстрый двойной клик не купит два уровня подряд

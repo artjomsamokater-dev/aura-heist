@@ -5,6 +5,7 @@
 -- Решение «можно ли подобрать» принимает не Spawn, а обработчик подбора (сервис Raid).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
@@ -12,6 +13,7 @@ local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
+local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
 local Spawn = {}
 
@@ -65,7 +67,7 @@ local function addPickupPrompt(part: Part, instanceId: string, displayName: stri
 	prompt.Parent = part
 
 	-- Triggered приходит на сервер с игроком, который нажал. Больше клиент ничего не передаёт.
-	prompt.Triggered:Connect(function(player: Player)
+	RemoteGuard.ConnectPrompt(prompt, "подбор", function(player: Player)
 		if pickupHandler then
 			pickupHandler(player, instanceId)
 		end
