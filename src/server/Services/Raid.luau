@@ -114,10 +114,20 @@ local function loseCarried(player: Player, reason: string)
 	print(string.format("[Raid] %s потерял мемлингов: %d (%s)", player.Name, #list, reason))
 end
 
+-- Где висит мемлинг номер slotIndex: места из StyleConfig, дальше — выше по стопке
+local function getCarryOffset(slotIndex: number): Vector3
+	local offsets = StyleConfig.Memeling.CarrySlotOffsets
+	local offset = offsets[slotIndex]
+	if offset then
+		return offset
+	end
+	return offsets[#offsets] + StyleConfig.Memeling.CarryStackStep * (slotIndex - #offsets)
+end
+
 -- Мемлинг едет вместе с персонажем: приварен к HumanoidRootPart и лежит внутри модели персонажа.
 -- Развёрнут на 180°, чтобы глазами смотрел на игрока (камера обычно сзади).
 local function attachToCharacter(part: Part, character: Model, root: BasePart, slotIndex: number)
-	local offset = StyleConfig.Memeling.CarryOffset + StyleConfig.Memeling.CarryStackStep * (slotIndex - 1)
+	local offset = getCarryOffset(slotIndex)
 	part.Anchored = false
 	part.CanCollide = false
 	part.Massless = true
