@@ -8,6 +8,7 @@ require("./PedestalMath.spec")
 require("./RateLimiter.spec")
 require("./RarityRoll.spec")
 require("./CarrySpeed.spec")
+require("./HazardMath.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

@@ -123,6 +123,20 @@ StyleConfig.Zone = {
 	FloorTextureColor = rgb(255, 255, 255),
 }
 
+-- Ловушки: красное = опасно, оранжевое = сейчас ударит
+StyleConfig.Hazards = {
+	Laser = rgb(255, 40, 40),
+	LaserBlinkTransparency = 0.7, -- мигание у конца дорожки перед проездом
+	LaserBlinkHz = 4, -- сколько раз в секунду мигает
+	Rail = rgb(90, 15, 20), -- рельсы дорожки лазера на полу
+	RailWidth = 0.6,
+	SlamIdle = rgb(70, 40, 45),
+	SlamWarn = rgb(255, 140, 20),
+	SlamStrike = rgb(255, 255, 255),
+	SlamPopHeight = 0.8, -- плита подпрыгивает при ударе
+	SlamPopSeconds = 0.15,
+}
+
 -- Площадка EXTRACT: неон и искры вверх
 StyleConfig.Extraction = {
 	Color = rgb(80, 255, 120),
