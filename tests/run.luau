@@ -6,6 +6,7 @@ local TestKit = require("./TestKit")
 
 require("./PedestalMath.spec")
 require("./RateLimiter.spec")
+require("./RarityRoll.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

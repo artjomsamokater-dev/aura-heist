@@ -1,7 +1,7 @@
 --!strict
 -- Spawn: ставит мемлингов на точки спавна в зоне и помнит, где какой.
--- Пока только Common и только один раз при старте сервера
--- (все редкости и шансы — задача 3.1, ресток по таймеру — задача 4.1).
+-- Редкость каждой точки — по шансам её части зоны (ZoneConfig.SpawnChances, граница MapConfig.Zone.DangerFromX),
+-- выбор — чистая функция shared/Util/RarityRoll. Пока один раз при старте (ресток по таймеру — задача 4.1).
 -- Решение «можно ли подобрать» принимает не Spawn, а обработчик подбора (сервис Raid).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +12,7 @@ local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
+local RarityRoll = require(ReplicatedStorage.Shared.Util.RarityRoll)
 local MapBuilder = require(script.Parent.MapBuilder)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
@@ -34,8 +35,6 @@ export type Record = {
 
 type PickupHandler = (player: Player, instanceId: string) -> ()
 
-local SPAWN_RARITY = "Common" -- временно, до задачи 3.1
-
 local random = Random.new()
 local memelingsFolder: Folder? = nil
 local nextNumber = 0
@@ -54,6 +53,21 @@ local function getIdsOfRarity(rarity: string): { string }
 	end
 	table.sort(ids)
 	return ids
+end
+
+-- Какой мемлинг появится на точке: часть зоны → редкость по шансам → случайный мемлинг этой редкости
+local function rollMemeling(floorPosition: Vector3): (string?, string, string?)
+	local offsetX = floorPosition.X - MapConfig.Zone.Center.X
+	local part = RarityRoll.ZonePart(offsetX, MapConfig.Zone.DangerFromX)
+	local rarity = RarityRoll.Pick(ZoneConfig.SpawnChances[part] or {}, MemelingConfig.RarityOrder, random:NextNumber())
+	if rarity == nil then
+		return nil, part, nil
+	end
+	local ids = getIdsOfRarity(rarity)
+	if #ids == 0 then
+		return nil, part, rarity
+	end
+	return ids[random:NextInteger(1, #ids)], part, rarity
 end
 
 local function addPickupPrompt(part: Part, instanceId: string, displayName: string)
@@ -162,16 +176,17 @@ function Spawn.Start()
 	folder.Parent = MapBuilder.GetZoneFolder()
 	memelingsFolder = folder
 
-	local ids = getIdsOfRarity(SPAWN_RARITY)
-	if #ids == 0 then
-		warn(string.format("[Spawn] В MemelingConfig нет мемлингов редкости %s", SPAWN_RARITY))
-		return
-	end
-
+	local spawned: { string } = {}
 	for _, point in ipairs(MapConfig.Zone.SpawnPoints) do
-		spawnAt(ids[random:NextInteger(1, #ids)], point)
+		local memelingId, part, rarity = rollMemeling(point)
+		if memelingId then
+			spawnAt(memelingId, point)
+			table.insert(spawned, string.format("%s:%s", part, memelingId))
+		else
+			warn(string.format("[Spawn] Точка в части %s: нет мемлинга (редкость %s)", part, tostring(rarity)))
+		end
 	end
-	print(string.format("[Spawn] В зоне появилось мемлингов: %d (%s)", #MapConfig.Zone.SpawnPoints, SPAWN_RARITY))
+	print(string.format("[Spawn] В зоне появилось мемлингов: %d (%s)", #spawned, table.concat(spawned, ", ")))
 end
 
 return Spawn

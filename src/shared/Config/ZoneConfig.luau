@@ -13,11 +13,12 @@ end
 
 local ZoneConfig = {}
 
--- Шанс редкости при появлении мемлинга, в процентах (сумма в каждой части = 100)
+-- Шанс редкости при появлении мемлинга, в процентах (сумма в каждой части = 100).
+-- Safe — от входа до MapConfig.Zone.DangerFromX, Danger — восточнее (там же ловушки и враги)
 ZoneConfig.SpawnChances = {
 	Safe = { Common = 80, Rare = 20, Epic = 0, Legendary = 0 },
 	Danger = { Common = 0, Rare = 55, Epic = 38, Legendary = 7 },
-}
+} :: { [string]: { [string]: number } }
 
 ZoneConfig.RestockSeconds = 180 -- через сколько секунд зона заново наполняется мемлингами
 ZoneConfig.EvacuationSeconds = 3 -- сколько секунд длится эвакуация
