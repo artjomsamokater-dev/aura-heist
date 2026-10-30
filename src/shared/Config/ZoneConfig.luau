@@ -23,6 +23,9 @@ ZoneConfig.SpawnChances = {
 -- Раз в столько секунд все пустые точки спавна получают новых мемлингов.
 -- Для теста с игроками — 90; по документации — 180
 ZoneConfig.RestockSeconds = 90
+
+-- О каких редкостях объявлять всем игрокам, когда они появляются (одно объявление на спавн)
+ZoneConfig.AnnounceRarities = { "Epic", "Legendary" }
 ZoneConfig.EvacuationSeconds = 3 -- сколько секунд длится эвакуация
 ZoneConfig.PickupDistance = 10 -- максимум студов до мемлинга, чтобы его подобрать
 ZoneConfig.EvacuationDistance = 12 -- максимум студов до точки эвакуации

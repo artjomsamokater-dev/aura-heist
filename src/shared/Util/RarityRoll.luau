@@ -37,4 +37,25 @@ function RarityRoll.Pick(chances: { [string]: number }, order: { string }, roll:
 	return lastPositive -- roll ровно у края: погрешность дробных чисел
 end
 
+export type Spawned = {
+	Rarity: string,
+	Part: string,
+}
+
+-- Для объявления: самый редкий из появившихся за один спавн, если его редкость есть в announce.
+-- order — редкости от простой к редкой. Вернёт индекс в spawned или nil (объявлять нечего).
+-- Одно объявление на спавн: даже если появились и Epic, и Legendary — только про Legendary.
+function RarityRoll.Rarest(spawned: { Spawned }, order: { string }, announce: { string }): number?
+	local best: number? = nil
+	local bestRank = 0
+	for i, entry in ipairs(spawned) do
+		local rank = table.find(order, entry.Rarity) or 0
+		if table.find(announce, entry.Rarity) and rank > bestRank then
+			best = i
+			bestRank = rank
+		end
+	end
+	return best
+end
+
 return RarityRoll

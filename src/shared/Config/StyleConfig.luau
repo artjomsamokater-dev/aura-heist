@@ -542,6 +542,14 @@ StyleConfig.Hud = {
 	TimerTextSize = 20,
 	TimerTop = 8, -- отступ от панели Roblox сверху, в пикселях
 
+	-- Объявление о редком спавне: крупная плашка цвета редкости под таймером рестока
+	AnnounceSeconds = 3.5, -- сколько держится на экране
+	AnnounceFadeSeconds = 0.3, -- появление и исчезание
+	AnnounceWidth = 560,
+	AnnounceHeight = 64,
+	AnnounceTextSize = 30,
+	AnnounceGap = 10, -- отступ под таймером рестока, в пикселях
+
 	MarkerHeight = 14, -- на сколько студов над площадкой висит маркер EXTRACT
 	MarkerHideDistance = 45, -- ближе этого маркер прячется: площадку и так видно
 	MarkerTitleSize = 30,

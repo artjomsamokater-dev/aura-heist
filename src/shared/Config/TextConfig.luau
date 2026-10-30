@@ -58,6 +58,11 @@ TextConfig.HudHandsIcon = "🎒" -- в руках
 TextConfig.HudHandsValue = "%d / %d" -- сколько несёшь / сколько можно
 TextConfig.HudHandsCaption = "💀 lost if you die"
 TextConfig.RestockTimer = "🔄 New memelings in %s" -- %s — сколько осталось, например 1:23
+
+-- Объявление о редком спавне всем игрокам: «A LEGENDARY appeared in the DANGER zone!»
+TextConfig.AnnounceSpawn = "A %s appeared in the %s zone!" -- %s — редкость, %s — часть зоны
+TextConfig.RarityNames = { Common = "COMMON", Rare = "RARE", Epic = "EPIC", Legendary = "LEGENDARY" } :: { [string]: string }
+TextConfig.ZonePartNames = { Safe = "SAFE", Danger = "DANGER" } :: { [string]: string }
 TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна

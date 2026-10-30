@@ -21,6 +21,7 @@ local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local RarityRoll = require(ReplicatedStorage.Shared.Util.RarityRoll)
 local SpawnPointBook = require(ReplicatedStorage.Shared.Util.SpawnPointBook)
 local MapBuilder = require(script.Parent.MapBuilder)
+local Announcer = require(script.Parent.Announcer)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
 local Spawn = {}
@@ -40,13 +41,6 @@ export type Record = {
 	Part: Part,
 	Owner: Player?,
 	SpawnIndex: number, -- номер точки спавна (MapConfig.Zone.SpawnPoints), куда он вернётся, если его потеряют
-}
-
--- Кто появился при одном спавне или рестоке (для объявлений)
-export type Spawned = {
-	MemelingId: string,
-	Rarity: string,
-	Part: string, -- "Safe" / "Danger"
 }
 
 type PickupHandler = (player: Player, instanceId: string) -> ()
@@ -142,15 +136,15 @@ local function spawnAt(memelingId: string, spawnIndex: number): Record
 	return record
 end
 
--- Ресток: каждая свободная точка получает нового мемлинга. Вернёт, кто появился
-local function restock(): { Spawned }
-	local spawned: { Spawned } = {}
+-- Ресток: каждая свободная точка получает нового мемлинга. Вернёт редкости и части зоны появившихся
+local function restock(): { RarityRoll.Spawned }
+	local spawned: { RarityRoll.Spawned } = {}
 	local names: { string } = {}
 	for _, index in ipairs(SpawnPointBook.FreePoints(book)) do
 		local memelingId, part, rarity = rollMemeling(MapConfig.Zone.SpawnPoints[index])
 		if memelingId and rarity and SpawnPointBook.Occupy(book, index) then
 			spawnAt(memelingId, index)
-			table.insert(spawned, { MemelingId = memelingId, Rarity = rarity, Part = part })
+			table.insert(spawned, { Rarity = rarity, Part = part })
 			table.insert(names, string.format("%s:%s", part, memelingId))
 		elseif memelingId == nil then
 			warn(string.format("[Spawn] Точка %d в части %s: нет мемлинга (редкость %s)", index, part, tostring(rarity)))
@@ -234,7 +228,7 @@ function Spawn.Start()
 	folder.Parent = MapBuilder.GetZoneFolder()
 	memelingsFolder = folder
 
-	restock()
+	Announcer.AnnounceSpawn(restock()) -- при старте игроков ещё нет, но правило одно для всех спавнов
 
 	-- Таймер рестока: время следующего хранит сервер, у всех игроков оно одно
 	local nextRestockAt = now() + ZoneConfig.RestockSeconds
@@ -243,7 +237,7 @@ function Spawn.Start()
 		while true do
 			task.wait(math.max(0.1, nextRestockAt - now()))
 			if now() >= nextRestockAt then
-				restock()
+				Announcer.AnnounceSpawn(restock()) -- одно объявление на один ресток
 				nextRestockAt += ZoneConfig.RestockSeconds
 				ReplicatedStorage:SetAttribute(Spawn.RestockAttribute, nextRestockAt)
 			end

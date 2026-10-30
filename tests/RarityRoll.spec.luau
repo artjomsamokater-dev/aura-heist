@@ -67,6 +67,21 @@ test("все шансы нулевые — nil", function()
 	equal(RarityRoll.Pick({ Common = 0 }, { "Common" }, 0.5), nil)
 end)
 
+test("объявление: из одного спавна — только самый редкий, и только Epic/Legendary", function()
+	local order = MemelingConfig.RarityOrder
+	local announce = ZoneConfig.AnnounceRarities
+	local spawned = {
+		{ Rarity = "Common", Part = "Safe" },
+		{ Rarity = "Epic", Part = "Danger" },
+		{ Rarity = "Legendary", Part = "Danger" },
+		{ Rarity = "Epic", Part = "Danger" },
+	}
+	equal(RarityRoll.Rarest(spawned, order, announce), 3, "Legendary важнее Epic")
+	equal(RarityRoll.Rarest({ { Rarity = "Epic", Part = "Danger" } }, order, announce), 1)
+	equal(RarityRoll.Rarest({ { Rarity = "Common", Part = "Safe" }, { Rarity = "Rare", Part = "Danger" } }, order, announce), nil, "без редких — молчим")
+	equal(RarityRoll.Rarest({}, order, announce), nil, "пустой ресток — молчим")
+end)
+
 test("часть зоны по X: граница DangerFromX уже опасная", function()
 	equal(RarityRoll.ZonePart(-40, 10), "Safe")
 	equal(RarityRoll.ZonePart(9.9, 10), "Safe")
