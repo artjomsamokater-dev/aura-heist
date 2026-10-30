@@ -50,10 +50,13 @@ TextConfig.UpgradeMaxed = {
 } :: { [string]: string }
 
 -- HUD (клиент)
-TextConfig.HudBaseCaption = "SAFE AT BASE"
-TextConfig.HudBaseValue = "%s Aura" -- %s — число Aura на базе
-TextConfig.HudHandsCaption = "IN HANDS · LOST IF YOU DIE"
-TextConfig.HudHandsValue = "In hands: %d/%d" -- сколько несёшь / сколько можно
+-- Иконки вместо слов: крупное число — главное, мелкая подпись с иконкой — пояснение
+TextConfig.HudBaseIcon = "✨" -- Aura
+TextConfig.HudBaseValue = "%s" -- %s — число Aura на базе
+TextConfig.HudBaseCaption = "🏠 safe"
+TextConfig.HudHandsIcon = "🎒" -- в руках
+TextConfig.HudHandsValue = "%d / %d" -- сколько несёшь / сколько можно
+TextConfig.HudHandsCaption = "💀 lost if you die"
 TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна

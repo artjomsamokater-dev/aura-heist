@@ -1,7 +1,10 @@
 --!strict
--- MapBuilder: при старте сервера строит карту по MapConfig (формы) и StyleConfig (цвета, материалы).
+-- MapBuilder: при старте сервера строит карту по MapConfig (формы, места) и StyleConfig (цвета, облик).
 -- Хаб → Workspace.Hub, участки → Workspace.PlayerStudios, зона → Workspace.RaidZone.
--- Здесь же собирается вид мемлинга (тело + глаза) — им пользуются Spawn и Studio.
+-- Здесь же собирается облик мемлинга (StyleConfig.Memeling.Looks) — им пользуются Spawn и Studio.
+--
+-- Скруглённые постаменты и кнопки: «логическая» деталь (коробка, к ней привязаны кнопки, подписи
+-- и расстояния) невидима, а видно круглую деталь Look поверх неё. Механика от этого не меняется.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -14,12 +17,17 @@ local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 
 local MapBuilder = {}
 
+local LOOK = "Look" -- имя видимых деталей поверх невидимой логической
+local UPRIGHT = CFrame.Angles(0, 0, math.rad(90)) -- цилиндр Roblox лежит вдоль X; так он встаёт вертикально
+
 local built = false
 local plots: { Model } = {} -- [номер участка] = Model участка
 local portalPart: Part? = nil
 local zoneFolder: Folder? = nil
 local zoneEntryPart: Part? = nil
 local extractionPad: Part? = nil
+
+-- ── Детали ─────────────────────────────────────────────────────────────────
 
 -- Создаёт папку в Workspace; старую с тем же именем удаляет, чтобы не было дублей
 local function makeFolder(name: string): Folder
@@ -47,8 +55,44 @@ local function makePart(name: string, size: Vector3, cframe: CFrame, color: Colo
 	return part
 end
 
--- Неоновая светящаяся деталь (порталы, площадка EXTRACT)
-local function makeGlow(part: Part, transparency: number)
+-- Деталь любой формы: "Ball" | "Block" | "Cylinder" | "Wedge"
+local function makeShape(name: string, kind: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): BasePart
+	if kind == "Wedge" then
+		local wedge = Instance.new("WedgePart")
+		wedge.Name = name
+		wedge.Size = size
+		wedge.CFrame = cframe
+		wedge.Color = color
+		wedge.Material = StyleConfig.Material
+		wedge.Anchored = true
+		wedge.Parent = parent
+		return wedge
+	end
+	local part = makePart(name, size, cframe, color, parent)
+	if kind == "Ball" then
+		part.Shape = Enum.PartType.Ball
+	elseif kind == "Cylinder" then
+		part.Shape = Enum.PartType.Cylinder
+	end
+	return part
+end
+
+-- Декор: не мешает игре (не ловит лучи и касания) и не даёт тени, если мелкий
+local function decorate(part: BasePart, castShadow: boolean)
+	part.CanTouch = false
+	part.CanQuery = false
+	part.CastShadow = castShadow
+end
+
+-- Вертикальный цилиндр: center — центр, height — высота
+local function makeColumn(name: string, center: CFrame, height: number, diameter: number, color: Color3, parent: Instance): Part
+	local part = makePart(name, Vector3.new(height, diameter, diameter), center * UPRIGHT, color, parent)
+	part.Shape = Enum.PartType.Cylinder
+	return part
+end
+
+-- Неоновая светящаяся деталь (портал, EXTRACT, столбы света)
+local function makeGlow(part: BasePart, transparency: number)
 	part.Material = StyleConfig.GlowMaterial
 	part.Transparency = transparency
 	part.CastShadow = false
@@ -68,6 +112,38 @@ local function addParticles(part: BasePart, spec: StyleConfig.Particles): Partic
 	emitter.Parent = part
 	return emitter
 end
+
+local function addLight(part: BasePart, color: Color3, brightness: number, range: number)
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Brightness = brightness
+	light.Range = range
+	light.Shadows = false
+	light.Parent = part
+end
+
+-- Логическую коробку прячем, сверху — круглый Look: цилиндр по размеру коробки и светлый ободок
+local function makeRoundLook(logical: Part, color: Color3, rimColor: Color3)
+	logical.Transparency = 1
+	local size = logical.Size
+	local diameter = math.min(size.X, size.Z)
+	local body = makeColumn(LOOK, logical.CFrame, size.Y, diameter, color, logical)
+	decorate(body, true)
+	body.CanCollide = false
+	local rimHeight = math.min(0.3, size.Y / 3)
+	local rim = makeColumn(
+		LOOK,
+		logical.CFrame * CFrame.new(0, size.Y / 2 - rimHeight / 2 + 0.05, 0),
+		rimHeight,
+		diameter + 0.3,
+		rimColor,
+		logical
+	)
+	decorate(rim, false)
+	rim.CanCollide = false
+end
+
+-- ── Подписи ────────────────────────────────────────────────────────────────
 
 export type LabelOptions = {
 	Height: number?, -- на сколько студов над центром детали (по умолчанию — сразу над её верхом)
@@ -122,10 +198,10 @@ local function addSignText(sign: BasePart, text: string)
 	end
 end
 
--- Мелкая деталь мемлинга: не мешает физике и не даёт тени
-local function makeDetail(name: string, diameter: number, cframe: CFrame, color: Color3, body: Part): Part
-	local detail = makePart(name, Vector3.new(diameter, diameter, diameter), cframe, color, body)
-	detail.Shape = Enum.PartType.Ball
+-- ── Мемлинги ───────────────────────────────────────────────────────────────
+
+-- Мелкая деталь, приваренная к телу: не мешает физике и не даёт тени
+local function attachDetail(detail: BasePart, body: BasePart)
 	detail.Anchored = false
 	detail.CanCollide = false
 	detail.CanTouch = false
@@ -137,51 +213,333 @@ local function makeDetail(name: string, diameter: number, cframe: CFrame, color:
 	weld.Part0 = body
 	weld.Part1 = detail
 	weld.Parent = detail
+end
+
+-- Круглая мелкая деталь (глаза врага и т.п.)
+local function makeDetail(name: string, diameter: number, cframe: CFrame, color: Color3, body: Part): Part
+	local detail = makePart(name, Vector3.new(diameter, diameter, diameter), cframe, color, body)
+	detail.Shape = Enum.PartType.Ball
+	attachDetail(detail, body)
 	return detail
 end
 
--- Мемлинг-персонаж: круглое тело цвета редкости и два глаза. Возвращает тело (Part);
--- глаза приварены к нему, поэтому двигаются вместе с телом.
--- Тело смотрит глазами в сторону -Z переданного cframe.
+-- Цвет детали: ключ палитры или "Body" / "BodyShade" — цвет редкости
+local function resolveColor(key: string, rarity: StyleConfig.RarityStyle): Color3
+	if key == "Body" then
+		return rarity.Body
+	elseif key == "BodyShade" then
+		return rarity.Shade
+	end
+	local color = (StyleConfig.Palette :: any)[key]
+	return if typeof(color) == "Color3" then color else rarity.Body
+end
+
+local FALLBACK_LOOK: StyleConfig.Look = {
+	Core = { Kind = "Ball", Size = Vector3.new(5, 5, 5), Color = "Body" },
+	Features = {},
+}
+
+-- Мемлинг-персонаж по облику из StyleConfig.Memeling.Looks: цвет тела и свечение — по редкости.
+-- Возвращает ядро (Part) — с ним работают подбор, подписи и переноска; детали к нему приварены.
+-- Мемлинг смотрит лицом в сторону −Z переданного cframe.
 local function makeMemeling(name: string, memelingId: string, cframe: CFrame, parent: Instance): Part
 	local cfg = StyleConfig.Memeling
 	local memeling = MemelingConfig.Memelings[memelingId]
-	local style = (memeling and cfg.Rarities[memeling.Rarity]) or cfg.Rarities.Common
+	local rarity = (memeling and cfg.Rarities[memeling.Rarity]) or cfg.Rarities.Common
+	local look = cfg.Looks[memelingId] or FALLBACK_LOOK
 
-	local body = makePart(name, cfg.Size, cframe, style.Body, parent)
-	body.Shape = Enum.PartType.Ball
+	-- Ядро всегда без поворота: переноска и постаменты ставят мемлинга именно по нему
+	local coreKind = if look.Core.Kind == "Block" then "Block" else "Ball"
+	local body = makeShape(name, coreKind, look.Core.Size, cframe, resolveColor(look.Core.Color, rarity), parent) :: Part
 	body.CastShadow = false
-
-	for i, offset in ipairs(cfg.EyeOffsets) do
-		local eyeCFrame = cframe * CFrame.new(offset)
-		makeDetail("Eye" .. i, cfg.EyeSize, eyeCFrame, cfg.EyeWhite, body)
-		makeDetail("Pupil" .. i, cfg.PupilSize, eyeCFrame * CFrame.new(0, 0, -cfg.PupilForward), cfg.Pupil, body)
+	if look.Core.Hidden then
+		body.Transparency = 1
 	end
 
-	if style.Outline then
+	for i, feature in ipairs(look.Features) do
+		local rotation = feature.Rotation or Vector3.zero
+		local featureCFrame = cframe
+			* CFrame.new(feature.Offset)
+			* CFrame.Angles(math.rad(rotation.X), math.rad(rotation.Y), math.rad(rotation.Z))
+		local detail = makeShape("Part" .. i, feature.Kind, feature.Size, featureCFrame, resolveColor(feature.Color, rarity), body)
+		if feature.Glow then
+			detail.Material = StyleConfig.GlowMaterial
+		end
+		attachDetail(detail, body)
+	end
+
+	if rarity.Outline then
 		-- Только контур, без заливки; сквозь стены не виден
 		local outline = Instance.new("Highlight")
 		outline.FillTransparency = 1
-		outline.OutlineColor = style.Outline
+		outline.OutlineColor = rarity.Outline
 		outline.OutlineTransparency = 0
 		outline.DepthMode = Enum.HighlightDepthMode.Occluded
 		outline.Adornee = body
 		outline.Parent = body
 	end
-
-	if style.Glow then
-		local light = Instance.new("PointLight")
-		light.Color = style.Body
-		light.Brightness = cfg.Light.Brightness
-		light.Range = cfg.Light.Range
-		light.Shadows = false
-		light.Parent = body
+	if rarity.Light then
+		addLight(body, rarity.Body, rarity.Light.Brightness, rarity.Light.Range)
 	end
-	if style.Particles then
-		addParticles(body, style.Particles)
+	if rarity.Particles then
+		addParticles(body, rarity.Particles)
 	end
 	return body
 end
+
+-- ── Хаб ────────────────────────────────────────────────────────────────────
+
+local function paintGround()
+	-- Baseplate из default.project.json: формы не трогаем, только цвет
+	local baseplate = Workspace:FindFirstChild("Baseplate")
+	if baseplate and baseplate:IsA("BasePart") then
+		baseplate.Color = StyleConfig.Ground
+		baseplate.Material = StyleConfig.Material
+	end
+end
+
+local function buildHub()
+	local folder = makeFolder("Hub")
+	local hub = MapConfig.Hub
+	local portalCfg = MapConfig.Portal
+	local style = StyleConfig.Portal
+
+	makePart("Floor", hub.Size, CFrame.new(hub.Center), StyleConfig.Hub.Floor, folder)
+	local path = makePart("Path", hub.PathSize, CFrame.new(hub.PathCenter), StyleConfig.Hub.Path, folder)
+	decorate(path, false)
+
+	-- Игрок появляется лицом к порталу: персонаж смотрит туда же, куда точка появления
+	local spawnPosition = MapConfig.Spawn.Position
+	local portalFlat = Vector3.new(portalCfg.Position.X, spawnPosition.Y, portalCfg.Position.Z)
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "HubSpawn"
+	spawn.Size = MapConfig.Spawn.Size
+	spawn.CFrame = CFrame.lookAt(spawnPosition, portalFlat)
+	spawn.Color = StyleConfig.Hub.Spawn
+	spawn.Material = StyleConfig.Material
+	spawn.TopSurface = Enum.SurfaceType.Smooth
+	spawn.Anchored = true
+	spawn.Neutral = true
+	spawn.Duration = StyleConfig.Hub.SpawnForceFieldSeconds -- 0 = без силового поля
+	spawn.Parent = folder
+
+	-- Портал — самое яркое в хабе: неон, свет, искры, рамка и столб света
+	local portal = makePart("Portal", portalCfg.Size, CFrame.new(portalCfg.Position), style.Color, folder)
+	makeGlow(portal, style.Transparency)
+	portal.CanCollide = false -- сквозь портал проходят
+	addParticles(portal, style.Particles)
+	addLight(portal, style.Color, style.Light.Brightness, style.Light.Range)
+	addLabel(portal, TextConfig.Portal)
+	portalPart = portal
+
+	local floorTop = hub.Center.Y + hub.Size.Y / 2
+	local frameCenterY = floorTop + portalCfg.FrameHeight / 2
+	for i, side in ipairs({ -1, 1 }) do
+		local pillar = makeColumn(
+			"PortalPillar" .. i,
+			CFrame.new(portalCfg.Position.X + side * portalCfg.FramePillarX, frameCenterY, portalCfg.Position.Z),
+			portalCfg.FrameHeight,
+			portalCfg.FramePillarDiameter,
+			style.Frame,
+			folder
+		)
+		decorate(pillar, true)
+		local cap = makeShape(
+			"PortalCap" .. i,
+			"Ball",
+			Vector3.one * portalCfg.FrameCapDiameter,
+			CFrame.new(portalCfg.Position.X + side * portalCfg.FramePillarX, floorTop + portalCfg.FrameHeight, portalCfg.Position.Z),
+			style.FrameCaps,
+			folder
+		)
+		decorate(cap, false)
+	end
+	local beam = makeColumn(
+		"PortalBeam",
+		CFrame.new(portalCfg.Position.X, floorTop + portalCfg.FrameHeight, portalCfg.Position.Z) * CFrame.Angles(0, 0, math.rad(-90)),
+		portalCfg.FramePillarX * 2,
+		portalCfg.FramePillarDiameter * 0.8,
+		style.Frame,
+		folder
+	)
+	decorate(beam, true)
+
+	local beacon = makeColumn(
+		"PortalBeacon",
+		CFrame.new(portalCfg.Position.X, floorTop + portalCfg.FrameHeight + portalCfg.BeaconHeight / 2, portalCfg.Position.Z),
+		portalCfg.BeaconHeight,
+		portalCfg.BeaconDiameter,
+		style.Color,
+		folder
+	)
+	makeGlow(beacon, style.BeaconTransparency)
+	decorate(beacon, false)
+	beacon.CanCollide = false
+end
+
+-- ── Участки ────────────────────────────────────────────────────────────────
+
+-- Ограда: столбики через PostStep и перекладина по каждому отрезку
+local function buildFence(plotCFrame: CFrame, accent: Color3, parent: Instance)
+	local fence = MapConfig.Plots.Fence
+	local floorTop = MapConfig.Plots.Size.Y / 2
+	local postCenterY = floorTop + fence.PostHeight / 2
+	local railY = floorTop + fence.PostHeight - fence.RailSize.Y
+	for s, segment in ipairs(fence.Segments) do
+		local from = Vector3.new(segment.From.X, 0, segment.From.Y)
+		local to = Vector3.new(segment.To.X, 0, segment.To.Y)
+		local length = (to - from).Magnitude
+		local posts = math.max(1, math.floor(length / fence.PostStep))
+		for i = 0, posts do
+			local p = from:Lerp(to, i / posts)
+			local post = makeColumn(
+				"FencePost" .. s .. "_" .. i,
+				plotCFrame * CFrame.new(p.X, postCenterY, p.Z),
+				fence.PostHeight,
+				fence.PostDiameter,
+				accent,
+				parent
+			)
+			decorate(post, false)
+		end
+		local middle = (from + to) / 2
+		local rail = makePart(
+			"FenceRail" .. s,
+			Vector3.new(fence.RailSize.X, fence.RailSize.Y, length),
+			plotCFrame * CFrame.lookAt(Vector3.new(middle.X, railY, middle.Z), Vector3.new(to.X, railY, to.Z)),
+			StyleConfig.Plot.Rail,
+			parent
+		)
+		decorate(rail, false)
+	end
+end
+
+-- Арка входа: два круглых столба, перекладина, шары сверху. Табличка висит под перекладиной
+local function buildArch(plotCFrame: CFrame, accent: Color3, parent: Instance)
+	local arch = MapConfig.Plots.Arch
+	local floorTop = MapConfig.Plots.Size.Y / 2
+	for i, side in ipairs({ -1, 1 }) do
+		local pillar = makeColumn(
+			"ArchPillar" .. i,
+			plotCFrame * CFrame.new(side * arch.PillarX, floorTop + arch.Height / 2, arch.Z),
+			arch.Height,
+			arch.PillarDiameter,
+			accent,
+			parent
+		)
+		decorate(pillar, true)
+		local cap = makeShape(
+			"ArchCap" .. i,
+			"Ball",
+			Vector3.one * arch.CapDiameter,
+			plotCFrame * CFrame.new(side * arch.PillarX, floorTop + arch.Height + arch.BeamSize.Y / 2, arch.Z),
+			StyleConfig.Plot.ArchCaps,
+			parent
+		)
+		decorate(cap, false)
+	end
+	local beam = makePart(
+		"ArchBeam",
+		arch.BeamSize,
+		plotCFrame * CFrame.new(0, floorTop + arch.Height + arch.BeamSize.Y / 2, arch.Z),
+		accent,
+		parent
+	)
+	decorate(beam, true)
+end
+
+local function buildRug(plotCFrame: CFrame, accent: Color3, parent: Instance)
+	local cfg = MapConfig.Plots
+	local border = makePart(
+		"RugBorder",
+		cfg.RugSize + Vector3.new(cfg.RugBorder * 2, 0, cfg.RugBorder * 2),
+		plotCFrame * CFrame.new(cfg.RugCenter - Vector3.new(0, 0.01, 0)),
+		accent,
+		parent
+	)
+	decorate(border, false)
+	local rug = makePart("Rug", cfg.RugSize, plotCFrame * CFrame.new(cfg.RugCenter + Vector3.new(0, 0.01, 0)), StyleConfig.Plot.Rug, parent)
+	decorate(rug, false)
+end
+
+local function buildPlots()
+	local folder = makeFolder("PlayerStudios")
+	local cfg = MapConfig.Plots
+	local hubCenter = MapConfig.Hub.Center
+	local accents = StyleConfig.Plot.Accents
+
+	for i = 1, cfg.Count do
+		local accent = accents[(i - 1) % #accents + 1]
+
+		-- Участки равномерно по кругу; каждый повёрнут лицом к хабу
+		local angle = (i - 1) * (2 * math.pi / cfg.Count)
+		local center = hubCenter + Vector3.new(math.cos(angle), 0, math.sin(angle)) * cfg.RingRadius
+		local plotCFrame = CFrame.lookAt(center, hubCenter)
+
+		local model = Instance.new("Model")
+		model.Name = "Studio" .. i
+		model:SetAttribute("PlotIndex", i)
+		model:SetAttribute("OwnerUserId", 0) -- 0 = участок свободен
+
+		local floor = makePart("Floor", cfg.Size, plotCFrame, StyleConfig.Plot.Floor, model)
+		model.PrimaryPart = floor
+
+		local decor = Instance.new("Folder")
+		decor.Name = "Decor"
+		decor.Parent = model
+		buildArch(plotCFrame, accent, decor)
+		buildFence(plotCFrame, accent, decor)
+		buildRug(plotCFrame, accent, decor)
+
+		local sign = makePart("Sign", cfg.SignSize, plotCFrame * CFrame.new(cfg.SignOffset), accent, model)
+		decorate(sign, true)
+		addSignText(sign, TextConfig.FreePlot)
+
+		local pedestals = Instance.new("Folder")
+		pedestals.Name = "Pedestals"
+		pedestals.Parent = model
+		for p, offset in ipairs(cfg.PedestalOffsets) do
+			local pedestal = makePart("Pedestal" .. p, cfg.PedestalSize, plotCFrame * CFrame.new(offset), accent, pedestals)
+			pedestal:SetAttribute("PedestalIndex", p)
+			makeRoundLook(pedestal, accent, StyleConfig.PlotParts.PedestalRim)
+		end
+
+		-- Кнопки-диски улучшений; подписи и кнопку «Buy» на них вешает Studio
+		local buttons = Instance.new("Folder")
+		buttons.Name = "Buttons"
+		buttons.Parent = model
+		for upgradeId, offset in cfg.UpgradeButtonOffsets do
+			local button = makePart(
+				"Upgrade_" .. upgradeId,
+				cfg.ButtonSize,
+				plotCFrame * CFrame.new(offset),
+				StyleConfig.PlotParts.UpgradeButton,
+				buttons
+			)
+			button.CastShadow = false
+			button:SetAttribute("UpgradeId", upgradeId)
+			makeRoundLook(button, StyleConfig.PlotParts.UpgradeButton, StyleConfig.PlotParts.ButtonRim)
+			addLabel(button, "")
+		end
+
+		-- Диск запаса; подпись и кнопку «Sell» на него вешает Studio
+		local reserve = makePart(
+			"Reserve",
+			cfg.ButtonSize,
+			plotCFrame * CFrame.new(cfg.ReserveOffset),
+			StyleConfig.PlotParts.ReservePad,
+			buttons
+		)
+		reserve.CastShadow = false
+		makeRoundLook(reserve, StyleConfig.PlotParts.ReservePad, StyleConfig.PlotParts.ReserveRim)
+		addLabel(reserve, "")
+
+		model.Parent = folder
+		plots[i] = model
+	end
+end
+
+-- ── Зона ───────────────────────────────────────────────────────────────────
 
 -- Узор плиткой на верхней грани пола зоны
 local function addFloorTexture(floor: BasePart)
@@ -196,115 +554,90 @@ local function addFloorTexture(floor: BasePart)
 	texture.Parent = floor
 end
 
-local function paintGround()
-	-- Baseplate из default.project.json: формы не трогаем, только цвет
-	local baseplate = Workspace:FindFirstChild("Baseplate")
-	if baseplate and baseplate:IsA("BasePart") then
-		baseplate.Color = StyleConfig.Ground
-		baseplate.Material = StyleConfig.Material
-	end
-end
-
-local function buildHub()
-	local folder = makeFolder("Hub")
-	local hub = MapConfig.Hub
-
-	makePart("Floor", hub.Size, CFrame.new(hub.Center), StyleConfig.Hub.Floor, folder)
-
-	local spawn = Instance.new("SpawnLocation")
-	spawn.Name = "HubSpawn"
-	spawn.Size = MapConfig.Spawn.Size
-	spawn.CFrame = CFrame.new(MapConfig.Spawn.Position)
-	spawn.Color = StyleConfig.Hub.Spawn
-	spawn.Material = StyleConfig.Material
-	spawn.TopSurface = Enum.SurfaceType.Smooth
-	spawn.Anchored = true
-	spawn.Neutral = true
-	spawn.Duration = StyleConfig.Hub.SpawnForceFieldSeconds -- 0 = без силового поля
-	spawn.Parent = folder
-
-	local portal = makePart(
-		"Portal",
-		MapConfig.Portal.Size,
-		CFrame.new(MapConfig.Portal.Position),
-		StyleConfig.Portal.Color,
-		folder
-	)
-	makeGlow(portal, StyleConfig.Portal.Transparency)
-	portal.CanCollide = false -- сквозь портал проходят
-	addParticles(portal, StyleConfig.Portal.Particles)
-	addLabel(portal, TextConfig.Portal)
-	portalPart = portal
-end
-
-local function buildPlots()
-	local folder = makeFolder("PlayerStudios")
-	local cfg = MapConfig.Plots
-	local hubCenter = MapConfig.Hub.Center
-
-	for i = 1, cfg.Count do
-		local colors = StyleConfig.Plots[(i - 1) % #StyleConfig.Plots + 1]
-
-		-- Участки равномерно по кругу; каждый повёрнут лицом к хабу
-		local angle = (i - 1) * (2 * math.pi / cfg.Count)
-		local center = hubCenter + Vector3.new(math.cos(angle), 0, math.sin(angle)) * cfg.RingRadius
-		local plotCFrame = CFrame.lookAt(center, hubCenter)
-
-		local model = Instance.new("Model")
-		model.Name = "Studio" .. i
-		model:SetAttribute("PlotIndex", i)
-		model:SetAttribute("OwnerUserId", 0) -- 0 = участок свободен
-
-		local floor = makePart("Floor", cfg.Size, plotCFrame, colors.Floor, model)
-		model.PrimaryPart = floor
-
-		local sign = makePart("Sign", cfg.SignSize, plotCFrame * CFrame.new(cfg.SignOffset), colors.Accent, model)
-		addSignText(sign, TextConfig.FreePlot)
-
-		local pedestals = Instance.new("Folder")
-		pedestals.Name = "Pedestals"
-		pedestals.Parent = model
-		for p, offset in ipairs(cfg.PedestalOffsets) do
-			local pedestal = makePart(
-				"Pedestal" .. p,
-				cfg.PedestalSize,
-				plotCFrame * CFrame.new(offset),
-				colors.Accent,
-				pedestals
-			)
-			pedestal:SetAttribute("PedestalIndex", p)
-		end
-
-		-- Кнопки-площадки улучшений; подписи и кнопку «Buy» на них вешает Studio
-		local buttons = Instance.new("Folder")
-		buttons.Name = "Buttons"
-		buttons.Parent = model
-		for upgradeId, offset in cfg.UpgradeButtonOffsets do
-			local button = makePart(
-				"Upgrade_" .. upgradeId,
-				cfg.ButtonSize,
-				plotCFrame * CFrame.new(offset),
-				StyleConfig.PlotParts.UpgradeButton,
-				buttons
-			)
-			button.CastShadow = false
-			button:SetAttribute("UpgradeId", upgradeId)
-			addLabel(button, "")
-		end
-
-		-- Площадка запаса; подпись и кнопку «Sell» на неё вешает Studio
-		local reserve = makePart(
-			"Reserve",
-			cfg.ButtonSize,
-			plotCFrame * CFrame.new(cfg.ReserveOffset),
-			StyleConfig.PlotParts.ReservePad,
-			buttons
+-- Ворота поперёк дорожки на линии x (смещение от центра зоны)
+local function buildGate(name: string, x: number, color: Color3, parent: Instance)
+	local zone = MapConfig.Zone
+	local decor = zone.Decor
+	local top = zone.Center.Y + zone.Size.Y / 2
+	local base = zone.Center + Vector3.new(x, 0, 0)
+	for i, side in ipairs({ -1, 1 }) do
+		local pillar = makeColumn(
+			name .. "Pillar" .. i,
+			CFrame.new(base.X, top + decor.GateHeight / 2, base.Z + side * decor.GatePillarZ),
+			decor.GateHeight,
+			decor.GatePillarDiameter,
+			color,
+			parent
 		)
-		reserve.CastShadow = false
-		addLabel(reserve, "")
+		decorate(pillar, true)
+		local cap = makeShape(
+			name .. "Cap" .. i,
+			"Ball",
+			Vector3.one * decor.GateCapDiameter,
+			CFrame.new(base.X, top + decor.GateHeight, base.Z + side * decor.GatePillarZ),
+			StyleConfig.Zone.GateCaps,
+			parent
+		)
+		decorate(cap, false)
+	end
+	local beam = makePart(
+		name .. "Beam",
+		Vector3.new(decor.GateBeamThickness, decor.GateBeamThickness, decor.GatePillarZ * 2),
+		CFrame.new(base.X, top + decor.GateHeight, base.Z),
+		color,
+		parent
+	)
+	decorate(beam, true)
+end
 
-		model.Parent = folder
-		plots[i] = model
+local function buildLandmarks(parent: Instance)
+	local zone = MapConfig.Zone
+	local decor = zone.Decor
+	local style = StyleConfig.Zone
+	local top = zone.Center.Y + zone.Size.Y / 2
+
+	-- Грибы-великаны в безопасной части
+	for m, mushroom in ipairs(decor.Mushrooms) do
+		local base = Vector3.new(zone.Center.X + mushroom.Position.X, top, zone.Center.Z + mushroom.Position.Y)
+		local stem = makeColumn("MushroomStem" .. m, CFrame.new(base + Vector3.new(0, mushroom.StemHeight / 2, 0)), mushroom.StemHeight, mushroom.StemDiameter, style.MushroomStem, parent)
+		decorate(stem, true)
+		local capCenter = base + Vector3.new(0, mushroom.StemHeight, 0)
+		local brim = makeColumn("MushroomBrim" .. m, CFrame.new(capCenter), 1.6, mushroom.CapDiameter, style.MushroomCap, parent)
+		decorate(brim, true)
+		local domeSize = mushroom.CapDiameter * 0.8
+		local dome = makeShape("MushroomDome" .. m, "Ball", Vector3.one * domeSize, CFrame.new(capCenter + Vector3.new(0, 0.8, 0)), style.MushroomCap, parent)
+		decorate(dome, true)
+		for d, offset in ipairs({ Vector3.new(0.25, 0.4, 0), Vector3.new(-0.2, 0.42, 0.2), Vector3.new(0, 0.38, -0.3) }) do
+			local dot = makeShape(
+				"MushroomDot" .. m .. "_" .. d,
+				"Ball",
+				Vector3.one * (domeSize * 0.18),
+				CFrame.new(capCenter + Vector3.new(0, 0.8, 0) + offset * domeSize),
+				style.MushroomDots,
+				parent
+			)
+			decorate(dot, false)
+		end
+	end
+
+	-- Кристаллы в опасной части: несколько наклонённых столбиков разной высоты
+	local tilts = { Vector3.new(8, 0, 6), Vector3.new(-12, 30, 10), Vector3.new(14, 70, -10) }
+	local spread = { Vector3.new(0, 0, 0), Vector3.new(3, 0, 2), Vector3.new(-2.5, 0, 3) }
+	for c, crystal in ipairs(decor.Crystals) do
+		local base = Vector3.new(zone.Center.X + crystal.Position.X, top, zone.Center.Z + crystal.Position.Y)
+		for i, height in ipairs(crystal.Heights) do
+			local tilt = tilts[(i - 1) % #tilts + 1]
+			local width = 1.6 + height * 0.12
+			local part = makePart(
+				"Crystal" .. c .. "_" .. i,
+				Vector3.new(width, height, width),
+				CFrame.new(base + spread[(i - 1) % #spread + 1] + Vector3.new(0, height / 2 - 0.5, 0))
+					* CFrame.Angles(math.rad(tilt.X), math.rad(tilt.Y), math.rad(tilt.Z)),
+				style.Crystal,
+				parent
+			)
+			decorate(part, true)
+		end
 	end
 end
 
@@ -312,8 +645,11 @@ local function buildZone()
 	local folder = makeFolder("RaidZone")
 	zoneFolder = folder
 	local zone = MapConfig.Zone
+	local decor = zone.Decor
+	local style = StyleConfig.Zone
+	local top = zone.Center.Y + zone.Size.Y / 2
 
-	-- Пол из двух частей: безопасная (у входа) и опасная (дальше, тревожного цвета)
+	-- Пол из двух частей: безопасная (у входа) и опасная (дальше, тёмная слива)
 	local halfX = zone.Size.X / 2
 	local safeWidth = halfX + zone.DangerFromX
 	local dangerWidth = halfX - zone.DangerFromX
@@ -321,7 +657,7 @@ local function buildZone()
 		"SafeFloor",
 		Vector3.new(safeWidth, zone.Size.Y, zone.Size.Z),
 		CFrame.new(zone.Center + Vector3.new(-halfX + safeWidth / 2, 0, 0)),
-		StyleConfig.Zone.SafeFloor,
+		style.SafeFloor,
 		folder
 	)
 	addLabel(safeFloor, TextConfig.Zone)
@@ -329,19 +665,50 @@ local function buildZone()
 		"DangerFloor",
 		Vector3.new(dangerWidth, zone.Size.Y, zone.Size.Z),
 		CFrame.new(zone.Center + Vector3.new(zone.DangerFromX + dangerWidth / 2, 0, 0)),
-		StyleConfig.Zone.DangerFloor,
+		style.DangerFloor,
 		folder
 	)
 	addLabel(dangerFloor, TextConfig.ZoneDanger)
 	addFloorTexture(safeFloor)
 	addFloorTexture(dangerFloor)
 
+	local decorFolder = Instance.new("Folder")
+	decorFolder.Name = "Decor"
+	decorFolder.Parent = folder
+
+	-- Полоса по границе опасной части
+	local border = makePart(
+		"DangerBorder",
+		Vector3.new(decor.DangerBorderWidth, 0.1, zone.Size.Z),
+		CFrame.new(zone.Center.X + zone.DangerFromX, top + 0.05, zone.Center.Z),
+		style.DangerBorder,
+		decorFolder
+	)
+	decorate(border, false)
+
+	-- Дорожка от входа к EXTRACT
+	local pathLength = decor.PathToX - decor.PathFromX
+	local path = makePart(
+		"Path",
+		Vector3.new(pathLength, 0.1, decor.PathWidth),
+		CFrame.new(zone.Center.X + (decor.PathFromX + decor.PathToX) / 2, top + 0.06, zone.Center.Z),
+		style.Path,
+		decorFolder
+	)
+	path.Transparency = style.PathTransparency
+	decorate(path, false)
+
+	-- Ворота: у входа (мята) и в опасную часть (коралл)
+	buildGate("EntryGate", decor.EntryGateX, style.EntryGate, decorFolder)
+	buildGate("DangerGate", zone.DangerFromX, style.DangerGate, decorFolder)
+	buildLandmarks(decorFolder)
+
 	-- Плоская плитка на полу: сюда портал переносит игрока
 	local entry = makePart(
 		"EntryPoint",
 		zone.EntryMarkerSize,
 		CFrame.new(zone.EntryPosition + Vector3.new(0, zone.EntryMarkerSize.Y / 2, 0)),
-		StyleConfig.Zone.Entry,
+		style.Entry,
 		folder
 	)
 	entry.CanCollide = false
@@ -355,8 +722,7 @@ local function buildZone()
 	local pad = makePart(
 		"ExtractionPoint",
 		Vector3.new(zone.ExtractionPadThickness, diameter, diameter),
-		CFrame.new(zone.ExtractionPosition + Vector3.new(0, zone.ExtractionPadThickness / 2, 0))
-			* CFrame.Angles(0, 0, math.rad(90)),
+		CFrame.new(zone.ExtractionPosition + Vector3.new(0, zone.ExtractionPadThickness / 2, 0)) * UPRIGHT,
 		StyleConfig.Extraction.Color,
 		folder
 	)
@@ -367,6 +733,19 @@ local function buildZone()
 	sparks.EmissionDirection = Enum.NormalId.Right -- после поворота «право» цилиндра смотрит вверх
 	addLabel(pad, TextConfig.Extraction, { Height = StyleConfig.Label.HeightStuds })
 	extractionPad = pad
+
+	-- Столб света над EXTRACT: видно из любого места зоны, куда идти
+	local beacon = makeColumn(
+		"ExtractBeacon",
+		CFrame.new(zone.ExtractionPosition + Vector3.new(0, decor.ExtractBeaconHeight / 2, 0)),
+		decor.ExtractBeaconHeight,
+		decor.ExtractBeaconDiameter,
+		StyleConfig.Extraction.Color,
+		decorFolder
+	)
+	makeGlow(beacon, StyleConfig.Extraction.BeaconTransparency)
+	decorate(beacon, false)
+	beacon.CanCollide = false
 
 	-- Невидимые стены по четырём краям пола, чтобы из зоны нельзя было выпасть
 	local walls = Instance.new("Folder")
@@ -383,7 +762,7 @@ local function buildZone()
 		{ Name = "East", Size = Vector3.new(t, h, zone.Size.Z), Offset = Vector3.new(half.X + t / 2, 0, 0) },
 	}
 	for _, spec in ipairs(wallSpecs) do
-		local wall = makePart(spec.Name, spec.Size, CFrame.new(wallBase + spec.Offset), StyleConfig.Zone.SafeFloor, walls)
+		local wall = makePart(spec.Name, spec.Size, CFrame.new(wallBase + spec.Offset), style.SafeFloor, walls)
 		wall.Transparency = 1
 		wall.CastShadow = false
 	end
@@ -416,20 +795,32 @@ function MapBuilder.GetZoneFolder(): Folder
 	return assert(zoneFolder, "MapBuilder.Build() ещё не вызван")
 end
 
--- Куда ставить персонажа при входе в зону
+-- Куда ставить персонажа при входе в зону: лицом на восток — к воротам, дорожке и EXTRACT
 function MapBuilder.GetZoneEntryCFrame(): CFrame
 	local entry = assert(zoneEntryPart, "MapBuilder.Build() ещё не вызван")
-	return CFrame.new(entry.Position + Vector3.new(0, MapConfig.Zone.EntrySpawnHeight, 0))
+	local position = entry.Position + Vector3.new(0, MapConfig.Zone.EntrySpawnHeight, 0)
+	return CFrame.lookAt(position, position + Vector3.xAxis)
 end
 
--- Куда ставить персонажа при возвращении в хаб (после эвакуации)
+-- Куда ставить персонажа при возвращении в хаб (после эвакуации): лицом к порталу
 function MapBuilder.GetHubArrivalCFrame(): CFrame
-	return CFrame.new(MapConfig.Spawn.Position + Vector3.new(0, MapConfig.Spawn.ArrivalHeight, 0))
+	local position = MapConfig.Spawn.Position + Vector3.new(0, MapConfig.Spawn.ArrivalHeight, 0)
+	local portal = MapConfig.Portal.Position
+	return CFrame.lookAt(position, Vector3.new(portal.X, position.Y, portal.Z))
 end
 
 -- Площадка эвакуации в зоне (на ней же подпись с прогрессом)
 function MapBuilder.GetExtractionPad(): Part
 	return (assert(extractionPad, "MapBuilder.Build() ещё не вызван"))
+end
+
+-- Прозрачность видимой части скруглённой детали (постамент-«призрак», пока не куплен)
+function MapBuilder.SetLookTransparency(part: Instance, transparency: number)
+	for _, child in ipairs(part:GetChildren()) do
+		if child.Name == LOOK and child:IsA("BasePart") then
+			child.Transparency = transparency
+		end
+	end
 end
 
 -- Те же помощники для других сервисов

@@ -1,6 +1,7 @@
 --!strict
 -- LightingSetup: при старте сервера настраивает свет по StyleConfig.Lighting —
--- яркий день, атмосфера, Bloom, ColorCorrection, небо. Сервер меняет Lighting, клиенты видят то же.
+-- солнце под углом, атмосфера, Bloom, мягкая цветокоррекция, небо. Сервер меняет Lighting, клиенты видят то же.
+-- Тени (Lighting.Technology = ShadowMap) задаются в default.project.json: из скрипта их не включить.
 -- Эффекты этих типов, которые уже лежат в Lighting (например, из шаблона места), заменяются нашими,
 -- иначе их было бы по два и Roblox брал бы любой из них.
 
@@ -26,6 +27,7 @@ function LightingSetup.Apply()
 	removeExisting()
 
 	Lighting.ClockTime = cfg.ClockTime
+	Lighting.GeographicLatitude = cfg.GeographicLatitude -- вместе с ClockTime задаёт угол солнца
 	Lighting.Brightness = cfg.Brightness
 	Lighting.Ambient = cfg.Ambient
 	Lighting.OutdoorAmbient = cfg.OutdoorAmbient

@@ -118,8 +118,8 @@ local function buildChaser(index: number, floorPosition: Vector3, parent: Instan
 
 	for i, offset in ipairs(style.EyeOffsets) do
 		local eyeCFrame = cframe * CFrame.new(offset)
-		MapBuilder.MakeDetail("Eye" .. i, style.EyeSize, eyeCFrame, StyleConfig.Memeling.EyeWhite, body)
-		MapBuilder.MakeDetail("Pupil" .. i, style.PupilSize, eyeCFrame * CFrame.new(0, 0, -style.PupilForward), StyleConfig.Memeling.Pupil, body)
+		MapBuilder.MakeDetail("Eye" .. i, style.EyeSize, eyeCFrame, StyleConfig.Palette.CreamLight, body)
+		MapBuilder.MakeDetail("Pupil" .. i, style.PupilSize, eyeCFrame * CFrame.new(0, 0, -style.PupilForward), StyleConfig.Palette.Ink, body)
 	end
 	for _, brow in ipairs(style.BrowOffsets) do
 		makeBrow(body, cframe * CFrame.new(brow.Position) * CFrame.Angles(0, 0, math.rad(brow.Tilt)))

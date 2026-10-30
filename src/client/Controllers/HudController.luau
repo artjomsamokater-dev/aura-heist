@@ -24,10 +24,10 @@ local HUD = StyleConfig.Hud
 local CARD_WIDTH = HUD.CardWidth
 local CAPTION_SIZE = HUD.CaptionSize
 local VALUE_SIZE = HUD.ValueSize
-local BASE_COLOR = HUD.BaseCard
-local HANDS_COLOR = HUD.HandsCard
 local TEXT_DARK = HUD.TextDark
 local TEXT_LIGHT = HUD.TextLight
+local PADDING = 8
+local CARD_HEIGHT = math.max(HUD.IconSize + PADDING * 2, VALUE_SIZE + CAPTION_SIZE + PADDING * 2 + 4)
 
 local function readNumber(name: string): number
 	return tonumber(player:GetAttribute(name)) or 0
@@ -46,35 +46,74 @@ local function makeLabel(parent: Instance, text: string, size: number, color: Co
 	return label
 end
 
--- Цветная карточка: мелкая подпись сверху, крупное значение снизу
-local function makeCard(parent: Instance, order: number, color: Color3, textColor: Color3, caption: string): TextLabel
-	local card = Instance.new("Frame")
-	card.LayoutOrder = order
-	card.BackgroundColor3 = color
-	card.Size = UDim2.fromOffset(CARD_WIDTH, 0)
-	card.AutomaticSize = Enum.AutomaticSize.Y
-	card.Parent = parent
-
+local function addCorner(frame: GuiObject, radius: UDim)
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 12)
-	corner.Parent = card
+	corner.CornerRadius = radius
+	corner.Parent = frame
+end
 
-	local padding = Instance.new("UIPadding")
-	padding.PaddingLeft = UDim.new(0, 12)
-	padding.PaddingRight = UDim.new(0, 12)
-	padding.PaddingTop = UDim.new(0, 8)
-	padding.PaddingBottom = UDim.new(0, 8)
-	padding.Parent = card
+-- Скруглённая панель с тенью и обводкой: слева иконка в кружке, справа крупное число,
+-- под ним мелкое пояснение. Вернёт подпись числа (её обновляет refresh)
+local function makeCard(parent: Instance, order: number, color: Color3, icon: string, caption: string): TextLabel
+	local holder = Instance.new("Frame")
+	holder.Name = "Card" .. order
+	holder.LayoutOrder = order
+	holder.BackgroundTransparency = 1
+	holder.Size = UDim2.fromOffset(CARD_WIDTH, CARD_HEIGHT + HUD.ShadowOffset)
+	holder.Parent = parent
 
-	local layout = Instance.new("UIListLayout")
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = card
+	local shadow = Instance.new("Frame")
+	shadow.Name = "Shadow"
+	shadow.BackgroundColor3 = HUD.Shadow
+	shadow.BackgroundTransparency = HUD.ShadowTransparency
+	shadow.BorderSizePixel = 0
+	shadow.Position = UDim2.fromOffset(0, HUD.ShadowOffset)
+	shadow.Size = UDim2.fromOffset(CARD_WIDTH, CARD_HEIGHT)
+	shadow.Parent = holder
+	addCorner(shadow, UDim.new(0, HUD.CornerRadius))
 
-	local captionLabel = makeLabel(card, caption, CAPTION_SIZE, textColor)
-	captionLabel.LayoutOrder = 1
-	captionLabel.TextTransparency = 0.25
-	local valueLabel = makeLabel(card, "", VALUE_SIZE, textColor)
-	valueLabel.LayoutOrder = 2
+	local card = Instance.new("Frame")
+	card.Name = "Panel"
+	card.BackgroundColor3 = color
+	card.BorderSizePixel = 0
+	card.Size = UDim2.fromOffset(CARD_WIDTH, CARD_HEIGHT)
+	card.Parent = holder
+	addCorner(card, UDim.new(0, HUD.CornerRadius))
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = HUD.Stroke
+	stroke.Thickness = HUD.StrokeThickness
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = card
+
+	local bubble = Instance.new("Frame")
+	bubble.Name = "Icon"
+	bubble.BackgroundColor3 = HUD.IconBubble
+	bubble.BorderSizePixel = 0
+	bubble.AnchorPoint = Vector2.new(0, 0.5)
+	bubble.Position = UDim2.new(0, PADDING, 0.5, 0)
+	bubble.Size = UDim2.fromOffset(HUD.IconSize, HUD.IconSize)
+	bubble.Parent = card
+	addCorner(bubble, UDim.new(1, 0))
+	local iconLabel = Instance.new("TextLabel")
+	iconLabel.BackgroundTransparency = 1
+	iconLabel.Size = UDim2.fromScale(1, 1)
+	iconLabel.TextScaled = true
+	iconLabel.Font = StyleConfig.Fonts.Hud
+	iconLabel.Text = icon
+	iconLabel.Parent = bubble
+
+	local textLeft = PADDING * 2 + HUD.IconSize
+	local valueLabel = makeLabel(card, "", VALUE_SIZE, TEXT_DARK)
+	valueLabel.Name = "Value"
+	valueLabel.Position = UDim2.fromOffset(textLeft, PADDING - 2)
+	valueLabel.Size = UDim2.new(1, -textLeft - PADDING, 0, VALUE_SIZE + 4)
+	valueLabel.TextScaled = false
+
+	local captionLabel = makeLabel(card, caption, CAPTION_SIZE, TEXT_DARK)
+	captionLabel.Name = "Caption"
+	captionLabel.Position = UDim2.fromOffset(textLeft, PADDING + VALUE_SIZE + 2)
+	captionLabel.Size = UDim2.new(1, -textLeft - PADDING, 0, CAPTION_SIZE + 4)
+	captionLabel.TextTransparency = 0.2
 	return valueLabel
 end
 
@@ -113,11 +152,11 @@ local function buildHud(playerGui: Instance)
 
 	local layout = Instance.new("UIListLayout")
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, 8)
+	layout.Padding = UDim.new(0, 6)
 	layout.Parent = column
 
-	local baseValue = makeCard(column, 1, BASE_COLOR, TEXT_DARK, TextConfig.HudBaseCaption)
-	local handsValue = makeCard(column, 2, HANDS_COLOR, TEXT_LIGHT, TextConfig.HudHandsCaption)
+	local baseValue = makeCard(column, 1, HUD.BaseCard, TextConfig.HudBaseIcon, TextConfig.HudBaseCaption)
+	local handsValue = makeCard(column, 2, HUD.HandsCard, TextConfig.HudHandsIcon, TextConfig.HudHandsCaption)
 
 	local function refresh()
 		baseValue.Text = string.format(TextConfig.HudBaseValue, formatNumber(readNumber("BankedAura")))

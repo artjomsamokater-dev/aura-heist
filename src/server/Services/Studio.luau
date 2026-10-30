@@ -122,7 +122,8 @@ local function refreshPedestalLocks(plotIndex: number, data: PlayerData.Data?)
 		local pedestal = getPedestal(plotIndex, pedestalIndex)
 		if pedestal then
 			local isUnlocked = pedestalIndex <= unlocked
-			pedestal.Transparency = if isUnlocked then 0 else StyleConfig.PlotParts.LockedPedestalTransparency
+			-- Сама деталь постамента невидимая (логическая), видно круглый Look поверх неё
+			MapBuilder.SetLookTransparency(pedestal, if isUnlocked then 0 else StyleConfig.PlotParts.LockedPedestalTransparency)
 			pedestal.CanCollide = isUnlocked
 		end
 	end
@@ -233,7 +234,7 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 	MapBuilder.AddLabel(
 		body,
 		string.format(TextConfig.PedestalMemeling, name, getRate(entry.memelingId)),
-		{ MaxDistance = labelStyle.MemelingMaxDistance }
+		{ MaxDistance = labelStyle.MemelingMaxDistance, Height = StyleConfig.Memeling.LabelHeight }
 	)
 
 	-- Подпись «накоплено» висит выше подписи мемлинга, с зазором

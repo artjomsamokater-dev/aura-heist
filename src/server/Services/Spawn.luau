@@ -104,7 +104,11 @@ local function spawnAt(memelingId: string, floorPosition: Vector3): Record
 	)
 	part:SetAttribute("InstanceId", instanceId)
 	part:SetAttribute("MemelingId", memelingId)
-	MapBuilder.AddLabel(part, displayName, { MaxDistance = StyleConfig.Label.MemelingMaxDistance })
+	MapBuilder.AddLabel(
+		part,
+		displayName,
+		{ MaxDistance = StyleConfig.Label.MemelingMaxDistance, Height = StyleConfig.Memeling.LabelHeight }
+	)
 	addPickupPrompt(part, instanceId, displayName)
 
 	local record: Record = {
