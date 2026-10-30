@@ -534,6 +534,14 @@ StyleConfig.Hud = {
 	SmallScreenHeight = 500, -- экран ниже этого (телефон боком) — HUD чуть меньше
 	SmallScreenScale = 0.8,
 
+	-- Таймер рестока вверху по центру
+	TimerPanel = Palette.PlumDark,
+	TimerText = Palette.CreamLight,
+	TimerWidth = 300,
+	TimerHeight = 36,
+	TimerTextSize = 20,
+	TimerTop = 8, -- отступ от панели Roblox сверху, в пикселях
+
 	MarkerHeight = 14, -- на сколько студов над площадкой висит маркер EXTRACT
 	MarkerHideDistance = 45, -- ближе этого маркер прячется: площадку и так видно
 	MarkerTitleSize = 30,

@@ -170,6 +170,53 @@ local function buildHud(playerGui: Instance)
 	refresh()
 end
 
+-- 83 секунды → "1:23"
+local function formatClock(seconds: number): string
+	local whole = math.max(0, math.ceil(seconds))
+	return string.format("%d:%02d", whole // 60, whole % 60)
+end
+
+-- Таймер рестока вверху по центру. Время следующего рестока хранит сервер
+-- (атрибут NextRestockAt на ReplicatedStorage), остаток каждый считает сам — у всех он одинаковый
+local function buildRestockTimer(playerGui: Instance)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "RestockTimer"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.Parent = playerGui
+
+	local panel = Instance.new("Frame")
+	panel.Name = "Panel"
+	panel.AnchorPoint = Vector2.new(0.5, 0)
+	panel.Position = UDim2.new(0.5, 0, 0, GuiService:GetGuiInset().Y + HUD.TimerTop)
+	panel.Size = UDim2.fromOffset(HUD.TimerWidth, HUD.TimerHeight)
+	panel.BackgroundColor3 = HUD.TimerPanel
+	panel.BorderSizePixel = 0
+	panel.Visible = false
+	panel.Parent = gui
+	addCorner(panel, UDim.new(1, 0))
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = HUD.Stroke
+	stroke.Thickness = HUD.StrokeThickness
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = panel
+
+	local label = makeLabel(panel, "", HUD.TimerTextSize, HUD.TimerText)
+	label.Size = UDim2.fromScale(1, 1)
+	label.TextXAlignment = Enum.TextXAlignment.Center
+
+	task.spawn(function()
+		while gui.Parent do
+			local nextRestockAt = tonumber(ReplicatedStorage:GetAttribute("NextRestockAt"))
+			if nextRestockAt then
+				panel.Visible = true
+				label.Text = string.format(TextConfig.RestockTimer, formatClock(nextRestockAt - Workspace:GetServerTimeNow()))
+			end
+			task.wait(0.25)
+		end
+	end)
+end
+
 -- Указатель на EXTRACT: маркер высоко над площадкой (виден сквозь стены, единственный «поверх всего»)
 -- и стрелка у края экрана, когда площадка за кадром. Только в состоянии InRaid.
 -- Вблизи маркер прячется, чтобы не закрывать имена мемлингов: площадку и так видно.
@@ -279,6 +326,7 @@ end
 function HudController.Start()
 	local playerGui = player:WaitForChild("PlayerGui")
 	buildHud(playerGui)
+	buildRestockTimer(playerGui)
 	buildExtractPointer(playerGui)
 end
 

@@ -57,6 +57,7 @@ TextConfig.HudBaseCaption = "🏠 safe"
 TextConfig.HudHandsIcon = "🎒" -- в руках
 TextConfig.HudHandsValue = "%d / %d" -- сколько несёшь / сколько можно
 TextConfig.HudHandsCaption = "💀 lost if you die"
+TextConfig.RestockTimer = "🔄 New memelings in %s" -- %s — сколько осталось, например 1:23
 TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна

@@ -20,7 +20,9 @@ ZoneConfig.SpawnChances = {
 	Danger = { Common = 0, Rare = 55, Epic = 38, Legendary = 7 },
 } :: { [string]: { [string]: number } }
 
-ZoneConfig.RestockSeconds = 180 -- через сколько секунд зона заново наполняется мемлингами
+-- Раз в столько секунд все пустые точки спавна получают новых мемлингов.
+-- Для теста с игроками — 90; по документации — 180
+ZoneConfig.RestockSeconds = 90
 ZoneConfig.EvacuationSeconds = 3 -- сколько секунд длится эвакуация
 ZoneConfig.PickupDistance = 10 -- максимум студов до мемлинга, чтобы его подобрать
 ZoneConfig.EvacuationDistance = 12 -- максимум студов до точки эвакуации

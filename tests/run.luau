@@ -10,6 +10,7 @@ require("./RarityRoll.spec")
 require("./CarrySpeed.spec")
 require("./HazardMath.spec")
 require("./EnemyMath.spec")
+require("./SpawnPointBook.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")
