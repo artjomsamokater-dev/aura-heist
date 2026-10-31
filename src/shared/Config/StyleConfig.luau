@@ -565,6 +565,19 @@ StyleConfig.Hud = {
 	AnnounceTextSize = 30,
 	AnnounceGap = 10, -- отступ под таймером рестока, в пикселях
 
+	-- Туториал: подсказка внизу по центру (между джойстиком и кнопкой прыжка) и стрелка к цели
+	TutorialPanel = Palette.CreamLight,
+	TutorialAccent = Palette.Coral, -- стрелка и номер шага
+	TutorialWidth = 330,
+	TutorialHeight = 52,
+	TutorialTextSize = 24,
+	TutorialBottom = 150, -- отступ подсказки от низа экрана (выше джойстика и кнопки прыжка)
+	TutorialSkipWidth = 64,
+	TutorialArrowSize = 64, -- стрелка над целью, в пикселях
+	TutorialArrowHeight = 8, -- на сколько студов над целью висит стрелка
+	TutorialArrowBob = 1.2, -- на сколько студов стрелка покачивается вверх-вниз
+	TutorialArrowBobHz = 1.5,
+
 	MarkerHeight = 14, -- на сколько студов над площадкой висит маркер EXTRACT
 	MarkerHideDistance = 45, -- ближе этого маркер прячется: площадку и так видно
 	MarkerTitleSize = 30,

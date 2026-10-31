@@ -14,6 +14,7 @@ local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
+local PlotLayout = require(ReplicatedStorage.Shared.Util.PlotLayout)
 
 local MapBuilder = {}
 
@@ -465,16 +466,13 @@ end
 local function buildPlots()
 	local folder = makeFolder("PlayerStudios")
 	local cfg = MapConfig.Plots
-	local hubCenter = MapConfig.Hub.Center
 	local accents = StyleConfig.Plot.Accents
 
 	for i = 1, cfg.Count do
 		local accent = accents[(i - 1) % #accents + 1]
 
-		-- Участки равномерно по кругу; каждый повёрнут лицом к хабу
-		local angle = (i - 1) * (2 * math.pi / cfg.Count)
-		local center = hubCenter + Vector3.new(math.cos(angle), 0, math.sin(angle)) * cfg.RingRadius
-		local plotCFrame = CFrame.lookAt(center, hubCenter)
+		-- Участки равномерно по кругу; каждый повёрнут лицом к хабу (shared/Util/PlotLayout)
+		local plotCFrame = PlotLayout.PlotCFrame(i)
 
 		local model = Instance.new("Model")
 		model.Name = "Studio" .. i

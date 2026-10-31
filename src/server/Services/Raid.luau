@@ -16,6 +16,7 @@ local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerData = require(script.Parent.PlayerData)
+local Tutorial = require(script.Parent.Tutorial)
 local Spawn = require(script.Parent.Spawn)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 local RateLimiter = require(ServerScriptService.Server.Security.RateLimiter)
@@ -181,6 +182,7 @@ local function tryPickup(player: Player, instanceId: string)
 	player:SetAttribute("CarriedCount", #list)
 	updateCarrySpeed(player)
 	print(string.format("[Raid] %s подобрал %s (%s)", player.Name, record.MemelingId, instanceId))
+	Tutorial.Notify(player, "PickUp")
 end
 
 local function onPortalTouched(hit: BasePart)
@@ -208,6 +210,7 @@ local function onPortalTouched(hit: BasePart)
 	character:PivotTo(MapBuilder.GetZoneEntryCFrame())
 	runs[player] = { Rewarded = false }
 	data.stats.raids += 1
+	Tutorial.Notify(player, "EnterZone")
 	setState(player, Raid.State.InRaid)
 	print(string.format("[Raid] %s вошёл в зону", player.Name))
 

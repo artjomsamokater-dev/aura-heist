@@ -27,6 +27,7 @@ local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerData = require(script.Parent.PlayerData)
 local Economy = require(script.Parent.Economy)
 local Raid = require(script.Parent.Raid)
+local Tutorial = require(script.Parent.Tutorial)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 local RateLimiter = require(ServerScriptService.Server.Security.RateLimiter)
 
@@ -351,6 +352,7 @@ local function tryCollect(player: Player, plotIndex: number, pedestalIndex: numb
 	entry.lastCollect = newLastCollect
 	updatePedestalLabel(pedestal, entry, data, at)
 	Economy.AddBankedAura(player, amount, "сбор с постамента " .. pedestalIndex)
+	Tutorial.Notify(player, "Collect")
 end
 
 local function addCollectPrompts()
@@ -683,6 +685,7 @@ local function tryBuy(player: Player, plotIndex: number, id: UpgradeId)
 	setLevel(data, id, level + 1)
 	lastPurchaseAt[player] = os.clock()
 	print(string.format("[Studio] %s купил %s, уровень %d", player.Name, id, level + 1))
+	Tutorial.Notify(player, "BuyUpgrade")
 
 	if id == "pedestals" then
 		refreshPedestalLocks(plotIndex, data)
@@ -731,10 +734,28 @@ local function updateAllLabels()
 	end
 end
 
+-- Стоит ли игрок у своего постамента с мемлингом (шаг туториала «подойти к постаменту»)
+local function isNearFilledPedestal(player: Player): boolean
+	local plotIndex = playerPlots[player]
+	local playerSlots = rendered[player]
+	local _, root = RemoteGuard.GetAliveCharacter(player)
+	if plotIndex == nil or playerSlots == nil or root == nil then
+		return false
+	end
+	for pedestalIndex in playerSlots do
+		local pedestal = getPedestal(plotIndex, pedestalIndex)
+		if pedestal and RemoteGuard.IsNear(root, pedestal.Position, EconomyConfig.CollectDistance) then
+			return true
+		end
+	end
+	return false
+end
+
 function Studio.Start()
 	addCollectPrompts()
 	addBuyPrompts()
 	addSellPrompts()
+	Tutorial.SetPedestalCheck(isNearFilledPedestal)
 
 	Players.PlayerAdded:Connect(assignPlot)
 	Players.PlayerRemoving:Connect(releasePlot)

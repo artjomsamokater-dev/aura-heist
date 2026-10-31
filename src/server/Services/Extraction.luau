@@ -20,6 +20,7 @@ local Announcer = require(script.Parent.Announcer)
 local Raid = require(script.Parent.Raid)
 local Studio = require(script.Parent.Studio)
 local PlayerData = require(script.Parent.PlayerData)
+local Tutorial = require(script.Parent.Tutorial)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
 local Extraction = {}
@@ -106,6 +107,7 @@ local function complete(player: Player)
 		data.stats.memelingsExtracted += #memelingIds
 	end
 	Raid.ReturnToHub(player)
+	Tutorial.Notify(player, "Extract")
 	print(
 		string.format(
 			"[Extraction] %s эвакуировался, на витрину: %d (%s)",

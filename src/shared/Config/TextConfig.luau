@@ -70,6 +70,18 @@ TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
 
+-- Туториал: одна короткая подсказка на шаг (номер = шаг из shared/Util/TutorialSteps)
+TextConfig.TutorialHints = {
+	"Walk into the portal",
+	"Pick up a memeling",
+	"Stand on EXTRACT",
+	"Go to your pedestal",
+	"Collect your Aura",
+	"Buy an upgrade",
+}
+TextConfig.TutorialStepTag = "%d/%d" -- номер шага / всего шагов
+TextConfig.TutorialSkip = "Skip"
+
 -- Событие Giant Object
 TextConfig.GiantObjectName = "MEGA CHEESE WHEEL"
 

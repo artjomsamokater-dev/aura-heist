@@ -4,7 +4,10 @@
 local HudController = require(script.Controllers.HudController)
 local HazardController = require(script.Controllers.HazardController)
 local AnnouncementController = require(script.Controllers.AnnouncementController)
+local TutorialController = require(script.Controllers.TutorialController)
 
 HudController.Start()
 HazardController.Start()
-task.spawn(AnnouncementController.Start) -- ждёт RemoteEvent от сервера, остальным не мешает
+-- Эти ждут RemoteEvent от сервера — в отдельном потоке, чтобы не задерживать остальных
+task.spawn(AnnouncementController.Start)
+task.spawn(TutorialController.Start)

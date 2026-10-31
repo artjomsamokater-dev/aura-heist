@@ -15,6 +15,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local EconomyConfig = require(ReplicatedStorage.Shared.Config.EconomyConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
+local TutorialSteps = require(ReplicatedStorage.Shared.Util.TutorialSteps)
 local ProfileStore = require(ServerScriptService.Server.Packages.ProfileStore)
 
 local PlayerData = {}
@@ -47,6 +48,10 @@ export type Data = {
 		carrySlots: number,
 		storage: number,
 	},
+	tutorial: { -- туториал (shared/Util/TutorialSteps): текущий шаг и пройден ли
+		step: number,
+		completed: boolean,
+	},
 	stats: {
 		raids: number,
 		extractions: number,
@@ -64,6 +69,7 @@ local TEMPLATE: Data = {
 	showcase = {},
 	reserve = {},
 	upgrades = { pedestals = 0, carrySlots = 0, storage = 0 },
+	tutorial = { step = 1, completed = false },
 	stats = {
 		raids = 0,
 		extractions = 0,
@@ -106,6 +112,9 @@ local function migrate(data: Data): boolean
 			reserve[i] = { memelingId = item }
 		end
 	end
+
+	-- Туториал появился позже: кто уже эвакуировался, его не проходит (поле tutorial дописал Reconcile)
+	TutorialSteps.CompleteForVeteran(data.tutorial, data.stats.extractions)
 
 	data.schemaVersion = SCHEMA_VERSION
 	return true

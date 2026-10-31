@@ -11,6 +11,7 @@ local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local RarityRoll = require(ReplicatedStorage.Shared.Util.RarityRoll)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local RemoteGuard = require(game:GetService("ServerScriptService").Server.Security.RemoteGuard)
 
 local Announcer = {}
 
@@ -46,21 +47,8 @@ function Announcer.AnnounceSpawn(spawned: { RarityRoll.Spawned })
 end
 
 function Announcer.Start()
-	local folder = ReplicatedStorage:FindFirstChild(Remotes.Folder)
-	if folder == nil then
-		folder = Instance.new("Folder")
-		folder.Name = Remotes.Folder
-		folder.Parent = ReplicatedStorage
-	end
-	local event = Instance.new("RemoteEvent")
-	event.Name = Remotes.Announcement
-	event.Parent = folder
-	announcement = event
-
-	local squadEvent = Instance.new("RemoteEvent")
-	squadEvent.Name = Remotes.SquadBonus
-	squadEvent.Parent = folder
-	squadBonus = squadEvent
+	announcement = RemoteGuard.CreateRemote(Remotes.Announcement)
+	squadBonus = RemoteGuard.CreateRemote(Remotes.SquadBonus)
 	-- OnServerEvent не подключаем: эти события только от сервера к клиентам
 end
 

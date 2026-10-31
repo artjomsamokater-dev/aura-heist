@@ -39,6 +39,7 @@ local Hazards = require(Services.Hazards)
 local Enemy = require(Services.Enemy)
 local Announcer = require(Services.Announcer)
 local Event = require(Services.Event)
+local Tutorial = require(Services.Tutorial)
 
 -- Порядок важен: сначала карта, потом сервисы, которые её используют
 LightingSetup.Apply()
@@ -52,7 +53,8 @@ Extraction.Start()
 Hazards.Start()
 Enemy.Start()
 Event.Start()
+Tutorial.Start()
 -- Последним: все сервисы уже подписались на PlayerData.OnLoaded
 PlayerData.Start()
 
-print("[Server] Сервисы запущены: MapBuilder, Economy, Studio, Raid, Spawn, Extraction, Hazards, Enemy, Event, Announcer, PlayerData")
+print("[Server] Сервисы запущены: MapBuilder, Economy, Studio, Raid, Spawn, Extraction, Hazards, Enemy, Event, Tutorial, Announcer, PlayerData")

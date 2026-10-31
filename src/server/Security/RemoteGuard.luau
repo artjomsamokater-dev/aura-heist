@@ -1,18 +1,20 @@
 --!strict
 -- RemoteGuard: общие проверки любого запроса от игрока. Клиенту не верим ни в чём.
 --
--- Сейчас клиент «стучится» на сервер только через ProximityPrompt (RemoteEvent в игре нет).
--- Каждую кнопку подключаем через RemoteGuard.ConnectPrompt — это первый слой защиты:
+-- Клиент «стучится» на сервер через ProximityPrompt и RemoteEvent клиент → сервер (shared/Remotes).
+-- Кнопки подключаем через RemoteGuard.ConnectPrompt, события — через RemoteGuard.ConnectRemote.
+-- Это первый слой защиты:
 --   • общий лимит на любые действия игрока (SecurityConfig.RateLimits.AnyAction),
 --   • игрок в игре и его персонаж жив,
 --   • персонаж рядом с кнопкой (её MaxActivationDistance + запас на задержку сети).
 -- Второй слой — в обработчике: свой лимит действия, свой участок, состояние, цена, «уже выдано».
--- Когда появятся RemoteEvent, их тоже подключать через этот модуль (ID проверять IsId).
+-- Если у события появятся аргументы — ID проверять IsId.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local RateLimiter = require(script.Parent.RateLimiter)
 
 local RemoteGuard = {}
@@ -58,6 +60,40 @@ local function warnSpam(player: Player, action: string)
 		lastSpamWarnAt[player] = now
 		warn(string.format("[RemoteGuard] %s слишком часто жмёт кнопки (%s) — лишние запросы отброшены", player.Name, action))
 	end
+end
+
+-- Создаёт RemoteEvent с именем из shared/Remotes в ReplicatedStorage.Remotes (только сервер)
+function RemoteGuard.CreateRemote(name: string): RemoteEvent
+	local folder = ReplicatedStorage:FindFirstChild(Remotes.Folder)
+	if folder == nil then
+		folder = Instance.new("Folder")
+		folder.Name = Remotes.Folder
+		folder.Parent = ReplicatedStorage
+	end
+	local existing = (folder :: Instance):FindFirstChild(name)
+	if existing and existing:IsA("RemoteEvent") then
+		return existing
+	end
+	local event = Instance.new("RemoteEvent")
+	event.Name = name
+	event.Parent = folder
+	return event
+end
+
+-- Подключает событие клиент → сервер через общие проверки: настоящий игрок в игре и общий лимит.
+-- Аргументы от клиента обработчику НЕ передаются: события у нас без аргументов,
+-- а если появятся — проверять их здесь (тип, IsId), а не в обработчике.
+function RemoteGuard.ConnectRemote(event: RemoteEvent, action: string, handler: (player: Player) -> ())
+	event.OnServerEvent:Connect(function(player: Player)
+		if typeof(player) ~= "Instance" or not player:IsA("Player") or player.Parent ~= Players then
+			return
+		end
+		if not anyActionLimiter.Allow(player) then
+			warnSpam(player, action)
+			return
+		end
+		handler(player)
+	end)
 end
 
 -- Подключает обработчик кнопки через общие проверки. action — имя для Output.
