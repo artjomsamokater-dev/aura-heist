@@ -565,6 +565,17 @@ StyleConfig.Hud = {
 	AnnounceTextSize = 30,
 	AnnounceGap = 10, -- отступ под таймером рестока, в пикселях
 
+	-- Экран результата эвакуации: короткий, закрывается сам
+	ResultSeconds = 6,
+	ResultPanel = Palette.CreamLight,
+	ResultTitleColor = Palette.MintDark,
+	ResultWidth = 400,
+	ResultTitleSize = 36,
+	ResultRowSize = 22,
+	ResultRowHeight = 34,
+	ResultButton = Palette.Mint,
+	ResultButtonHeight = 48,
+
 	-- Туториал: подсказка внизу по центру (между джойстиком и кнопкой прыжка) и стрелка к цели
 	TutorialPanel = Palette.CreamLight,
 	TutorialAccent = Palette.Coral, -- стрелка и номер шага

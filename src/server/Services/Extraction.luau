@@ -48,7 +48,8 @@ local broughtBy: { [SquadRule.Extraction]: Brought } = setmetatable({}, { __mode
 
 -- Бонус отряда: эвакуировались рядом и почти одновременно — оба получают +% к цене продажи
 -- принесённых мемлингов. Каждая эвакуация — не больше одного раза (флаг Bonus до выдачи)
-local function applySquadBonus(player: Player, position: Vector3, entries: { Studio.BroughtEntry })
+-- Вернёт true, если эта эвакуация уже получила бонус (игрок эвакуировался вторым в отряде)
+local function applySquadBonus(player: Player, position: Vector3, entries: { Studio.BroughtEntry }): boolean
 	local cfg = EconomyConfig.SquadBonus
 	local now = os.clock()
 	SquadRule.Prune(recent, now, cfg.WindowSeconds)
@@ -58,7 +59,7 @@ local function applySquadBonus(player: Player, position: Vector3, entries: { Stu
 	local partners = SquadRule.FindPartners(mine, recent, cfg.Radius, cfg.WindowSeconds)
 	table.insert(recent, mine)
 	if #partners == 0 then
-		return
+		return false
 	end
 
 	local winners: { Player } = {}
@@ -88,6 +89,7 @@ local function applySquadBonus(player: Player, position: Vector3, entries: { Stu
 		end
 		print(string.format("[Extraction] Бонус отряда: %s", table.concat(names, ", ")))
 	end
+	return mine.Bonus
 end
 
 local function complete(player: Player)
@@ -95,18 +97,19 @@ local function complete(player: Player)
 	local _, root = RemoteGuard.GetAliveCharacter(player)
 	local position = if root then root.Position else MapConfig.Zone.ExtractionPosition
 
-	local memelingIds = Raid.ClaimExtraction(player)
+	local memelingIds, raidSeconds = Raid.ClaimExtraction(player)
 	if memelingIds == nil then
 		return -- награда за эту вылазку уже выдана
 	end
 	local entries = Studio.AddToShowcase(player, memelingIds)
-	applySquadBonus(player, position, entries)
+	local squad = applySquadBonus(player, position, entries)
 	local data = PlayerData.GetData(player)
 	if data then
 		data.stats.extractions += 1
 		data.stats.memelingsExtracted += #memelingIds
 	end
 	Raid.ReturnToHub(player)
+	Announcer.ExtractionResult(player, memelingIds, raidSeconds, squad)
 	Tutorial.Notify(player, "Extract")
 	print(
 		string.format(

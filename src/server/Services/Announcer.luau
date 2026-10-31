@@ -17,6 +17,15 @@ local Announcer = {}
 
 local announcement: RemoteEvent? = nil
 local squadBonus: RemoteEvent? = nil
+local extractionResult: RemoteEvent? = nil
+
+-- Экран результата эвакуации этому игроку: Id принесённых, длительность вылазки, бонус отряда
+function Announcer.ExtractionResult(player: Player, memelingIds: { string }, raidSeconds: number, squad: boolean)
+	local event = extractionResult
+	if event and player.Parent then
+		event:FireClient(player, memelingIds, math.floor(raidSeconds), squad)
+	end
+end
 
 -- Плашка «SQUAD BONUS!» этим игрокам (оба участника отряда)
 function Announcer.SquadBonus(players: { Player })
@@ -49,6 +58,7 @@ end
 function Announcer.Start()
 	announcement = RemoteGuard.CreateRemote(Remotes.Announcement)
 	squadBonus = RemoteGuard.CreateRemote(Remotes.SquadBonus)
+	extractionResult = RemoteGuard.CreateRemote(Remotes.ExtractionResult)
 	-- OnServerEvent не подключаем: эти события только от сервера к клиентам
 end
 

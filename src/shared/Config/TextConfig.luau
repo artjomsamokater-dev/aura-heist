@@ -70,6 +70,14 @@ TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
 
+-- Экран результата эвакуации
+TextConfig.ResultTitle = "EXTRACTED!"
+TextConfig.ResultRow = "%s · %s · +%d/s" -- имя · редкость · доход в секунду
+TextConfig.ResultEmpty = "Empty hands this time"
+TextConfig.ResultTime = "Raid time %s" -- %s — например 1:23
+TextConfig.ResultSquad = "SQUAD BONUS +%d%% sell price"
+TextConfig.ResultBack = "Back to base"
+
 -- Туториал: одна короткая подсказка на шаг (номер = шаг из shared/Util/TutorialSteps)
 TextConfig.TutorialHints = {
 	"Walk into the portal",

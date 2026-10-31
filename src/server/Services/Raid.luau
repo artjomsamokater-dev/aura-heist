@@ -36,6 +36,7 @@ local carried: { [Player]: { string } } = {} -- InstanceId мемлингов в
 -- Rewarded — флаг «награда за эту вылазку выдана», ставится ДО выдачи.
 type Run = {
 	Rewarded: boolean,
+	StartedAt: number, -- когда вошёл в зону (os.clock) — для экрана результата
 }
 local runs: { [Player]: Run } = {}
 
@@ -208,7 +209,7 @@ local function onPortalTouched(hit: BasePart)
 
 	portalBusy[player] = true
 	character:PivotTo(MapBuilder.GetZoneEntryCFrame())
-	runs[player] = { Rewarded = false }
+	runs[player] = { Rewarded = false, StartedAt = os.clock() }
 	data.stats.raids += 1
 	Tutorial.Notify(player, "EnterZone")
 	setState(player, Raid.State.InRaid)
@@ -219,13 +220,14 @@ local function onPortalTouched(hit: BasePart)
 	end)
 end
 
--- Забирает добычу успешной эвакуации. Вернёт MemelingId всего, что было в руках,
--- или nil, если игрок не в вылазке или награда за эту вылазку уже выдана.
-function Raid.ClaimExtraction(player: Player): { string }?
+-- Забирает добычу успешной эвакуации. Вернёт MemelingId всего, что было в руках, и сколько секунд
+-- длилась вылазка — или nil, если игрок не в вылазке или награда за эту вылазку уже выдана.
+function Raid.ClaimExtraction(player: Player): ({ string }?, number)
 	local run = runs[player]
 	if states[player] ~= Raid.State.InRaid or run == nil or run.Rewarded then
-		return nil
+		return nil, 0
 	end
+	local raidSeconds = os.clock() - run.StartedAt
 	run.Rewarded = true -- флаг до выдачи: второй вызов получит nil
 
 	local list = carried[player] or {}
@@ -241,7 +243,7 @@ function Raid.ClaimExtraction(player: Player): { string }?
 		Spawn.Despawn(instanceId)
 	end
 	updateCarrySpeed(player) -- руки пустые — обычная скорость
-	return memelingIds
+	return memelingIds, raidSeconds
 end
 
 -- Переносит живого персонажа в хаб и ставит InHub (после эвакуации)
