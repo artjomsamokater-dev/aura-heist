@@ -3,6 +3,7 @@
 -- Игрок InRaid стоит на точке ZoneConfig.EvacuationSeconds секунд подряд —
 -- он возвращается в хаб, а всё, что было в руках, переходит на витрину.
 -- Ушёл с точки или умер — отсчёт сбрасывается. Награда — ровно один раз (флаг в Raid).
+-- Бонус отряда: эвакуировались рядом и почти одновременно — принесённые обоими дороже при продаже.
 -- Всё решает сервер по позиции персонажа; клиент ничего не присылает.
 
 local Players = game:GetService("Players")
@@ -12,7 +13,10 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
+local EconomyConfig = require(ReplicatedStorage.Shared.Config.EconomyConfig)
+local SquadRule = require(ReplicatedStorage.Shared.Util.SquadRule)
 local MapBuilder = require(script.Parent.MapBuilder)
+local Announcer = require(script.Parent.Announcer)
 local Raid = require(script.Parent.Raid)
 local Studio = require(script.Parent.Studio)
 local PlayerData = require(script.Parent.PlayerData)
@@ -32,12 +36,70 @@ local function isOnPoint(root: BasePart): boolean
 		and offset.Y <= MapConfig.Zone.ExtractionMaxHeight
 end
 
+type Brought = {
+	Player: Player,
+	Entries: { Studio.BroughtEntry },
+}
+
+-- Недавние эвакуации (за последние SquadBonus.WindowSeconds) — для бонуса отряда
+local recent: { SquadRule.Extraction } = {}
+local broughtBy: { [SquadRule.Extraction]: Brought } = setmetatable({}, { __mode = "k" }) :: any
+
+-- Бонус отряда: эвакуировались рядом и почти одновременно — оба получают +% к цене продажи
+-- принесённых мемлингов. Каждая эвакуация — не больше одного раза (флаг Bonus до выдачи)
+local function applySquadBonus(player: Player, position: Vector3, entries: { Studio.BroughtEntry })
+	local cfg = EconomyConfig.SquadBonus
+	local now = os.clock()
+	SquadRule.Prune(recent, now, cfg.WindowSeconds)
+
+	local mine: SquadRule.Extraction = { OwnerId = player.UserId, X = position.X, Z = position.Z, Time = now, Bonus = false }
+	broughtBy[mine] = { Player = player, Entries = entries }
+	local partners = SquadRule.FindPartners(mine, recent, cfg.Radius, cfg.WindowSeconds)
+	table.insert(recent, mine)
+	if #partners == 0 then
+		return
+	end
+
+	local winners: { Player } = {}
+	local function grant(extraction: SquadRule.Extraction)
+		local brought = broughtBy[extraction]
+		if extraction.Bonus or brought == nil or brought.Player.Parent == nil then
+			return
+		end
+		extraction.Bonus = true -- флаг до выдачи: второй раз этой эвакуации бонус не дадут
+		Studio.ApplySquadBonus(brought.Player, brought.Entries)
+		local data = PlayerData.GetData(brought.Player)
+		if data then
+			data.stats.squadBonuses += 1
+		end
+		table.insert(winners, brought.Player)
+	end
+	grant(mine)
+	for _, index in ipairs(partners) do
+		grant(recent[index])
+	end
+
+	if #winners > 0 then
+		Announcer.SquadBonus(winners)
+		local names = {}
+		for _, winner in ipairs(winners) do
+			table.insert(names, winner.Name)
+		end
+		print(string.format("[Extraction] Бонус отряда: %s", table.concat(names, ", ")))
+	end
+end
+
 local function complete(player: Player)
+	-- Где игрок эвакуировался — запоминаем до переноса в хаб (для бонуса отряда)
+	local _, root = RemoteGuard.GetAliveCharacter(player)
+	local position = if root then root.Position else MapConfig.Zone.ExtractionPosition
+
 	local memelingIds = Raid.ClaimExtraction(player)
 	if memelingIds == nil then
 		return -- награда за эту вылазку уже выдана
 	end
-	Studio.AddToShowcase(player, memelingIds)
+	local entries = Studio.AddToShowcase(player, memelingIds)
+	applySquadBonus(player, position, entries)
 	local data = PlayerData.GetData(player)
 	if data then
 		data.stats.extractions += 1

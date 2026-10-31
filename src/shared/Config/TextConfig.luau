@@ -59,6 +59,10 @@ TextConfig.HudHandsValue = "%d / %d" -- сколько несёшь / сколь
 TextConfig.HudHandsCaption = "💀 lost if you die"
 TextConfig.RestockTimer = "🔄 New memelings in %s" -- %s — сколько осталось, например 1:23
 
+-- Бонус отряда: плашка обоим игрокам и отметка на мемлинге (%d — проценты к цене продажи)
+TextConfig.SquadBonusBanner = "👥 SQUAD BONUS! +%d%% sell price"
+TextConfig.SquadTag = "\n👥 +%d%%"
+
 -- Объявление о редком спавне всем игрокам: «A LEGENDARY appeared in the DANGER zone!»
 TextConfig.AnnounceSpawn = "A %s appeared in the %s zone!" -- %s — редкость, %s — часть зоны
 TextConfig.RarityNames = { Common = "COMMON", Rare = "RARE", Epic = "EPIC", Legendary = "LEGENDARY" } :: { [string]: string }

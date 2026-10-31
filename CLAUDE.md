@@ -106,7 +106,7 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   Сервис PlayerData: профиль `Player_<UserId>` в DataStore `PlayerProfiles`, блокировка сессии,
   автосейв по EconomyConfig.AutosaveSeconds, сохранение при выходе и BindToClose; не загрузился —
   кик с текстом из TextConfig. Схема (schemaVersion 1): bankedAura, showcase {pedestal, memelingId,
-  lastCollect}, reserve {memelingId}, upgrades {pedestals, carrySlots, storage}, stats.
+  lastCollect}, reserve {memelingId}, upgrades {pedestals, carrySlots, storage}, stats (сейчас схема 2, см. 4.3).
   Economy и Studio работают с данными профиля; накопление постамента — shared/Util/PedestalMath
   (от lastCollect, не больше лимита — так же считается офлайн-доход). В портал нельзя без профиля.
 - 2.2: улучшения. На участке 6 мест под постаменты (некупленные — полупрозрачные), ряд золотых
@@ -173,6 +173,13 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   только сервер → клиенты (сервер его не слушает), шлёт Id редкости и части зоны. Клиент
   (AnnouncementController) показывает плашку цвета редкости вверху на 3,5 с; тексты — TextConfig.
   Имена всех RemoteEvent — src/shared/Remotes.luau. Вернувшийся потерянный мемлинг не объявляется.
+- 4.3: бонус отряда. Два разных игрока завершили эвакуацию не дальше EconomyConfig.SquadBonus.Radius
+  (15) друг от друга с разницей не больше WindowSeconds (5) → у принесённых обоими мемлингов флаг
+  squadBonus в профиле, цена продажи +SellBonusPercent (25%, вниз). Правило — shared/Util/SquadRule
+  (+ тест «рядом и вовремя»). Каждая эвакуация получает бонус один раз (флаг Bonus до выдачи);
+  stats.squadBonuses. Плашка «👥 SQUAD BONUS!» обоим (Remotes.SquadBonus, сервер → игрок), на мемлинге
+  отметка «👥 +25%». Схема профиля 2: reserve — записи {memelingId, squadBonus}; старые строки
+  переводятся при загрузке (PlayerData.migrate).
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
@@ -181,4 +188,4 @@ luau-lsp analyze с типами Roblox, проверка кодировки (.l
 После 1.4: тексты для игрока вынесены в TextConfig, потерянные мемлинги возвращаются
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
-Следующий шаг — «Ворота A»: серый тест с детьми (раздел 7, шаг 2). Из фазы 4 остались 4.3 и 4.4.
+Следующая задача — 4.4 (событие Giant Object), потом «Ворота A»: серый тест с детьми (раздел 7, шаг 2).

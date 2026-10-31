@@ -20,20 +20,28 @@ local ProfileStore = require(ServerScriptService.Server.Packages.ProfileStore)
 local PlayerData = {}
 
 local STORE_NAME = "PlayerProfiles" -- имя DataStore; сменишь — все начнут с нуля
-local SCHEMA_VERSION = 1
+-- 1 — первая схема; 2 — запас стал списком записей (с флагом бонуса отряда), а не просто Id
+local SCHEMA_VERSION = 2
 
 -- Мемлинг на постаменте
 export type ShowcaseEntry = {
 	pedestal: number, -- номер постамента на участке (1, 2, ...)
 	memelingId: string, -- Id из MemelingConfig
 	lastCollect: number, -- время сервера (секунды Unix), с которого копится Aura
+	squadBonus: boolean?, -- принесён в отряде: цена продажи выше (EconomyConfig.SquadBonus)
+}
+
+-- Мемлинг «в запасе» (не хватило постаментов)
+export type ReserveEntry = {
+	memelingId: string,
+	squadBonus: boolean?,
 }
 
 export type Data = {
 	schemaVersion: number,
 	bankedAura: number, -- меняет только Economy
 	showcase: { ShowcaseEntry }, -- мемлинги на постаментах
-	reserve: { string }, -- MemelingId «в запасе» (не хватило постаментов)
+	reserve: { ReserveEntry }, -- мемлинги «в запасе»
 	upgrades: { -- сколько уровней куплено (0 = стартовое значение)
 		pedestals: number,
 		carrySlots: number,
@@ -46,6 +54,7 @@ export type Data = {
 		memelingsSold: number,
 		auraEarned: number,
 		deaths: number, -- смерти (ловушки, враги, Reset, падение из зоны)
+		squadBonuses: number, -- сколько раз получал бонус отряда
 	},
 }
 
@@ -55,7 +64,15 @@ local TEMPLATE: Data = {
 	showcase = {},
 	reserve = {},
 	upgrades = { pedestals = 0, carrySlots = 0, storage = 0 },
-	stats = { raids = 0, extractions = 0, memelingsExtracted = 0, memelingsSold = 0, auraEarned = 0, deaths = 0 },
+	stats = {
+		raids = 0,
+		extractions = 0,
+		memelingsExtracted = 0,
+		memelingsSold = 0,
+		auraEarned = 0,
+		deaths = 0,
+		squadBonuses = 0,
+	},
 }
 
 type Profile = ProfileStore.Profile<Data>
@@ -71,13 +88,27 @@ local function getProfileData(profile: Profile): Data
 	return profile.Data :: any
 end
 
--- Профиль, сохранённый новой версией игры, старый сервер открывать не должен — он бы его испортил.
--- Когда схема поменяется, здесь будет перевод старых профилей на новую версию.
+-- Перевод старых профилей на текущую схему. Профиль, сохранённый новой версией игры,
+-- старый сервер открывать не должен — он бы его испортил (вернёт false).
 local function migrate(data: Data): boolean
 	if type(data.schemaVersion) ~= "number" then
-		data.schemaVersion = SCHEMA_VERSION
+		data.schemaVersion = 1
 	end
-	return data.schemaVersion <= SCHEMA_VERSION
+	if data.schemaVersion > SCHEMA_VERSION then
+		return false
+	end
+
+	-- 1 → 2: в запасе лежали просто Id мемлингов — делаем из них записи.
+	-- Делаем всегда, а не только по номеру версии: повторный перевод ничего не меняет
+	local reserve = data.reserve :: { any }
+	for i, item in ipairs(reserve) do
+		if type(item) == "string" then
+			reserve[i] = { memelingId = item }
+		end
+	end
+
+	data.schemaVersion = SCHEMA_VERSION
+	return true
 end
 
 local function onPlayerAdded(player: Player)

@@ -22,6 +22,7 @@ local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
 local PedestalMath = require(ReplicatedStorage.Shared.Util.PedestalMath)
 local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
+local SquadRule = require(ReplicatedStorage.Shared.Util.SquadRule)
 local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerData = require(script.Parent.PlayerData)
 local Economy = require(script.Parent.Economy)
@@ -161,11 +162,13 @@ local function refreshButtons(plotIndex: number, data: PlayerData.Data?)
 	end
 end
 
--- Цена продажи — только из MemelingConfig (0, если мемлинга нет в конфиге)
-local function getSellPrice(memelingId: string): number
+-- Цена продажи — только из MemelingConfig (0, если мемлинга нет в конфиге);
+-- принесённые в отряде дороже на EconomyConfig.SquadBonus.SellBonusPercent (SquadRule)
+local function getSellPrice(memelingId: string, squadBonus: boolean?): number
 	local memeling = MemelingConfig.Memelings[memelingId]
 	local rarity = memeling and MemelingConfig.Rarities[memeling.Rarity]
-	return if rarity then rarity.SellPrice else 0
+	local base = if rarity then rarity.SellPrice else 0
+	return SquadRule.SellPrice(base, EconomyConfig.SquadBonus.SellBonusPercent, squadBonus == true)
 end
 
 local function getReservePad(plotIndex: number): Part?
@@ -190,7 +193,9 @@ local function refreshReserve(plotIndex: number, data: PlayerData.Data?)
 	if prompt and prompt:IsA("ProximityPrompt") then
 		prompt.Enabled = count > 0
 		local first = data and data.reserve[1]
-		prompt.ObjectText = if first then string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(first))) else ""
+		prompt.ObjectText = if first
+			then string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(first.memelingId, first.squadBonus)))
+			else ""
 	end
 end
 
@@ -213,6 +218,24 @@ local function updatePedestalLabel(pedestal: Part, entry: ShowcaseEntry, data: P
 	MapBuilder.SetLabelText(pedestal, string.format(format, formatNumber(stored)))
 end
 
+-- Подпись мемлинга на постаменте: имя и доход; у принесённых в отряде — ещё отметка бонуса
+local function getMemelingLabel(entry: ShowcaseEntry): string
+	local name = TextConfig.MemelingNames[entry.memelingId] or entry.memelingId
+	local text = string.format(TextConfig.PedestalMemeling, name, getRate(entry.memelingId))
+	if entry.squadBonus then
+		text ..= string.format(TextConfig.SquadTag, EconomyConfig.SquadBonus.SellBonusPercent)
+	end
+	return text
+end
+
+local function updateSellPrompt(pedestal: Part, entry: ShowcaseEntry)
+	local sellPrompt = pedestal:FindFirstChild("SellPrompt")
+	if sellPrompt and sellPrompt:IsA("ProximityPrompt") then
+		sellPrompt.ObjectText =
+			string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(entry.memelingId, entry.squadBonus)))
+	end
+end
+
 -- Рисует мемлинга на постаменте: мемлинг с именем и доходом, над ним — накоплено
 local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEntry, data: PlayerData.Data)
 	local pedestal = getPedestal(plotIndex, entry.pedestal)
@@ -230,10 +253,9 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 		pedestal
 	)
 	body:SetAttribute("MemelingId", entry.memelingId)
-	local name = TextConfig.MemelingNames[entry.memelingId] or entry.memelingId
 	MapBuilder.AddLabel(
 		body,
-		string.format(TextConfig.PedestalMemeling, name, getRate(entry.memelingId)),
+		getMemelingLabel(entry),
 		{ MaxDistance = labelStyle.MemelingMaxDistance, Height = StyleConfig.Memeling.LabelHeight }
 	)
 
@@ -247,10 +269,7 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 	updatePedestalLabel(pedestal, entry, data, now())
 	setPromptEnabled(pedestal, "CollectPrompt", true)
 	setPromptEnabled(pedestal, "SellPrompt", true)
-	local sellPrompt = pedestal:FindFirstChild("SellPrompt")
-	if sellPrompt and sellPrompt:IsA("ProximityPrompt") then
-		sellPrompt.ObjectText = string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(entry.memelingId)))
-	end
+	updateSellPrompt(pedestal, entry)
 end
 
 -- Убирает мемлинга с постамента в мире (профиль не трогает)
@@ -423,12 +442,21 @@ local function findFreePedestal(data: PlayerData.Data): number?
 	return nil
 end
 
--- Вынесенные мемлинги: на свободные постаменты, остальные — в запас (вызывает Extraction)
-function Studio.AddToShowcase(player: Player, memelingIds: { string })
+-- Запись профиля о принесённом мемлинге (на постаменте или в запасе) — на ней ставится бонус отряда
+export type BroughtEntry = { squadBonus: boolean? }
+
+-- Мемлинг перешёл из запаса на постамент: [старая запись запаса] = новая запись постамента
+-- (слабые ключи — старые записи исчезают сами)
+local movedFromReserve: { [any]: ShowcaseEntry } = setmetatable({}, { __mode = "k" }) :: any
+
+-- Вынесенные мемлинги: на свободные постаменты, остальные — в запас (вызывает Extraction).
+-- Вернёт созданные записи профиля: по ним Extraction может позже поставить бонус отряда
+function Studio.AddToShowcase(player: Player, memelingIds: { string }): { BroughtEntry }
+	local brought: { BroughtEntry } = {}
 	local data = PlayerData.GetData(player)
 	if data == nil then
 		warn(string.format("[Studio] Профиль %s не загружен — мемлинги не сохранены", player.Name))
-		return
+		return brought
 	end
 	local plotIndex = playerPlots[player]
 
@@ -437,19 +465,54 @@ function Studio.AddToShowcase(player: Player, memelingIds: { string })
 		if freeIndex then
 			local entry: ShowcaseEntry = { pedestal = freeIndex, memelingId = memelingId, lastCollect = now() }
 			table.insert(data.showcase, entry)
+			table.insert(brought, entry)
 			if plotIndex then
 				renderEntry(player, plotIndex, entry, data)
 			end
 			print(string.format("[Studio] %s: %s на постаменте %d", player.Name, memelingId, freeIndex))
 		else
-			table.insert(data.reserve, memelingId)
+			local reserveEntry: PlayerData.ReserveEntry = { memelingId = memelingId }
+			table.insert(data.reserve, reserveEntry)
+			table.insert(brought, reserveEntry)
 			print(string.format("[Studio] %s: %s в запасе (нет свободного постамента)", player.Name, memelingId))
+		end
+	end
+	publishCounts(player)
+	return brought
+end
+
+-- Бонус отряда на принесённых мемлингах: флаг в профиле, подписи и цены продажи обновляются.
+-- Записи могли уже перейти из запаса на постамент или быть проданы — тогда отмечаем то, что осталось
+function Studio.ApplySquadBonus(player: Player, brought: { BroughtEntry })
+	local marked: { BroughtEntry } = {}
+	for _, entry in ipairs(brought) do
+		entry.squadBonus = true
+		table.insert(marked, entry)
+		-- Мемлинг мог перейти из запаса на постамент: у него теперь новая запись — отмечаем и её
+		local moved = movedFromReserve[entry]
+		if moved then
+			moved.squadBonus = true
+			table.insert(marked, moved)
+		end
+	end
+	local plotIndex = playerPlots[player]
+	local playerSlots = rendered[player]
+	if plotIndex and playerSlots then
+		for pedestalIndex, slot in playerSlots do
+			if table.find(marked, slot.Entry :: BroughtEntry) then
+				MapBuilder.SetLabelText(slot.Body, getMemelingLabel(slot.Entry))
+				local pedestal = getPedestal(plotIndex, pedestalIndex)
+				if pedestal then
+					updateSellPrompt(pedestal, slot.Entry)
+				end
+			end
 		end
 	end
 	publishCounts(player)
 end
 
--- Мемлинги из запаса встают на свободные постаменты (после покупки постамента)
+-- Мемлинги из запаса встают на свободные постаменты (после покупки постамента).
+-- Бонус отряда переходит вместе с мемлингом
 local function fillFromReserve(player: Player, data: PlayerData.Data)
 	local plotIndex = playerPlots[player]
 	while #data.reserve > 0 do
@@ -457,13 +520,19 @@ local function fillFromReserve(player: Player, data: PlayerData.Data)
 		if freeIndex == nil then
 			break
 		end
-		local memelingId = table.remove(data.reserve, 1) :: string
-		local entry: ShowcaseEntry = { pedestal = freeIndex, memelingId = memelingId, lastCollect = now() }
+		local reserveEntry = table.remove(data.reserve, 1) :: PlayerData.ReserveEntry
+		local entry: ShowcaseEntry = {
+			pedestal = freeIndex,
+			memelingId = reserveEntry.memelingId,
+			lastCollect = now(),
+			squadBonus = reserveEntry.squadBonus,
+		}
 		table.insert(data.showcase, entry)
+		movedFromReserve[reserveEntry] = entry
 		if plotIndex then
 			renderEntry(player, plotIndex, entry, data)
 		end
-		print(string.format("[Studio] %s: %s из запаса на постамент %d", player.Name, memelingId, freeIndex))
+		print(string.format("[Studio] %s: %s из запаса на постамент %d", player.Name, entry.memelingId, freeIndex))
 	end
 	publishCounts(player)
 end
@@ -507,7 +576,7 @@ local function trySellFromPedestal(player: Player, plotIndex: number, pedestalIn
 		return
 	end
 
-	local price = getSellPrice(entry.memelingId)
+	local price = getSellPrice(entry.memelingId, entry.squadBonus)
 	local collected = PedestalMath.Collect(getRate(entry.memelingId), entry.lastCollect, now(), getStorageSeconds(data))
 
 	-- Сначала мемлинг уходит из профиля, потом начисление: повторное нажатие уже ничего не найдёт
@@ -532,13 +601,13 @@ local function trySellFromReserve(player: Player, plotIndex: number)
 		return
 	end
 
-	local memelingId = table.remove(data.reserve, 1) :: string
+	local reserveEntry = table.remove(data.reserve, 1) :: PlayerData.ReserveEntry
 	data.stats.memelingsSold += 1
-	local price = getSellPrice(memelingId)
+	local price = getSellPrice(reserveEntry.memelingId, reserveEntry.squadBonus)
 	if price > 0 then
-		Economy.AddBankedAura(player, price, "продажа из запаса " .. memelingId)
+		Economy.AddBankedAura(player, price, "продажа из запаса " .. reserveEntry.memelingId)
 	end
-	print(string.format("[Studio] %s продал %s из запаса", player.Name, memelingId))
+	print(string.format("[Studio] %s продал %s из запаса", player.Name, reserveEntry.memelingId))
 	publishCounts(player)
 end
 

@@ -1,7 +1,9 @@
 --!strict
--- AnnouncementController: крупная плашка вверху экрана — «A LEGENDARY appeared in the DANGER zone!».
--- Сервер присылает только Id редкости и части зоны (Remotes.Announcement), текст — из TextConfig,
--- цвет плашки — цвет редкости из StyleConfig. Новое объявление заменяет старое, а не встаёт в очередь.
+-- AnnouncementController: крупная плашка вверху экрана.
+-- • «A LEGENDARY appeared in the DANGER zone!» — сервер присылает только Id редкости и части зоны
+--   (Remotes.Announcement), цвет плашки — цвет редкости из StyleConfig.
+-- • «SQUAD BONUS!» — сервер присылает только сам факт (Remotes.SquadBonus), процент — из EconomyConfig.
+-- Тексты — из TextConfig. Новое объявление заменяет старое, а не встаёт в очередь.
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -9,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
+local EconomyConfig = require(ReplicatedStorage.Shared.Config.EconomyConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -74,21 +77,9 @@ function AnnouncementController.Start()
 		TweenService:Create(stroke, info, { Transparency = target }):Play()
 	end
 
-	local event = ReplicatedStorage:WaitForChild(Remotes.Folder):WaitForChild(Remotes.Announcement)
-	if not event:IsA("RemoteEvent") then
-		return
-	end
-	event.OnClientEvent:Connect(function(rarity: unknown, part: unknown)
-		if type(rarity) ~= "string" or type(part) ~= "string" then
-			return
-		end
-		local rarityStyle = StyleConfig.Memeling.Rarities[rarity]
-		banner.BackgroundColor3 = if rarityStyle then rarityStyle.Body else HUD.BaseCard
-		label.Text = string.format(
-			TextConfig.AnnounceSpawn,
-			TextConfig.RarityNames[rarity] or rarity,
-			TextConfig.ZonePartNames[part] or part
-		)
+	local function show(text: string, color: Color3)
+		banner.BackgroundColor3 = color
+		label.Text = text
 
 		showToken += 1
 		local token = showToken
@@ -107,7 +98,32 @@ function AnnouncementController.Start()
 				banner.Visible = false
 			end
 		end)
-	end)
+	end
+
+	local folder = ReplicatedStorage:WaitForChild(Remotes.Folder)
+
+	-- Редкий спавн: всем игрокам на сервере
+	local announcement = folder:WaitForChild(Remotes.Announcement)
+	if announcement:IsA("RemoteEvent") then
+		announcement.OnClientEvent:Connect(function(rarity: unknown, part: unknown)
+			if type(rarity) ~= "string" or type(part) ~= "string" then
+				return
+			end
+			local rarityStyle = StyleConfig.Memeling.Rarities[rarity]
+			show(
+				string.format(TextConfig.AnnounceSpawn, TextConfig.RarityNames[rarity] or rarity, TextConfig.ZonePartNames[part] or part),
+				if rarityStyle then rarityStyle.Body else HUD.BaseCard
+			)
+		end)
+	end
+
+	-- Бонус отряда: только этому игроку
+	local squadBonus = folder:WaitForChild(Remotes.SquadBonus)
+	if squadBonus:IsA("RemoteEvent") then
+		squadBonus.OnClientEvent:Connect(function()
+			show(string.format(TextConfig.SquadBonusBanner, EconomyConfig.SquadBonus.SellBonusPercent), HUD.HandsCard)
+		end)
+	end
 end
 
 return AnnouncementController
