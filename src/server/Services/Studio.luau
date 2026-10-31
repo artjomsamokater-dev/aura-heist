@@ -23,6 +23,7 @@ local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
 local PedestalMath = require(ReplicatedStorage.Shared.Util.PedestalMath)
 local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
 local SquadRule = require(ReplicatedStorage.Shared.Util.SquadRule)
+local RebirthMath = require(ReplicatedStorage.Shared.Util.RebirthMath)
 local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerData = require(script.Parent.PlayerData)
 local Economy = require(script.Parent.Economy)
@@ -93,10 +94,23 @@ local function getStorageSeconds(data: PlayerData.Data): number
 	return UpgradeValues.StorageSeconds(data.upgrades.storage)
 end
 
-local function getRate(memelingId: string): number
+-- Доход мемлинга в секунду: по редкости, × бонус за rebirth игрока (RebirthMath)
+local function getRate(memelingId: string, data: PlayerData.Data?): number
 	local memeling = MemelingConfig.Memelings[memelingId]
 	local rarity = memeling and MemelingConfig.Rarities[memeling.Rarity]
-	return if rarity then rarity.AuraPerSecond else 0
+	local base = if rarity then rarity.AuraPerSecond else 0
+	local rebirths = if data then data.rebirths else 0
+	return base * RebirthMath.IncomeMultiplier(rebirths, EconomyConfig.Rebirth.IncomeBonusPercent)
+end
+
+-- Все улучшения на максимуме — тогда доступен Rebirth
+local function allUpgradesMaxed(data: PlayerData.Data): boolean
+	for _, id in ipairs(UpgradeValues.GetIds()) do
+		if UpgradeValues.NextCost(id, getLevel(data, id)) ~= nil then
+			return false
+		end
+	end
+	return true
 end
 
 -- ── Мир: постаменты участка ────────────────────────────────────────────────
@@ -118,13 +132,21 @@ local function setPromptEnabled(pedestal: Part, name: string, enabled: boolean)
 	end
 end
 
--- Некупленные постаменты — полупрозрачные «призраки», сквозь них можно пройти
+-- Некупленные постаменты — полупрозрачные «призраки», сквозь них можно пройти.
+-- Постамент, на котором стоит мемлинг, открыт всегда: после Rebirth витрина остаётся на месте
+-- (новых мемлингов туда не поставить, пока постамент снова не куплен)
 local function refreshPedestalLocks(plotIndex: number, data: PlayerData.Data?)
 	local unlocked = getPedestalCount(data)
+	local occupied: { [number]: boolean } = {}
+	if data then
+		for _, entry in ipairs(data.showcase) do
+			occupied[entry.pedestal] = true
+		end
+	end
 	for pedestalIndex = 1, #MapConfig.Plots.PedestalOffsets do
 		local pedestal = getPedestal(plotIndex, pedestalIndex)
 		if pedestal then
-			local isUnlocked = pedestalIndex <= unlocked
+			local isUnlocked = pedestalIndex <= unlocked or occupied[pedestalIndex] == true
 			-- Сама деталь постамента невидимая (логическая), видно круглый Look поверх неё
 			MapBuilder.SetLookTransparency(pedestal, if isUnlocked then 0 else StyleConfig.PlotParts.LockedPedestalTransparency)
 			pedestal.CanCollide = isUnlocked
@@ -217,7 +239,7 @@ local function publishCounts(player: Player)
 end
 
 local function updatePedestalLabel(pedestal: Part, entry: ShowcaseEntry, data: PlayerData.Data, at: number)
-	local rate = getRate(entry.memelingId)
+	local rate = getRate(entry.memelingId, data)
 	local storageSeconds = getStorageSeconds(data)
 	local stored = PedestalMath.GetStored(rate, entry.lastCollect, at, storageSeconds)
 	local full = stored >= rate * storageSeconds
@@ -226,9 +248,10 @@ local function updatePedestalLabel(pedestal: Part, entry: ShowcaseEntry, data: P
 end
 
 -- Подпись мемлинга на постаменте: имя и доход; у принесённых в отряде — ещё отметка бонуса
-local function getMemelingLabel(entry: ShowcaseEntry): string
+local function getMemelingLabel(entry: ShowcaseEntry, data: PlayerData.Data?): string
 	local name = TextConfig.MemelingNames[entry.memelingId] or entry.memelingId
-	local text = string.format(TextConfig.PedestalMemeling, name, getRate(entry.memelingId))
+	-- Доход показываем целым, округлённым вниз (с бонусом rebirth он бывает дробным)
+	local text = string.format(TextConfig.PedestalMemeling, name, math.floor(getRate(entry.memelingId, data)))
 	if entry.squadBonus then
 		text ..= string.format(TextConfig.SquadTag, EconomyConfig.SquadBonus.SellBonusPercent)
 	end
@@ -262,7 +285,7 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 	body:SetAttribute("MemelingId", entry.memelingId)
 	MapBuilder.AddLabel(
 		body,
-		getMemelingLabel(entry),
+		getMemelingLabel(entry, data),
 		{ MaxDistance = labelStyle.MemelingMaxDistance, Height = StyleConfig.Memeling.LabelHeight }
 	)
 
@@ -349,7 +372,7 @@ local function tryCollect(player: Player, plotIndex: number, pedestalIndex: numb
 	local at = now()
 	local entry = slot.Entry
 	local amount, newLastCollect =
-		PedestalMath.Collect(getRate(entry.memelingId), entry.lastCollect, at, getStorageSeconds(data))
+		PedestalMath.Collect(getRate(entry.memelingId, data), entry.lastCollect, at, getStorageSeconds(data))
 	if amount < 1 then
 		return
 	end
@@ -508,7 +531,7 @@ function Studio.ApplySquadBonus(player: Player, brought: { BroughtEntry })
 	if plotIndex and playerSlots then
 		for pedestalIndex, slot in playerSlots do
 			if table.find(marked, slot.Entry :: BroughtEntry) then
-				MapBuilder.SetLabelText(slot.Body, getMemelingLabel(slot.Entry))
+				MapBuilder.SetLabelText(slot.Body, getMemelingLabel(slot.Entry, PlayerData.GetData(player)))
 				local pedestal = getPedestal(plotIndex, pedestalIndex)
 				if pedestal then
 					updateSellPrompt(pedestal, slot.Entry)
@@ -585,7 +608,7 @@ local function trySellFromPedestal(player: Player, plotIndex: number, pedestalIn
 	end
 
 	local price = getSellPrice(entry.memelingId, entry.squadBonus)
-	local collected = PedestalMath.Collect(getRate(entry.memelingId), entry.lastCollect, now(), getStorageSeconds(data))
+	local collected = PedestalMath.Collect(getRate(entry.memelingId, data), entry.lastCollect, now(), getStorageSeconds(data))
 
 	-- Сначала мемлинг уходит из профиля, потом начисление: повторное нажатие уже ничего не найдёт
 	table.remove(data.showcase, position)
@@ -727,8 +750,140 @@ local function addBuyPrompts()
 	end
 end
 
+-- ── Rebirth ────────────────────────────────────────────────────────────────
+
+local function getRebirthPad(plotIndex: number): Part?
+	local plot = MapBuilder.GetPlots()[plotIndex]
+	local folder = plot and plot:FindFirstChild("Buttons")
+	local pad = folder and folder:FindFirstChild("Rebirth")
+	if pad and pad:IsA("Part") then
+		return pad
+	end
+	return nil
+end
+
+local function getRebirthCost(data: PlayerData.Data): number
+	local cfg = EconomyConfig.Rebirth
+	return RebirthMath.Cost(data.rebirths, cfg.BaseCost, cfg.CostGrowth)
+end
+
+-- Подпись площадки Rebirth и кнопка: работает, только когда все улучшения куплены
+local function refreshRebirth(plotIndex: number, data: PlayerData.Data?)
+	local pad = getRebirthPad(plotIndex)
+	if pad == nil then
+		return
+	end
+	local maxed = data ~= nil and allUpgradesMaxed(data)
+	local cost = if data then getRebirthCost(data) else RebirthMath.Cost(0, EconomyConfig.Rebirth.BaseCost, EconomyConfig.Rebirth.CostGrowth)
+	local text = if maxed then string.format(TextConfig.RebirthLabel, formatNumber(cost)) else TextConfig.RebirthLocked
+	MapBuilder.SetLabelText(pad, text)
+	local prompt = pad:FindFirstChild("RebirthPrompt")
+	if prompt and prompt:IsA("ProximityPrompt") then
+		prompt.Enabled = maxed
+		prompt.ObjectText = string.format(TextConfig.PriceTag, formatNumber(cost))
+	end
+end
+
+-- Счётчик rebirth над именем игрока (атрибут Rebirths — копия для клиента)
+local function refreshRebirthTag(player: Player)
+	local data = PlayerData.GetData(player)
+	local rebirths = if data then data.rebirths else 0
+	player:SetAttribute("Rebirths", rebirths)
+	local character = player.Character
+	local head = character and character:FindFirstChild("Head")
+	if head == nil or not head:IsA("BasePart") then
+		return
+	end
+	local old = head:FindFirstChild("RebirthTag")
+	if old then
+		old:Destroy()
+	end
+	if rebirths <= 0 then
+		return
+	end
+	local tag = Instance.new("BillboardGui")
+	tag.Name = "RebirthTag"
+	tag.Size = UDim2.fromScale(6, 1.2)
+	tag.StudsOffsetWorldSpace = Vector3.new(0, StyleConfig.PlotParts.RebirthTagHeight, 0)
+	tag.MaxDistance = StyleConfig.Label.MaxDistance
+	tag.Parent = head
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.TextScaled = true
+	label.Font = StyleConfig.Fonts.Label
+	label.TextColor3 = StyleConfig.PlotParts.RebirthTag
+	label.TextStrokeColor3 = StyleConfig.Label.Stroke
+	label.TextStrokeTransparency = 0
+	label.Text = string.format(TextConfig.RebirthTag, rebirths)
+	label.Parent = tag
+end
+
+-- Игрок удержал «Rebirth» 2 с (это и есть подтверждение). Всё проверяет сервер:
+-- свой участок, рядом, все улучшения куплены, Aura хватает. Витрина и запас остаются
+local function tryRebirth(player: Player, plotIndex: number)
+	local last = lastPurchaseAt[player]
+	if last and os.clock() - last < SecurityConfig.PurchaseCooldownSeconds then
+		return
+	end
+	local data = checkPlotAction(player, buyLimiter, plotIndex, getRebirthPad(plotIndex), EconomyConfig.ButtonDistance)
+	if data == nil or not allUpgradesMaxed(data) then
+		return
+	end
+	local cost = getRebirthCost(data)
+	-- Сначала Aura (только через Economy), сразу за ней сброс улучшений — без ожиданий между ними
+	if not Economy.TrySpendAll(player, cost, "rebirth") then
+		return -- не хватает Aura
+	end
+	data.upgrades.pedestals = 0
+	data.upgrades.carrySlots = 0
+	data.upgrades.storage = 0
+	data.rebirths += 1
+	lastPurchaseAt[player] = os.clock()
+	print(string.format("[Studio] %s сделал Rebirth №%d, доход ×%.2f", player.Name, data.rebirths, RebirthMath.IncomeMultiplier(data.rebirths, EconomyConfig.Rebirth.IncomeBonusPercent)))
+
+	refreshPedestalLocks(plotIndex, data)
+	refreshButtons(plotIndex, data)
+	refreshRebirth(plotIndex, data)
+	Raid.RefreshCarrySlots(player)
+	refreshRebirthTag(player)
+	-- Доход мемлингов на витрине вырос — обновляем подписи «+N/s»
+	local playerSlots = rendered[player]
+	if playerSlots then
+		for _, slot in playerSlots do
+			MapBuilder.SetLabelText(slot.Body, getMemelingLabel(slot.Entry, data))
+		end
+	end
+end
+
+local function addRebirthPrompts()
+	for plotIndex = 1, #MapBuilder.GetPlots() do
+		local pad = getRebirthPad(plotIndex)
+		if pad then
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "RebirthPrompt"
+			prompt.ActionText = TextConfig.RebirthAction
+			prompt.MaxActivationDistance = EconomyConfig.ButtonDistance
+			prompt.HoldDuration = StyleConfig.Prompts.RebirthHoldSeconds
+			prompt.RequiresLineOfSight = false
+			prompt.Enabled = false
+			prompt.Parent = pad
+			RemoteGuard.ConnectPrompt(prompt, "rebirth", function(player: Player)
+				tryRebirth(player, plotIndex)
+			end)
+		end
+		refreshRebirth(plotIndex, nil)
+	end
+end
+
 local function updateAllLabels()
 	local at = now()
+	-- Кнопка Rebirth: Aura меняется постоянно, поэтому доступность обновляем вместе с подписями
+	-- (у свободного участка — стартовая подпись)
+	for plotIndex = 1, #MapBuilder.GetPlots() do
+		local owner = plotOwners[plotIndex]
+		refreshRebirth(plotIndex, if owner then PlayerData.GetData(owner) else nil)
+	end
 	for player, playerSlots in rendered do
 		local plotIndex = playerPlots[player]
 		local data = PlayerData.GetData(player)
@@ -764,17 +919,30 @@ function Studio.Start()
 	addCollectPrompts()
 	addBuyPrompts()
 	addSellPrompts()
+	addRebirthPrompts()
 	Tutorial.SetPedestalCheck(isNearFilledPedestal)
 
-	Players.PlayerAdded:Connect(assignPlot)
+	-- Счётчик rebirth над головой: при каждом появлении персонажа
+	local function watchCharacter(player: Player)
+		player.CharacterAdded:Connect(function(character)
+			character:WaitForChild("Head", 10)
+			refreshRebirthTag(player)
+		end)
+	end
+	Players.PlayerAdded:Connect(function(player)
+		assignPlot(player)
+		watchCharacter(player)
+	end)
 	Players.PlayerRemoving:Connect(releasePlot)
 	PlayerData.OnLoaded(function(player)
 		renderShowcase(player)
+		refreshRebirthTag(player)
 	end)
 
 	-- Игроки, которые успели зайти до запуска сервиса
 	for _, player in ipairs(Players:GetPlayers()) do
 		assignPlot(player)
+		watchCharacter(player)
 	end
 
 	task.spawn(function()

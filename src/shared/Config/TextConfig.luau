@@ -37,6 +37,12 @@ TextConfig.SellAction = "Sell"
 TextConfig.SellPriceTag = "+%s Aura" -- сколько получишь за продажу
 TextConfig.ReserveLabel = "Reserve: %d" -- сколько мемлингов в запасе
 
+-- Rebirth: площадка на участке и счётчик над именем игрока
+TextConfig.RebirthAction = "Rebirth"
+TextConfig.RebirthLabel = "REBIRTH\n%s Aura" -- %s — цена
+TextConfig.RebirthLocked = "REBIRTH\nMax all upgrades"
+TextConfig.RebirthTag = "REBIRTH %d" -- %d — сколько rebirth сделано
+
 -- Кнопки улучшений на участке: что даст следующий уровень и цена (%d — новое значение, %s — цена)
 TextConfig.UpgradeLabels = {
 	pedestals = "Pedestal #%d\n%s Aura",

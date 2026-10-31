@@ -14,6 +14,7 @@ require("./SpawnPointBook.spec")
 require("./SquadRule.spec")
 require("./GiantRoute.spec")
 require("./TutorialSteps.spec")
+require("./RebirthMath.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

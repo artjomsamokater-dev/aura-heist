@@ -57,6 +57,19 @@ function Economy.TrySpend(player: Player, amount: number, reason: string): boole
 	return true
 end
 
+-- Rebirth: если Aura не меньше minimum — вся Aura сгорает (баланс становится 0). Иначе ничего не меняет.
+function Economy.TrySpendAll(player: Player, minimum: number, reason: string): boolean
+	local data = PlayerData.GetData(player)
+	if data == nil or not isValidAmount(minimum) or data.bankedAura < minimum then
+		return false
+	end
+	local spent = data.bankedAura
+	data.bankedAura = 0
+	publish(player, data)
+	print(string.format("[Economy] %s −%d Aura (%s), осталось 0", player.Name, spent, reason))
+	return true
+end
+
 function Economy.Start()
 	Players.PlayerAdded:Connect(function(player)
 		player:SetAttribute("BankedAura", 0) -- пока профиль грузится

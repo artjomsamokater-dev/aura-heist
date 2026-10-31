@@ -15,6 +15,7 @@ local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local PlotLayout = require(ReplicatedStorage.Shared.Util.PlotLayout)
+local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
 
 local MapBuilder = {}
 
@@ -532,6 +533,18 @@ local function buildPlots()
 		makeRoundLook(reserve, StyleConfig.PlotParts.ReservePad, StyleConfig.PlotParts.ReserveRim)
 		addLabel(reserve, "")
 
+		-- Диск Rebirth; подпись и кнопку (удержание 2 с) на него вешает Studio
+		local rebirth = makePart(
+			"Rebirth",
+			cfg.ButtonSize,
+			plotCFrame * CFrame.new(cfg.RebirthOffset),
+			StyleConfig.PlotParts.RebirthPad,
+			buttons
+		)
+		rebirth.CastShadow = false
+		makeRoundLook(rebirth, StyleConfig.PlotParts.RebirthPad, StyleConfig.PlotParts.RebirthRim)
+		addLabel(rebirth, "")
+
 		model.Parent = folder
 		plots[i] = model
 	end
@@ -766,12 +779,47 @@ local function buildZone()
 	end
 end
 
+-- Хватает ли на участке места под все постаменты: столько мест, сколько даёт последний уровень,
+-- не ближе PedestalMinSpacing друг к другу и к кнопкам, не ближе PedestalEdgeMargin к краю участка
+local function validatePlotLayout()
+	local cfg = MapConfig.Plots
+	local offsets = cfg.PedestalOffsets
+	local levels = UpgradeConfig.Pedestals.Levels
+	local maxCount = if #levels > 0 then levels[#levels].Count else UpgradeConfig.Pedestals.StartCount
+	if #offsets < maxCount then
+		warn(string.format("[MapBuilder] Мест под постаменты %d, а улучшение даёт до %d — добавь места в MapConfig.Plots.PedestalOffsets", #offsets, maxCount))
+	end
+	local half = cfg.Size / 2
+	local others: { Vector3 } = { cfg.ReserveOffset, cfg.RebirthOffset }
+	for _, offset in cfg.UpgradeButtonOffsets do
+		table.insert(others, offset)
+	end
+	local buttonClearance = cfg.ButtonSize.X / 2 + cfg.PedestalSize.X / 2
+	for i, a in ipairs(offsets) do
+		if math.abs(a.X) > half.X - cfg.PedestalEdgeMargin or math.abs(a.Z) > half.Z - cfg.PedestalEdgeMargin then
+			warn(string.format("[MapBuilder] Постамент %d слишком близко к краю участка", i))
+		end
+		for j = i + 1, #offsets do
+			local b = offsets[j]
+			if Vector3.new(a.X - b.X, 0, a.Z - b.Z).Magnitude < cfg.PedestalMinSpacing then
+				warn(string.format("[MapBuilder] Постаменты %d и %d стоят слишком близко", i, j))
+			end
+		end
+		for _, other in ipairs(others) do
+			if Vector3.new(a.X - other.X, 0, a.Z - other.Z).Magnitude < buttonClearance then
+				warn(string.format("[MapBuilder] Постамент %d налезает на кнопку участка", i))
+			end
+		end
+	end
+end
+
 function MapBuilder.Build()
 	if built then
 		return
 	end
 	built = true
 
+	validatePlotLayout()
 	paintGround()
 	buildHub()
 	buildPlots()

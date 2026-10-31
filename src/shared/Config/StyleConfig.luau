@@ -170,6 +170,10 @@ StyleConfig.PlotParts = {
 	ButtonRim = Palette.SunDark,
 	ReservePad = Palette.Mint, -- площадка запаса
 	ReserveRim = Palette.MintDark,
+	RebirthPad = Palette.Plum, -- площадка Rebirth: слива
+	RebirthRim = Palette.PlumLight,
+	RebirthTag = Palette.PlumLight, -- счётчик rebirth над именем игрока
+	RebirthTagHeight = 3.2, -- на сколько студов над головой (выше имени Roblox)
 	LockedPedestalTransparency = 0.75, -- некупленный постамент — полупрозрачный «призрак»
 	PedestalRim = Palette.CreamLight, -- светлый ободок сверху постамента
 }
@@ -178,6 +182,7 @@ StyleConfig.PlotParts = {
 StyleConfig.Prompts = {
 	BuyHoldSeconds = 0.3, -- короткое удержание, чтобы не купить случайно
 	SellHoldSeconds = 0.6, -- продажу держать дольше: её не отменить
+	RebirthHoldSeconds = 2, -- Rebirth сбрасывает Aura и улучшения — подтверждение долгим удержанием
 	SecondaryOffsetY = 90, -- вторая кнопка на том же постаменте (Sell) — ниже первой (Collect), в пикселях
 }
 

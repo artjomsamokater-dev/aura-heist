@@ -21,8 +21,9 @@ local ProfileStore = require(ServerScriptService.Server.Packages.ProfileStore)
 local PlayerData = {}
 
 local STORE_NAME = "PlayerProfiles" -- имя DataStore; сменишь — все начнут с нуля
--- 1 — первая схема; 2 — запас стал списком записей (с флагом бонуса отряда), а не просто Id
-local SCHEMA_VERSION = 2
+-- 1 — первая схема; 2 — запас стал списком записей (с флагом бонуса отряда), а не просто Id;
+-- 3 — появилось поле rebirths
+local SCHEMA_VERSION = 3
 
 -- Мемлинг на постаменте
 export type ShowcaseEntry = {
@@ -52,6 +53,7 @@ export type Data = {
 		step: number,
 		completed: boolean,
 	},
+	rebirths: number, -- сколько раз сделан Rebirth: доход постаментов выше (EconomyConfig.Rebirth)
 	stats: {
 		raids: number,
 		extractions: number,
@@ -70,6 +72,7 @@ local TEMPLATE: Data = {
 	reserve = {},
 	upgrades = { pedestals = 0, carrySlots = 0, storage = 0 },
 	tutorial = { step = 1, completed = false },
+	rebirths = 0,
 	stats = {
 		raids = 0,
 		extractions = 0,
@@ -115,6 +118,11 @@ local function migrate(data: Data): boolean
 
 	-- Туториал появился позже: кто уже эвакуировался, его не проходит (поле tutorial дописал Reconcile)
 	TutorialSteps.CompleteForVeteran(data.tutorial, data.stats.extractions)
+
+	-- 2 → 3: rebirths. Обычно его дописывает Reconcile; на случай испорченного значения — 0
+	if type(data.rebirths) ~= "number" or data.rebirths < 0 then
+		data.rebirths = 0
+	end
 
 	data.schemaVersion = SCHEMA_VERSION
 	return true

@@ -41,6 +41,7 @@ local Announcer = require(Services.Announcer)
 local Event = require(Services.Event)
 local Tutorial = require(Services.Tutorial)
 local Analytics = require(Services.Analytics)
+local DebugCommands = require(Services.DebugCommands)
 
 -- Порядок важен: сначала карта, потом сервисы, которые её используют
 LightingSetup.Apply()
@@ -56,6 +57,7 @@ Enemy.Start()
 Event.Start()
 Tutorial.Start()
 Analytics.Start()
+DebugCommands.Start() -- только в Studio
 -- Последним: все сервисы уже подписались на PlayerData.OnLoaded
 PlayerData.Start()
 
