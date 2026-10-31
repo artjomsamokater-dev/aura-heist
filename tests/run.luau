@@ -12,6 +12,7 @@ require("./HazardMath.spec")
 require("./EnemyMath.spec")
 require("./SpawnPointBook.spec")
 require("./SquadRule.spec")
+require("./GiantRoute.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

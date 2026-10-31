@@ -71,6 +71,9 @@ TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
 
+-- Событие Giant Object
+TextConfig.GiantObjectName = "🧀 MEGA CHEESE WHEEL"
+
 -- Враги
 TextConfig.EnemyNames = { Chaser = "Grumblob" }
 TextConfig.EnemySleeping = "Grumblob\nZzz..." -- подпись спящего врага

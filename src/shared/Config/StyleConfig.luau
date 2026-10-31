@@ -236,6 +236,21 @@ StyleConfig.Enemy = {
 	LabelMaxDistance = 60,
 }
 
+-- Событие Giant Object: колесо сыра с дырками и глупой рожицей
+StyleConfig.Event = {
+	Cheese = Palette.Sun,
+	Holes = Palette.SunDark,
+	Rind = Palette.SunLight, -- светлые бока колеса
+	Face = Palette.Ink,
+	RouteHighlight = Palette.Sun, -- подсветка маршрута перед стартом
+	RouteBlinkHz = 3, -- сколько раз в секунду мигает подсветка
+	RouteBlinkTransparency = 0.6,
+	-- Сигнал перед стартом: встроенный звук Roblox (если его нет — просто тишина, подсветка остаётся)
+	WarnSound = "rbxasset://sounds/electronicpingshort.wav",
+	WarnSoundVolume = 0.8,
+	LabelHeight = 9, -- подпись над колесом
+}
+
 -- Площадка EXTRACT: неон, искры вверх и столб света — видно из любого места зоны
 StyleConfig.Extraction = {
 	Color = Palette.Mint,
