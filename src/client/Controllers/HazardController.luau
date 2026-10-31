@@ -20,6 +20,7 @@ type Laser = {
 	Part: BasePart,
 	Start: Vector3,
 	End: Vector3,
+	SweepSeconds: number,
 }
 
 type Plate = {
@@ -40,8 +41,9 @@ local function addLaser(instance: Instance)
 	end
 	local startPosition = instance:GetAttribute("TrackStart")
 	local endPosition = instance:GetAttribute("TrackEnd")
-	if typeof(startPosition) == "Vector3" and typeof(endPosition) == "Vector3" then
-		lasers[instance] = { Part = instance, Start = startPosition, End = endPosition }
+	local sweepSeconds = tonumber(instance:GetAttribute("SweepSeconds"))
+	if typeof(startPosition) == "Vector3" and typeof(endPosition) == "Vector3" and sweepSeconds then
+		lasers[instance] = { Part = instance, Start = startPosition, End = endPosition, SweepSeconds = sweepSeconds }
 	end
 end
 
@@ -97,7 +99,7 @@ local function render()
 	local style = StyleConfig.Hazards
 
 	for _, laser in lasers do
-		local u, blinking = HazardMath.Laser(now, laserCfg.SweepSeconds, laserCfg.DwellSeconds)
+		local u, blinking = HazardMath.Laser(now, laser.SweepSeconds, laserCfg.DwellSeconds)
 		laser.Part.CFrame = CFrame.new(laser.Start:Lerp(laser.End, u))
 		local blinkOff = blinking and math.floor(now * style.LaserBlinkHz * 2) % 2 == 0
 		laser.Part.Transparency = if blinkOff then style.LaserBlinkTransparency else 0

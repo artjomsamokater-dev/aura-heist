@@ -2,6 +2,7 @@
 -- Enemy: враги Grumblob в опасной части зоны (числа — EnemyConfig.Chaser, вид — StyleConfig.Enemy).
 --
 -- • Ходят только внутри опасной части: цель за её краем — враг останавливается у границы (EnemyMath).
+--   В круг ExtractionKeepOut вокруг EXTRACT тоже не заходят: эвакуацию караулить нельзя.
 -- • Humanoid + PathfindingService: сквозь стены не проходят, путь пересчитывается раз в ThinkSeconds.
 -- • Спят, если ни одного игрока в вылазке нет ближе WakeRadius: тогда ничего не считают.
 -- • Урон при касании: сервер раз в DamageTickSeconds меряет расстояние (без Touched), с перезарядкой.
@@ -15,7 +16,6 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local EnemyConfig = require(ReplicatedStorage.Shared.Config.EnemyConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
-local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local EnemyMath = require(ReplicatedStorage.Shared.Util.EnemyMath)
 local MapBuilder = require(script.Parent.MapBuilder)
 local Raid = require(script.Parent.Raid)
@@ -124,7 +124,7 @@ local function buildChaser(index: number, floorPosition: Vector3, parent: Instan
 	for _, brow in ipairs(style.BrowOffsets) do
 		makeBrow(body, cframe * CFrame.new(brow.Position) * CFrame.Angles(0, 0, math.rad(brow.Tilt)))
 	end
-	MapBuilder.AddLabel(body, TextConfig.EnemySleeping, { MaxDistance = style.LabelMaxDistance })
+	-- Подписи у врага нет: его и так видно по цвету и сердитым бровям
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.RigType = Enum.HumanoidRigType.R15 -- у R15 высоту над полом задаёт HipHeight
@@ -180,7 +180,6 @@ local function setSleeping(chaser: Chaser, sleeping: boolean)
 		return
 	end
 	chaser.Sleeping = sleeping
-	MapBuilder.SetLabelText(chaser.Body, if sleeping then TextConfig.EnemySleeping else TextConfig.EnemyNames.Chaser)
 	if sleeping then
 		chaser.Waypoints = nil
 		chaser.Humanoid:MoveTo(chaser.Root.Position) -- стоит на месте
@@ -208,8 +207,19 @@ local function chooseGoal(chaser: Chaser, targets: { Target }): (Vector3?, boole
 		end
 	end
 
+	-- Вокруг EXTRACT враги не заходят: цель внутри круга — только до его края.
+	-- Если враг сам оказался внутри (его толкнули) — выходит на край
+	local extract = MapConfig.Zone.ExtractionPosition
+	local keepOut = cfg.ExtractionKeepOut
+	local target = goal or chaser.Home
+	local gx, gz = EnemyMath.PushOutOfCircle(target.X, target.Z, extract.X, extract.Z, keepOut, position.X, position.Z)
+	if EnemyMath.FlatDistance(position.X, position.Z, extract.X, extract.Z) < keepOut then
+		gx, gz = EnemyMath.PushOutOfCircle(position.X, position.Z, extract.X, extract.Z, keepOut, position.X - 1, position.Z)
+	end
+	goal = Vector3.new(gx, chaser.Home.Y, gz)
+
 	local awake = nearestAny <= cfg.WakeRadius
-	return goal or chaser.Home, awake
+	return goal, awake
 end
 
 local function think(chaser: Chaser)

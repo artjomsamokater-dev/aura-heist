@@ -133,6 +133,12 @@ end
 -- Развёрнут на 180°, чтобы глазами смотрел на игрока (камера обычно сзади).
 local function attachToCharacter(part: Part, character: Model, root: BasePart, slotIndex: number)
 	local offset = getCarryOffset(slotIndex)
+	-- В руках мемлинг меньше и без подписи — не закрывает обзор (пока он ещё закреплён — уменьшаем)
+	MapBuilder.ScaleMemeling(part, StyleConfig.Memeling.CarryScale)
+	local label = part:FindFirstChild("Label")
+	if label and label:IsA("BillboardGui") then
+		label.Enabled = false
+	end
 	part.Anchored = false
 	part.CanCollide = false
 	part.Massless = true

@@ -13,6 +13,32 @@ function EnemyMath.IsInArea(x: number, z: number, minX: number, maxX: number, mi
 	return x >= minX and x <= maxX and z >= minZ and z <= maxZ
 end
 
+-- Запретный круг (вокруг EXTRACT): точку внутри выталкиваем на его край, снаружи — оставляем.
+-- Точку ровно в центре выталкиваем в сторону from (откуда идёт враг), чтобы направление было понятно
+function EnemyMath.PushOutOfCircle(
+	x: number,
+	z: number,
+	centerX: number,
+	centerZ: number,
+	radius: number,
+	fromX: number,
+	fromZ: number
+): (number, number)
+	local dx, dz = x - centerX, z - centerZ
+	local distance = math.sqrt(dx * dx + dz * dz)
+	if distance >= radius then
+		return x, z
+	end
+	if distance < 1e-6 then
+		dx, dz = fromX - centerX, fromZ - centerZ
+		distance = math.sqrt(dx * dx + dz * dz)
+		if distance < 1e-6 then
+			dx, dz, distance = -1, 0, 1 -- совсем в центре: на запад
+		end
+	end
+	return centerX + dx / distance * radius, centerZ + dz / distance * radius
+end
+
 -- Расстояние по полу (высоту не считаем)
 function EnemyMath.FlatDistance(ax: number, az: number, bx: number, bz: number): number
 	local dx, dz = ax - bx, az - bz

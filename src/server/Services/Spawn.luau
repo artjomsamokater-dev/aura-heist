@@ -120,7 +120,11 @@ local function spawnAt(memelingId: string, spawnIndex: number): Record
 	MapBuilder.AddLabel(
 		part,
 		displayName,
-		{ MaxDistance = StyleConfig.Label.MemelingMaxDistance, Height = StyleConfig.Memeling.LabelHeight }
+		{
+			MaxDistance = StyleConfig.Label.MemelingMaxDistance,
+			Height = StyleConfig.Memeling.LabelHeight,
+			Scale = StyleConfig.Label.MemelingScale,
+		}
 	)
 	addPickupPrompt(part, instanceId, displayName)
 

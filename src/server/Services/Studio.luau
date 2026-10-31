@@ -286,7 +286,7 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 	MapBuilder.AddLabel(
 		body,
 		getMemelingLabel(entry, data),
-		{ MaxDistance = labelStyle.MemelingMaxDistance, Height = StyleConfig.Memeling.LabelHeight }
+		{ MaxDistance = labelStyle.MemelingMaxDistance, Height = StyleConfig.Memeling.LabelHeight, Scale = labelStyle.MemelingScale }
 	)
 
 	-- Подпись «накоплено» висит выше подписи мемлинга, с зазором

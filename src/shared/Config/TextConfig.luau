@@ -105,10 +105,6 @@ TextConfig.TutorialSkip = "Skip"
 -- Событие Giant Object
 TextConfig.GiantObjectName = "MEGA CHEESE WHEEL"
 
--- Враги
-TextConfig.EnemyNames = { Chaser = "Grumblob" }
-TextConfig.EnemySleeping = "Grumblob\nZzz..." -- подпись спящего врага
-
 -- Сообщения при кике (сохранение)
 TextConfig.KickProfileLoadFailed = "We couldn't load your save. Your progress is safe — please rejoin in a minute."
 TextConfig.KickProfileNewer = "This server is outdated. Please rejoin to get the latest version."

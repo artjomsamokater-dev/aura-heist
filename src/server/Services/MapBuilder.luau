@@ -869,6 +869,30 @@ function MapBuilder.SetLookTransparency(part: Instance, transparency: number)
 	end
 end
 
+-- Уменьшает (или увеличивает) мемлинга целиком: ядро и все детали, с сохранением формы.
+-- Детали приварены к ядру — сварки пересоздаём после изменения размеров
+function MapBuilder.ScaleMemeling(core: BasePart, factor: number)
+	local coreCFrame = core.CFrame
+	for _, child in ipairs(core:GetChildren()) do
+		if child:IsA("BasePart") then
+			local relative = coreCFrame:ToObjectSpace(child.CFrame)
+			local weld = child:FindFirstChildOfClass("WeldConstraint")
+			if weld then
+				weld:Destroy()
+			end
+			child.Size *= factor
+			child.CFrame = coreCFrame * CFrame.new(relative.Position * factor) * relative.Rotation
+			local newWeld = Instance.new("WeldConstraint")
+			newWeld.Part0 = core
+			newWeld.Part1 = child
+			newWeld.Parent = child
+		elseif child:IsA("PointLight") then
+			child.Range *= factor
+		end
+	end
+	core.Size *= factor
+end
+
 -- Те же помощники для других сервисов
 MapBuilder.MakePart = makePart
 MapBuilder.AddLabel = addLabel

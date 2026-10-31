@@ -119,16 +119,17 @@ local ZONE_TOP = Vector3.new(500, ZONE_FLOOR_Y + 1, 0) -- центр верхн�
 
 MapConfig.Zone = {
 	Center = ZONE_TOP - Vector3.new(0, 0.5, 0),
-	Size = Vector3.new(160, 1, 160),
+	Size = Vector3.new(224, 1, 224), -- смещения X и Z от −112 до 112
 	-- Пол делится на две части: от входа (запад) — безопасная, восточнее этой линии — опасная.
 	-- Число — смещение по X от центра зоны (шансы редкостей, ловушки и враги — по этой границе).
-	DangerFromX = 10,
-	EntryPosition = ZONE_TOP + Vector3.new(-60, 0, 0), -- точка входа на полу зоны (западный край)
+	-- Доли частей как раньше: безопасная ≈ 56%, опасная ≈ 44% ширины
+	DangerFromX = 14,
+	EntryPosition = ZONE_TOP + Vector3.new(-90, 0, 0), -- точка входа на полу зоны (западный край)
 	EntryMarkerSize = Vector3.new(8, 0.2, 8),
 	EntrySpawnHeight = 4, -- на сколько студов выше точки входа ставим персонажа
 
 	-- Точка эвакуации на полу зоны (восточный край). Радиус площадки = ZoneConfig.EvacuationDistance
-	ExtractionPosition = ZONE_TOP + Vector3.new(60, 0, 0),
+	ExtractionPosition = ZONE_TOP + Vector3.new(90, 0, 0),
 	ExtractionPadThickness = 0.2,
 	ExtractionMaxHeight = 10, -- выше этого над площадкой (прыжок не в счёт) игрок уже не «на точке»
 
@@ -143,39 +144,56 @@ MapConfig.Zone = {
 	-- Декор зоны: смещения X/Z от центра зоны (по полу). Путь понятен без текста:
 	-- ворота у входа → дорожка → ворота в опасную часть → столб света над EXTRACT
 	Decor = {
-		EntryGateX = -50, -- ворота сразу перед точкой входа: игрок видит их, как только появился
+		EntryGateX = -78, -- ворота сразу перед точкой входа: игрок видит их, как только появился
 		GatePillarZ = 8,
 		GateHeight = 14,
 		GatePillarDiameter = 3,
 		GateBeamThickness = 2,
 		GateCapDiameter = 3.6,
-		PathFromX = -60, -- дорожка от входа...
-		PathToX = 48, -- ...до края площадки EXTRACT
+		PathFromX = -90, -- дорожка от входа...
+		PathToX = 78, -- ...до края площадки EXTRACT
 		PathWidth = 6,
 		DangerBorderWidth = 1.2, -- полоса на полу по границе опасной части
 		ExtractBeaconDiameter = 4,
 		ExtractBeaconHeight = 60,
 		-- Ориентиры: грибы-великаны в углах безопасной части, кристаллы — в углах опасной
 		Mushrooms = {
-			{ Position = Vector2.new(-64, -62), StemHeight = 12, StemDiameter = 3.5, CapDiameter = 14 },
-			{ Position = Vector2.new(-64, 62), StemHeight = 9, StemDiameter = 3, CapDiameter = 11 },
+			{ Position = Vector2.new(-100, -100), StemHeight = 12, StemDiameter = 3.5, CapDiameter = 14 },
+			{ Position = Vector2.new(-100, 100), StemHeight = 9, StemDiameter = 3, CapDiameter = 11 },
+			{ Position = Vector2.new(-30, -100), StemHeight = 10, StemDiameter = 3, CapDiameter = 12 },
 		},
 		Crystals = {
-			{ Position = Vector2.new(68, -68), Heights = { 14, 9, 6 } },
-			{ Position = Vector2.new(68, 68), Heights = { 12, 8, 5 } },
+			{ Position = Vector2.new(100, -100), Heights = { 14, 9, 6 } },
+			{ Position = Vector2.new(100, 100), Heights = { 12, 8, 5 } },
 		},
 	},
 
-	-- Точки спавна мемлингов на полу зоны: на каждой появляется один мемлинг
+	-- Точки спавна мемлингов на полу зоны: на каждой появляется один мемлинг.
+	-- Разнесены по всей зоне: 12 в безопасной части (X < 14), 8 в опасной (X ≥ 14),
+	-- ни одной ближе 30 студов к входу и к EXTRACT
 	SpawnPoints = {
-		ZONE_TOP + Vector3.new(-40, 0, -30),
-		ZONE_TOP + Vector3.new(-40, 0, 30),
-		ZONE_TOP + Vector3.new(-10, 0, -55),
-		ZONE_TOP + Vector3.new(-10, 0, 0),
-		ZONE_TOP + Vector3.new(-10, 0, 55),
-		ZONE_TOP + Vector3.new(20, 0, -35),
-		ZONE_TOP + Vector3.new(20, 0, 35),
-		ZONE_TOP + Vector3.new(35, 0, 0),
+		-- Безопасная часть
+		ZONE_TOP + Vector3.new(-100, 0, -60),
+		ZONE_TOP + Vector3.new(-100, 0, 60),
+		ZONE_TOP + Vector3.new(-75, 0, -95),
+		ZONE_TOP + Vector3.new(-75, 0, 95),
+		ZONE_TOP + Vector3.new(-70, 0, -35),
+		ZONE_TOP + Vector3.new(-70, 0, 35),
+		ZONE_TOP + Vector3.new(-40, 0, -70),
+		ZONE_TOP + Vector3.new(-40, 0, 70),
+		ZONE_TOP + Vector3.new(-35, 0, -15),
+		ZONE_TOP + Vector3.new(-35, 0, 15),
+		ZONE_TOP + Vector3.new(-5, 0, -55),
+		ZONE_TOP + Vector3.new(-5, 0, 55),
+		-- Опасная часть
+		ZONE_TOP + Vector3.new(30, 0, -60),
+		ZONE_TOP + Vector3.new(30, 0, 60),
+		ZONE_TOP + Vector3.new(48, 0, -100),
+		ZONE_TOP + Vector3.new(50, 0, 100),
+		ZONE_TOP + Vector3.new(75, 0, -50),
+		ZONE_TOP + Vector3.new(75, 0, 55),
+		ZONE_TOP + Vector3.new(100, 0, -35),
+		ZONE_TOP + Vector3.new(100, 0, 35),
 	},
 }
 

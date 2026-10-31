@@ -36,10 +36,16 @@ type Target = {
 	Root: BasePart,
 }
 
-local laserStart = Vector3.zero
-local laserEnd = Vector3.zero
-local laserPrevPosition: Vector3? = nil
-local laserLastHit: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+type Laser = {
+	Start: Vector3,
+	End: Vector3,
+	Size: Vector3,
+	SweepSeconds: number,
+	PrevPosition: Vector3?,
+	LastHit: { [Player]: number },
+}
+
+local lasers: { Laser } = {}
 local plates: { Plate } = {}
 
 local function zoneTop(): Vector3
@@ -70,34 +76,48 @@ local function build()
 	local top = zoneTop()
 	local style = StyleConfig.Hazards
 
-	-- Лазерная планка: на сервере стоит в начале дорожки, двигает её клиент
-	local laser = HazardConfig.Laser
-	laserStart = top + laser.TrackStart
-	laserEnd = top + laser.TrackEnd
-	local bar = makeHazardPart("LaserBar", laser.Size, CFrame.new(laserStart), style.Laser, folder)
-	bar.Material = StyleConfig.GlowMaterial
-	bar.CanCollide = false
-	bar.CanTouch = false
-	bar.CanQuery = false
-	bar:SetAttribute("TrackStart", laserStart)
-	bar:SetAttribute("TrackEnd", laserEnd)
-	CollectionService:AddTag(bar, HazardConfig.Tags.Laser)
+	-- Лазерные планки: на сервере стоят в начале дорожки, двигает их клиент (по тем же формулам)
+	for n, spec in ipairs(HazardConfig.Lasers) do
+		local startPosition = top + spec.TrackStart
+		local endPosition = top + spec.TrackEnd
+		local bar = makeHazardPart("LaserBar" .. n, spec.Size, CFrame.new(startPosition), style.Laser, folder)
+		bar.Material = StyleConfig.GlowMaterial
+		bar.CanCollide = false
+		bar.CanTouch = false
+		bar.CanQuery = false
+		bar:SetAttribute("TrackStart", startPosition)
+		bar:SetAttribute("TrackEnd", endPosition)
+		bar:SetAttribute("SweepSeconds", spec.SweepSeconds)
+		CollectionService:AddTag(bar, HazardConfig.Tags.Laser)
+		table.insert(lasers, {
+			Start = startPosition,
+			End = endPosition,
+			Size = spec.Size,
+			SweepSeconds = spec.SweepSeconds,
+			PrevPosition = nil,
+			LastHit = setmetatable({}, { __mode = "k" }) :: any,
+		})
 
-	-- Рельсы на полу по краям дорожки: видно, где будет ездить планка
-	local trackMiddle = (laserStart + laserEnd) / 2
-	local trackLength = (laserEnd - laserStart).Magnitude + laser.Size.Z
-	local trackDirection = (laserEnd - laserStart).Unit
-	for i, side in ipairs({ -1, 1 }) do
-		local railCenter = Vector3.new(trackMiddle.X + side * laser.Size.X / 2, top.Y + 0.1, trackMiddle.Z)
-		local rail = makeHazardPart(
-			"LaserRail" .. i,
-			Vector3.new(style.RailWidth, 0.2, trackLength),
-			CFrame.lookAt(railCenter, railCenter + Vector3.new(trackDirection.X, 0, trackDirection.Z)),
-			style.Rail,
-			folder
-		)
-		rail.CanCollide = false
-		rail.CanQuery = false
+		-- Рельсы на полу по краям дорожки: видно, где будет ездить планка.
+		-- Края — по длинной стороне планки (поперёк направления движения)
+		local direction = (endPosition - startPosition).Unit
+		local alongX = math.abs(direction.X) > math.abs(direction.Z)
+		local halfWidth = if alongX then spec.Size.Z / 2 else spec.Size.X / 2
+		local side = if alongX then Vector3.zAxis else Vector3.xAxis
+		local middle = (startPosition + endPosition) / 2
+		local length = (endPosition - startPosition).Magnitude + (if alongX then spec.Size.X else spec.Size.Z)
+		for i, sign in ipairs({ -1, 1 }) do
+			local railCenter = Vector3.new(middle.X, top.Y + 0.1, middle.Z) + side * sign * halfWidth
+			local rail = makeHazardPart(
+				"LaserRail" .. n .. "_" .. i,
+				Vector3.new(style.RailWidth, 0.2, length),
+				CFrame.lookAt(railCenter, railCenter + Vector3.new(direction.X, 0, direction.Z)),
+				style.Rail,
+				folder
+			)
+			rail.CanCollide = false
+			rail.CanQuery = false
+		end
 	end
 
 	-- Плиты-«хлопушки»
@@ -139,13 +159,13 @@ local function overlaps(root: BasePart, center: Vector3, halfSize: Vector3): boo
 	return HazardMath.InBox(p.X, p.Y, p.Z, halfSize.X + character.X, halfSize.Y + character.Y, halfSize.Z + character.Z)
 end
 
-local function updateLaser(now: number, targets: { Target })
-	local laser = HazardConfig.Laser
-	local u = HazardMath.Laser(now, laser.SweepSeconds, laser.DwellSeconds)
-	local position = laserStart:Lerp(laserEnd, u)
+local function updateLaser(laser: Laser, now: number, targets: { Target })
+	local shared = HazardConfig.Laser
+	local u = HazardMath.Laser(now, laser.SweepSeconds, shared.DwellSeconds)
+	local position = laser.Start:Lerp(laser.End, u)
 	-- Проверяем всю полосу, которую планка прошла с прошлой проверки: иначе быстрая планка «перепрыгнет» игрока
-	local previous = laserPrevPosition or position
-	laserPrevPosition = position
+	local previous = laser.PrevPosition or position
+	laser.PrevPosition = position
 	local center = (previous + position) / 2
 	local halfSize = laser.Size / 2 + Vector3.new(
 		math.abs(position.X - previous.X) / 2,
@@ -154,10 +174,10 @@ local function updateLaser(now: number, targets: { Target })
 	)
 
 	for _, target in ipairs(targets) do
-		local last = laserLastHit[target.Player]
-		if (last == nil or now - last >= laser.HitCooldownSeconds) and overlaps(target.Root, center, halfSize) then
-			laserLastHit[target.Player] = now
-			Damage.Apply(target.Player, laser.Damage, "лазер")
+		local last = laser.LastHit[target.Player]
+		if (last == nil or now - last >= shared.HitCooldownSeconds) and overlaps(target.Root, center, halfSize) then
+			laser.LastHit[target.Player] = now
+			Damage.Apply(target.Player, shared.Damage, "лазер")
 		end
 	end
 end
@@ -188,11 +208,13 @@ function Hazards.Start()
 			task.wait(HazardConfig.TickSeconds)
 			local now = Workspace:GetServerTimeNow()
 			local targets = getTargets()
-			updateLaser(now, targets)
+			for _, laser in ipairs(lasers) do
+				updateLaser(laser, now, targets)
+			end
 			updatePlates(now, targets)
 		end
 	end)
-	print(string.format("[Hazards] Ловушки готовы: лазер и %d плит", #plates))
+	print(string.format("[Hazards] Ловушки готовы: лазеров %d, плит %d", #lasers, #plates))
 end
 
 return Hazards
