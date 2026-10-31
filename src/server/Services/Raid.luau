@@ -12,6 +12,7 @@ local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
 local CarrySpeed = require(ReplicatedStorage.Shared.Util.CarrySpeed)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
@@ -42,6 +43,7 @@ local runs: { [Player]: Run } = {}
 
 local pickupLimiter =
 	RateLimiter.new(SecurityConfig.RateLimits.Pickup.MaxRequests, SecurityConfig.RateLimits.Pickup.WindowSeconds)
+local dropLimiter = RateLimiter.new(SecurityConfig.RateLimits.Drop.MaxRequests, SecurityConfig.RateLimits.Drop.WindowSeconds)
 
 -- Сервер хранит состояние у себя; атрибут на игроке — только копия, чтобы видеть его в Studio
 local function setState(player: Player, state: string)
@@ -184,6 +186,24 @@ local function tryPickup(player: Player, instanceId: string)
 	updateCarrySpeed(player)
 	print(string.format("[Raid] %s подобрал %s (%s)", player.Name, record.MemelingId, instanceId))
 	Tutorial.Notify(player, "PickUp")
+end
+
+-- Игрок нажал «Drop»: последний мемлинг из рук отпускается и, как потерянный,
+-- возвращается на свою точку спавна через ZoneConfig.LostRespawnSeconds. Только в зоне и только живым
+local function tryDrop(player: Player)
+	if not dropLimiter.Allow(player) then
+		return
+	end
+	local character = RemoteGuard.GetAliveCharacter(player)
+	local list = carried[player]
+	if character == nil or states[player] ~= Raid.State.InRaid or list == nil or #list == 0 then
+		return
+	end
+	local instanceId = table.remove(list) :: string
+	Spawn.Lose(instanceId)
+	player:SetAttribute("CarriedCount", #list)
+	updateCarrySpeed(player)
+	print(string.format("[Raid] %s отпустил мемлинга %s", player.Name, instanceId))
 end
 
 local function onPortalTouched(hit: BasePart)
@@ -329,6 +349,7 @@ end
 function Raid.Start()
 	MapBuilder.GetPortal().Touched:Connect(onPortalTouched)
 	Spawn.SetPickupHandler(tryPickup)
+	RemoteGuard.ConnectRemote(RemoteGuard.CreateRemote(Remotes.DropCarried), "бросок", tryDrop)
 
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)

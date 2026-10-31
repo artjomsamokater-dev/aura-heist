@@ -22,6 +22,7 @@ SecurityConfig.RateLimits = {
 	Collect = { MaxRequests = 4, WindowSeconds = 1 },
 	Buy = { MaxRequests = 3, WindowSeconds = 1 },
 	Sell = { MaxRequests = 2, WindowSeconds = 1 },
+	Drop = { MaxRequests = 2, WindowSeconds = 1 },
 	-- Общий лимит на ЛЮБЫЕ кнопки одного игрока вместе (RemoteGuard.ConnectPrompt)
 	AnyAction = { MaxRequests = 8, WindowSeconds = 1 },
 }

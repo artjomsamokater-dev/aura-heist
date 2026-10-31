@@ -565,6 +565,23 @@ StyleConfig.Hud = {
 	AnnounceTextSize = 30,
 	AnnounceGap = 10, -- отступ под таймером рестока, в пикселях
 
+	-- Крупные кнопки ProximityPrompt (свой стиль вместо стандартного): удобно нажимать пальцем
+	PromptWidth = 180,
+	PromptHeight = 64,
+	PromptTouchScale = 1.25, -- на телефоне ещё крупнее
+	PromptPanel = Palette.CreamLight,
+	PromptFill = Palette.Mint, -- полоска удержания
+	PromptActionSize = 26,
+	PromptObjectSize = 16,
+
+	-- Кнопки действий справа над кнопкой прыжка (Drop, Extract)
+	ActionButtonSize = 92, -- диаметр, в пикселях
+	ActionButtonGap = 12,
+	ActionDrop = Palette.Coral,
+	ActionExtract = Palette.Mint,
+	ActionTextSize = 20,
+	ExtractButtonRange = 45, -- кнопка Extract появляется, когда до площадки ближе, в студах
+
 	-- Экран результата эвакуации: короткий, закрывается сам
 	ResultSeconds = 6,
 	ResultPanel = Palette.CreamLight,

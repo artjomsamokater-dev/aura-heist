@@ -8,6 +8,7 @@
 --   ExtractionResult — только сервер → игрок: экран результата (Id принесённых, время вылазки, бонус отряда).
 --   Эти три сервер не слушает: что бы клиент туда ни прислал, ничего не произойдёт.
 --   TutorialSkip — клиент → сервер, без аргументов: «пропустить туториал».
+--   DropCarried  — клиент → сервер, без аргументов: «отпустить последнего мемлинга из рук».
 -- События клиент → сервер подключать только через RemoteGuard.ConnectRemote (правило 2.5).
 
 local Remotes = table.freeze({
@@ -16,6 +17,7 @@ local Remotes = table.freeze({
 	SquadBonus = "SquadBonus",
 	ExtractionResult = "ExtractionResult",
 	TutorialSkip = "TutorialSkip",
+	DropCarried = "DropCarried",
 })
 
 return Remotes

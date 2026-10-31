@@ -70,6 +70,12 @@ TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
 
+-- Кнопки действий (крупные, справа над кнопкой прыжка)
+TextConfig.ActionDrop = "Drop"
+TextConfig.ActionExtract = "Extract"
+TextConfig.ActionExtracting = "Hold..."
+TextConfig.KeyHint = "[%s]" -- клавиша на компьютере, например [G]
+
 -- Экран результата эвакуации
 TextConfig.ResultTitle = "EXTRACTED!"
 TextConfig.ResultRow = "%s · %s · +%d/s" -- имя · редкость · доход в секунду
