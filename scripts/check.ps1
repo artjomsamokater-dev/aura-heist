@@ -40,6 +40,11 @@ foreach ($file in Get-ChildItem -Path src, tests -Recurse -Filter *.luau) {
 		Write-Host "  испорченная кодировка (кракозябры): $($file.FullName)"
 		$encodingCode = 1
 	}
+	# Эмодзи на разных устройствах выглядят по-разному — в игре их нет (иконки рисуем, client/Ui/Icons)
+	if ($text -match "[\uD83C-\uD83E][\uDC00-\uDFFF]|[☀-➿]") {
+		Write-Host "  эмодзи в файле (замени на иконку или простой символ): $($file.FullName)"
+		$encodingCode = 1
+	}
 }
 
 Write-Host "== тесты (luau tests/run.luau)"

@@ -14,6 +14,7 @@ local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
+local Icons = require(script.Parent.Parent.Ui.Icons)
 
 local HudController = {}
 
@@ -94,13 +95,7 @@ local function makeCard(parent: Instance, order: number, color: Color3, icon: st
 	bubble.Size = UDim2.fromOffset(HUD.IconSize, HUD.IconSize)
 	bubble.Parent = card
 	addCorner(bubble, UDim.new(1, 0))
-	local iconLabel = Instance.new("TextLabel")
-	iconLabel.BackgroundTransparency = 1
-	iconLabel.Size = UDim2.fromScale(1, 1)
-	iconLabel.TextScaled = true
-	iconLabel.Font = StyleConfig.Fonts.Hud
-	iconLabel.Text = icon
-	iconLabel.Parent = bubble
+	Icons.Make(icon, bubble, HUD.IconSize * 0.8)
 
 	local textLeft = PADDING * 2 + HUD.IconSize
 	local valueLabel = makeLabel(card, "", VALUE_SIZE, TEXT_DARK)
@@ -155,8 +150,8 @@ local function buildHud(playerGui: Instance)
 	layout.Padding = UDim.new(0, 6)
 	layout.Parent = column
 
-	local baseValue = makeCard(column, 1, HUD.BaseCard, TextConfig.HudBaseIcon, TextConfig.HudBaseCaption)
-	local handsValue = makeCard(column, 2, HUD.HandsCard, TextConfig.HudHandsIcon, TextConfig.HudHandsCaption)
+	local baseValue = makeCard(column, 1, HUD.BaseCard, "Aura", TextConfig.HudBaseCaption)
+	local handsValue = makeCard(column, 2, HUD.HandsCard, "Bag", TextConfig.HudHandsCaption)
 
 	local function refresh()
 		baseValue.Text = string.format(TextConfig.HudBaseValue, formatNumber(readNumber("BankedAura")))
@@ -201,8 +196,17 @@ local function buildRestockTimer(playerGui: Instance)
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = panel
 
+	local iconSize = HUD.TimerHeight - 8
+	local iconSlot = Instance.new("Frame")
+	iconSlot.BackgroundTransparency = 1
+	iconSlot.Position = UDim2.fromOffset(8, 4)
+	iconSlot.Size = UDim2.fromOffset(iconSize, iconSize)
+	iconSlot.Parent = panel
+	Icons.Make("Clock", iconSlot)
+
 	local label = makeLabel(panel, "", HUD.TimerTextSize, HUD.TimerText)
-	label.Size = UDim2.fromScale(1, 1)
+	label.Position = UDim2.fromOffset(iconSize + 12, 0)
+	label.Size = UDim2.new(1, -(iconSize + 20), 1, 0)
 	label.TextXAlignment = Enum.TextXAlignment.Center
 
 	task.spawn(function()

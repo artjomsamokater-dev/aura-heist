@@ -14,12 +14,13 @@ local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local EconomyConfig = require(ReplicatedStorage.Shared.Config.EconomyConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Icons = require(script.Parent.Parent.Ui.Icons)
 
 local AnnouncementController = {}
 
 local HUD = StyleConfig.Hud
 
-local function build(playerGui: Instance): (Frame, TextLabel, UIStroke)
+local function build(playerGui: Instance): (Frame, TextLabel, UIStroke, Frame)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Announcement"
 	gui.ResetOnSpawn = false
@@ -61,12 +62,20 @@ local function build(playerGui: Instance): (Frame, TextLabel, UIStroke)
 	textLimit.MaxTextSize = HUD.AnnounceTextSize
 	textLimit.Parent = label
 
-	return banner, label, stroke
+	-- Место под иконку слева (у «SQUAD BONUS!»); у объявлений без иконки текст по всей ширине
+	local iconSlot = Instance.new("Frame")
+	iconSlot.Name = "IconSlot"
+	iconSlot.BackgroundTransparency = 1
+	iconSlot.Position = UDim2.fromOffset(10, 6)
+	iconSlot.Size = UDim2.fromOffset(HUD.AnnounceHeight - 12, HUD.AnnounceHeight - 12)
+	iconSlot.Parent = banner
+
+	return banner, label, stroke, iconSlot
 end
 
 function AnnouncementController.Start()
 	local player = Players.LocalPlayer
-	local banner, label, stroke = build(player:WaitForChild("PlayerGui"))
+	local banner, label, stroke, iconSlot = build(player:WaitForChild("PlayerGui"))
 	local showToken = 0
 
 	local function fade(visible: boolean)
@@ -77,9 +86,16 @@ function AnnouncementController.Start()
 		TweenService:Create(stroke, info, { Transparency = target }):Play()
 	end
 
-	local function show(text: string, color: Color3)
+	local function show(text: string, color: Color3, icon: string?)
 		banner.BackgroundColor3 = color
 		label.Text = text
+		iconSlot:ClearAllChildren()
+		local iconWidth = if icon then iconSlot.Size.X.Offset + 10 else 0
+		if icon then
+			Icons.Make(icon, iconSlot)
+		end
+		label.Position = UDim2.fromOffset(10 + iconWidth, 4)
+		label.Size = UDim2.new(1, -20 - iconWidth, 1, -8)
 
 		showToken += 1
 		local token = showToken
@@ -121,7 +137,7 @@ function AnnouncementController.Start()
 	local squadBonus = folder:WaitForChild(Remotes.SquadBonus)
 	if squadBonus:IsA("RemoteEvent") then
 		squadBonus.OnClientEvent:Connect(function()
-			show(string.format(TextConfig.SquadBonusBanner, EconomyConfig.SquadBonus.SellBonusPercent), HUD.HandsCard)
+			show(string.format(TextConfig.SquadBonusBanner, EconomyConfig.SquadBonus.SellBonusPercent), HUD.HandsCard, "Squad")
 		end)
 	end
 end

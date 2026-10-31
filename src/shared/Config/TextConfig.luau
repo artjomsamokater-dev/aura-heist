@@ -50,18 +50,17 @@ TextConfig.UpgradeMaxed = {
 } :: { [string]: string }
 
 -- HUD (клиент)
--- Иконки вместо слов: крупное число — главное, мелкая подпись с иконкой — пояснение
-TextConfig.HudBaseIcon = "✨" -- Aura
+-- HUD: иконки рисуются (client/Ui/Icons), крупное число — главное, мелкая подпись — пояснение.
+-- Без эмодзи: на разных устройствах они выглядят по-разному
 TextConfig.HudBaseValue = "%s" -- %s — число Aura на базе
-TextConfig.HudBaseCaption = "🏠 safe"
-TextConfig.HudHandsIcon = "🎒" -- в руках
+TextConfig.HudBaseCaption = "SAFE AT BASE"
 TextConfig.HudHandsValue = "%d / %d" -- сколько несёшь / сколько можно
-TextConfig.HudHandsCaption = "💀 lost if you die"
-TextConfig.RestockTimer = "🔄 New memelings in %s" -- %s — сколько осталось, например 1:23
+TextConfig.HudHandsCaption = "LOST IF YOU DIE"
+TextConfig.RestockTimer = "New memelings in %s" -- %s — сколько осталось, например 1:23
 
 -- Бонус отряда: плашка обоим игрокам и отметка на мемлинге (%d — проценты к цене продажи)
-TextConfig.SquadBonusBanner = "👥 SQUAD BONUS! +%d%% sell price"
-TextConfig.SquadTag = "\n👥 +%d%%"
+TextConfig.SquadBonusBanner = "SQUAD BONUS! +%d%% sell price"
+TextConfig.SquadTag = "\nSQUAD +%d%%"
 
 -- Объявление о редком спавне всем игрокам: «A LEGENDARY appeared in the DANGER zone!»
 TextConfig.AnnounceSpawn = "A %s appeared in the %s zone!" -- %s — редкость, %s — часть зоны
@@ -72,7 +71,7 @@ TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние д�
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
 
 -- Событие Giant Object
-TextConfig.GiantObjectName = "🧀 MEGA CHEESE WHEEL"
+TextConfig.GiantObjectName = "MEGA CHEESE WHEEL"
 
 -- Враги
 TextConfig.EnemyNames = { Chaser = "Grumblob" }
