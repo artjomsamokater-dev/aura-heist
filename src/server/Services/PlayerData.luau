@@ -196,6 +196,12 @@ function PlayerData.IsLoaded(player: Player): boolean
 	return PlayerData.GetData(player) ~= nil
 end
 
+-- Первый ли это заход игрока в игру (профиль открыт впервые) — для аналитики FirstJoin
+function PlayerData.IsFirstSession(player: Player): boolean
+	local profile = profiles[player]
+	return profile ~= nil and profile.SessionLoadCount == 1
+end
+
 -- Вызвать callback, когда профиль игрока загрузится (и сразу — для уже загруженных)
 function PlayerData.OnLoaded(callback: LoadedCallback)
 	table.insert(loadedCallbacks, callback)

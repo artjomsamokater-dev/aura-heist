@@ -49,7 +49,7 @@ function Tutorial.SetPedestalCheck(check: (player: Player) -> boolean)
 	pedestalCheck = check
 end
 
--- Подписка на пройденные шаги (для аналитики)
+-- Подписка на пройденные шаги (для аналитики); при пропуске — шаг 0 с именем "Skipped"
 function Tutorial.OnStep(callback: StepCallback)
 	table.insert(stepCallbacks, callback)
 end
@@ -64,6 +64,9 @@ function Tutorial.Start()
 			TutorialSteps.Skip(data.tutorial)
 			publish(player, data)
 			print(string.format("[Tutorial] %s пропустил туториал", player.Name))
+			for _, callback in ipairs(stepCallbacks) do
+				task.spawn(callback, player, 0, "Skipped")
+			end
 		end
 	end)
 

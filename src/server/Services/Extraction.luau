@@ -21,6 +21,8 @@ local Raid = require(script.Parent.Raid)
 local Studio = require(script.Parent.Studio)
 local PlayerData = require(script.Parent.PlayerData)
 local Tutorial = require(script.Parent.Tutorial)
+local Analytics = require(script.Parent.Analytics)
+local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
 local Extraction = {}
@@ -92,6 +94,19 @@ local function applySquadBonus(player: Player, position: Vector3, entries: { Stu
 	return mine.Bonus
 end
 
+-- Самая редкая редкость среди вынесенных ("" — пустые руки) — для аналитики
+local function rarestOf(memelingIds: { string }): string
+	local best, bestRank = "", 0
+	for _, id in ipairs(memelingIds) do
+		local memeling = MemelingConfig.Memelings[id]
+		local rank = memeling and table.find(MemelingConfig.RarityOrder, memeling.Rarity) or 0
+		if memeling and rank > bestRank then
+			best, bestRank = memeling.Rarity, rank
+		end
+	end
+	return best
+end
+
 local function complete(player: Player)
 	-- Где игрок эвакуировался — запоминаем до переноса в хаб (для бонуса отряда)
 	local _, root = RemoteGuard.GetAliveCharacter(player)
@@ -110,6 +125,7 @@ local function complete(player: Player)
 	end
 	Raid.ReturnToHub(player)
 	Announcer.ExtractionResult(player, memelingIds, raidSeconds, squad)
+	Analytics.ExtractionSuccess(player, #memelingIds, rarestOf(memelingIds), squad)
 	Tutorial.Notify(player, "Extract")
 	print(
 		string.format(

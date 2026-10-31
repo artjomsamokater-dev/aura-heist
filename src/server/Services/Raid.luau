@@ -18,6 +18,7 @@ local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerData = require(script.Parent.PlayerData)
 local Tutorial = require(script.Parent.Tutorial)
+local Analytics = require(script.Parent.Analytics)
 local Spawn = require(script.Parent.Spawn)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 local RateLimiter = require(ServerScriptService.Server.Security.RateLimiter)
@@ -186,6 +187,8 @@ local function tryPickup(player: Player, instanceId: string)
 	updateCarrySpeed(player)
 	print(string.format("[Raid] %s подобрал %s (%s)", player.Name, record.MemelingId, instanceId))
 	Tutorial.Notify(player, "PickUp")
+	local memeling = MemelingConfig.Memelings[record.MemelingId]
+	Analytics.MemelingPicked(player, if memeling then memeling.Rarity else "")
 end
 
 -- Игрок нажал «Drop»: последний мемлинг из рук отпускается и, как потерянный,
@@ -232,6 +235,7 @@ local function onPortalTouched(hit: BasePart)
 	runs[player] = { Rewarded = false, StartedAt = os.clock() }
 	data.stats.raids += 1
 	Tutorial.Notify(player, "EnterZone")
+	Analytics.RaidStarted(player)
 	setState(player, Raid.State.InRaid)
 	print(string.format("[Raid] %s вошёл в зону", player.Name))
 
@@ -279,6 +283,7 @@ end
 -- Смерть (ловушка, враг, Reset или падение из зоны): всё из рук теряется, вылазка закрыта —
 -- награду за неё уже не выдать. Витрину и Aura смерть не трогает. Считаем в stats.deaths.
 local function onDeath(player: Player, cause: string)
+	Analytics.PlayerDied(player, #(carried[player] or {}), cause) -- до потери: сколько было в руках
 	loseCarried(player, "смерть: " .. cause)
 	runs[player] = nil
 	local data = PlayerData.GetData(player)

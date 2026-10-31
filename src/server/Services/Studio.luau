@@ -28,6 +28,7 @@ local PlayerData = require(script.Parent.PlayerData)
 local Economy = require(script.Parent.Economy)
 local Raid = require(script.Parent.Raid)
 local Tutorial = require(script.Parent.Tutorial)
+local Analytics = require(script.Parent.Analytics)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 local RateLimiter = require(ServerScriptService.Server.Security.RateLimiter)
 
@@ -161,6 +162,11 @@ local function refreshButtons(plotIndex: number, data: PlayerData.Data?)
 			end
 		end
 	end
+end
+
+local function rarityOf(memelingId: string): string
+	local memeling = MemelingConfig.Memelings[memelingId]
+	return if memeling then memeling.Rarity else ""
 end
 
 -- Цена продажи — только из MemelingConfig (0, если мемлинга нет в конфиге);
@@ -588,6 +594,7 @@ local function trySellFromPedestal(player: Player, plotIndex: number, pedestalIn
 	if price > 0 then
 		Economy.AddBankedAura(player, price, "продажа " .. entry.memelingId)
 	end
+	Analytics.MemelingSold(player, rarityOf(entry.memelingId), price)
 	if collected > 0 then
 		Economy.AddBankedAura(player, collected, "сбор при продаже")
 	end
@@ -609,6 +616,7 @@ local function trySellFromReserve(player: Player, plotIndex: number)
 	if price > 0 then
 		Economy.AddBankedAura(player, price, "продажа из запаса " .. reserveEntry.memelingId)
 	end
+	Analytics.MemelingSold(player, rarityOf(reserveEntry.memelingId), price)
 	print(string.format("[Studio] %s продал %s из запаса", player.Name, reserveEntry.memelingId))
 	publishCounts(player)
 end
@@ -686,6 +694,7 @@ local function tryBuy(player: Player, plotIndex: number, id: UpgradeId)
 	lastPurchaseAt[player] = os.clock()
 	print(string.format("[Studio] %s купил %s, уровень %d", player.Name, id, level + 1))
 	Tutorial.Notify(player, "BuyUpgrade")
+	Analytics.UpgradePurchased(player, id, level + 1, cost)
 
 	if id == "pedestals" then
 		refreshPedestalLocks(plotIndex, data)

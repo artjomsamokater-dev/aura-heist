@@ -69,7 +69,7 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
 
 ## Где остановились
 
-Задачи 0.1–4.4 готовы (фазы 1–4 закрыты):
+Задачи 0.1–4.4 и 5.1–5.3, 5.5 готовы:
 - Фаза 0 (0.1–0.6): Studio, VS Code, Rojo, rojo init, связь со Studio, GitHub,
   Test place «AURA HEIST TEST» (private), Config-модули.
 - 1.1: серый прототип карты из кода (хаб, 8 участков с постаментами, портал,
@@ -206,6 +206,12 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   круглые Drop и Extract справа над кнопкой прыжка (место — от реальной JumpButton), только когда нужны.
   Drop (G) — Remotes.DropCarried через RemoteGuard, Raid отпускает последнего мемлинга (вернётся на свою
   точку, как потерянный); Extract — персонаж сам идёт на площадку, эвакуацию засчитывает сервер.
+- 5.5: аналитика воронки — сервис Analytics, единственное место с AnalyticsService. LogCustomEvent:
+  FirstJoin (первая сессия профиля), TutorialStep (+ LogOnboardingFunnelStepEvent; пропуск — шаг 0),
+  RaidStarted, MemelingPicked (редкость), ExtractionSuccess (число, самая редкая, Squad/Solo),
+  PlayerDied (сколько потерял, причина), UpgradePurchased (id, уровень, цена), MemelingSold (редкость,
+  цена), SessionEnded (секунды). Детали — CustomField01..03. Каждое событие пишется в Output «[Analytics] …»;
+  в дашборд события идут только с живых серверов, не из Studio.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
@@ -214,4 +220,5 @@ luau-lsp analyze с типами Roblox, проверка кодировки (.l
 После 1.4: тексты для игрока вынесены в TextConfig, потерянные мемлинги возвращаются
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
-Фаза 4 закрыта. Идёт фаза 5 (без 5.4 — модели позже). Следующая задача — 5.5 (аналитика воронки).
+Фазы 1–4 закрыты, из фазы 5 готовы 5.1, 5.2, 5.3, 5.5. Осталась 5.4 (модели и звуки мемлингов) —
+отложена автором. Дальше по документации — «Ворота B»: закрытый тест (раздел 7, шаг 3).
