@@ -1,5 +1,6 @@
 --!strict
--- Enemy: враги Grumblob в опасной части зоны (числа — EnemyConfig.Chaser, вид — StyleConfig.Enemy).
+-- Enemy: враги Grumblob в опасной части зоны (числа — EnemyConfig.Chaser,
+-- вид — server/Visual/MemelingBuilders.BuildEnemy, цвета — StyleConfig.Characters.Grumblob).
 --
 -- • Ходят только внутри опасной части: цель за её краем — враг останавливается у границы (EnemyMath).
 --   В круг ExtractionKeepOut вокруг EXTRACT тоже не заходят: эвакуацию караулить нельзя.
@@ -21,6 +22,8 @@ local MapBuilder = require(script.Parent.MapBuilder)
 local Raid = require(script.Parent.Raid)
 local Damage = require(script.Parent.Damage)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
+local MemelingKit = require(ServerScriptService.Server.Visual.MemelingKit)
+local MemelingBuilders = require(ServerScriptService.Server.Visual.MemelingBuilders)
 
 local Enemy = {}
 
@@ -82,21 +85,9 @@ local function weld(part: BasePart, root: BasePart)
 	constraint.Parent = part
 end
 
--- Сердитая бровь: вытянутый брусок, наклонён к переносице
-local function makeBrow(body: Part, cframe: CFrame)
-	local brow = MapBuilder.MakePart("Brow", StyleConfig.Enemy.BrowSize, cframe, StyleConfig.Enemy.Brow, body)
-	brow.Anchored = false
-	brow.CanCollide = false
-	brow.CanTouch = false
-	brow.CanQuery = false
-	brow.Massless = true
-	brow.CastShadow = false
-	weld(brow, body)
-end
-
 local function buildChaser(index: number, floorPosition: Vector3, parent: Instance): Chaser
 	local cfg = EnemyConfig.Chaser
-	local style = StyleConfig.Enemy
+	local bodyColor = StyleConfig.Characters.Grumblob.Body
 	local center = floorPosition + Vector3.new(0, cfg.BodySize / 2, 0)
 	local cframe = CFrame.lookAt(center, center - Vector3.xAxis) -- смотрит на запад, к входу в зону
 
@@ -104,11 +95,11 @@ local function buildChaser(index: number, floorPosition: Vector3, parent: Instan
 	model.Name = "Grumblob" .. index
 
 	-- Невидимый корень, которым двигает Humanoid
-	local root = MapBuilder.MakePart("HumanoidRootPart", ROOT_SIZE, cframe, style.Body, model)
+	local root = MapBuilder.MakePart("HumanoidRootPart", ROOT_SIZE, cframe, bodyColor, model)
 	root.Transparency = 1
 	root.Anchored = false
 
-	local body = MapBuilder.MakePart("Body", Vector3.one * cfg.BodySize, cframe, style.Body, model)
+	local body = MapBuilder.MakePart("Body", Vector3.one * cfg.BodySize, cframe, bodyColor, model)
 	body.Shape = Enum.PartType.Ball
 	body.Anchored = false
 	body.CanCollide = false
@@ -116,14 +107,9 @@ local function buildChaser(index: number, floorPosition: Vector3, parent: Instan
 	body.CastShadow = false
 	weld(body, root)
 
-	for i, offset in ipairs(style.EyeOffsets) do
-		local eyeCFrame = cframe * CFrame.new(offset)
-		MapBuilder.MakeDetail("Eye" .. i, style.EyeSize, eyeCFrame, StyleConfig.Palette.CreamLight, body)
-		MapBuilder.MakeDetail("Pupil" .. i, style.PupilSize, eyeCFrame * CFrame.new(0, 0, -style.PupilForward), StyleConfig.Palette.Ink, body)
-	end
-	for _, brow in ipairs(style.BrowOffsets) do
-		makeBrow(body, cframe * CFrame.new(brow.Position) * CFrame.Angles(0, 0, math.rad(brow.Tilt)))
-	end
+	-- Лицо, блик, тень и румянец — в стиле мемлингов; контур ставит клиент (тег Outlined)
+	MemelingBuilders.BuildEnemy(body, cframe, cfg.BodySize)
+	MemelingKit.TagOutline(model)
 	-- Подписи у врага нет: его и так видно по цвету и сердитым бровям
 
 	local humanoid = Instance.new("Humanoid")

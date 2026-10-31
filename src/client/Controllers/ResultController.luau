@@ -69,7 +69,7 @@ local function makeRow(parent: Instance, memelingId: string, order: number)
 
 	local dotSize = HUD.ResultRowHeight - 10
 	local dot = Instance.new("Frame")
-	dot.BackgroundColor3 = if style then style.Body else HUD.BaseCard
+	dot.BackgroundColor3 = if style then style.Color else HUD.BaseCard
 	dot.BorderSizePixel = 0
 	dot.Position = UDim2.fromOffset(0, 5)
 	dot.Size = UDim2.fromOffset(dotSize, dotSize)

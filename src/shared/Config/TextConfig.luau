@@ -105,6 +105,9 @@ TextConfig.TutorialSkip = "Skip"
 -- Событие Giant Object
 TextConfig.GiantObjectName = "MEGA CHEESE WHEEL"
 
+-- Буквы сна над Mega Snoozeasaurus
+TextConfig.SnoozeLetters = "Z z z"
+
 -- Сообщения при кике (сохранение)
 TextConfig.KickProfileLoadFailed = "We couldn't load your save. Your progress is safe — please rejoin in a minute."
 TextConfig.KickProfileNewer = "This server is outdated. Please rejoin to get the latest version."

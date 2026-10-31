@@ -1,12 +1,15 @@
 --!strict
 -- MapBuilder: при старте сервера строит карту по MapConfig (формы, места) и StyleConfig (цвета, облик).
 -- Хаб → Workspace.Hub, участки → Workspace.PlayerStudios, зона → Workspace.RaidZone.
--- Здесь же собирается облик мемлинга (StyleConfig.Memeling.Looks) — им пользуются Spawn и Studio.
+-- Здесь же ставится мемлинг (MakeMemeling — им пользуются Spawn и Studio): модель из
+-- ServerStorage.MemelingModels или из кода (server/Visual/MemelingBuilders) и кольцо редкости.
 --
 -- Скруглённые постаменты и кнопки: «логическая» деталь (коробка, к ней привязаны кнопки, подписи
 -- и расстояния) невидима, а видно круглую деталь Look поверх неё. Механика от этого не меняется.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
@@ -16,6 +19,8 @@ local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local PlotLayout = require(ReplicatedStorage.Shared.Util.PlotLayout)
 local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
+local MemelingKit = require(ServerScriptService.Server.Visual.MemelingKit)
+local MemelingBuilders = require(ServerScriptService.Server.Visual.MemelingBuilders)
 
 local MapBuilder = {}
 
@@ -202,91 +207,71 @@ end
 
 -- ── Мемлинги ───────────────────────────────────────────────────────────────
 
--- Мелкая деталь, приваренная к телу: не мешает физике и не даёт тени
-local function attachDetail(detail: BasePart, body: BasePart)
-	detail.Anchored = false
-	detail.CanCollide = false
-	detail.CanTouch = false
-	detail.CanQuery = false
-	detail.Massless = true
-	detail.CastShadow = false
-
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = body
-	weld.Part1 = detail
-	weld.Parent = detail
-end
-
--- Круглая мелкая деталь (глаза врага и т.п.)
-local function makeDetail(name: string, diameter: number, cframe: CFrame, color: Color3, body: Part): Part
-	local detail = makePart(name, Vector3.new(diameter, diameter, diameter), cframe, color, body)
-	detail.Shape = Enum.PartType.Ball
-	attachDetail(detail, body)
-	return detail
-end
-
--- Цвет детали: ключ палитры или "Body" / "BodyShade" — цвет редкости
-local function resolveColor(key: string, rarity: StyleConfig.RarityStyle): Color3
-	if key == "Body" then
-		return rarity.Body
-	elseif key == "BodyShade" then
-		return rarity.Shade
+-- Своя модель из ServerStorage.MemelingModels[memelingId] (если автор сделал её в Studio).
+-- Требования к модели: PrimaryPart — Part (станет ядром), точка опоры (Pivot) — центр габарита 6 × 6 × 6,
+-- лицо смотрит в −Z. Все детали переносятся в ядро и привариваются к нему — как у моделей из кода.
+local function fromCustomModel(name: string, memelingId: string, cframe: CFrame, parent: Instance): Part?
+	local folder = ServerStorage:FindFirstChild("MemelingModels")
+	local template = folder and folder:FindFirstChild(memelingId)
+	if template == nil or not template:IsA("Model") then
+		return nil
 	end
-	local color = (StyleConfig.Palette :: any)[key]
-	return if typeof(color) == "Color3" then color else rarity.Body
-end
-
-local FALLBACK_LOOK: StyleConfig.Look = {
-	Core = { Kind = "Ball", Size = Vector3.new(5, 5, 5), Color = "Body" },
-	Features = {},
-}
-
--- Мемлинг-персонаж по облику из StyleConfig.Memeling.Looks: цвет тела и свечение — по редкости.
--- Возвращает ядро (Part) — с ним работают подбор, подписи и переноска; детали к нему приварены.
--- Мемлинг смотрит лицом в сторону −Z переданного cframe.
-local function makeMemeling(name: string, memelingId: string, cframe: CFrame, parent: Instance): Part
-	local cfg = StyleConfig.Memeling
-	local memeling = MemelingConfig.Memelings[memelingId]
-	local rarity = (memeling and cfg.Rarities[memeling.Rarity]) or cfg.Rarities.Common
-	local look = cfg.Looks[memelingId] or FALLBACK_LOOK
-
-	-- Ядро всегда без поворота: переноска и постаменты ставят мемлинга именно по нему
-	local coreKind = if look.Core.Kind == "Block" then "Block" else "Ball"
-	local body = makeShape(name, coreKind, look.Core.Size, cframe, resolveColor(look.Core.Color, rarity), parent) :: Part
-	body.CastShadow = false
-	if look.Core.Hidden then
-		body.Transparency = 1
+	local primary = template.PrimaryPart
+	if primary == nil or not primary:IsA("Part") then
+		warn(string.format("[MapBuilder] Модель MemelingModels.%s без PrimaryPart (Part) — строю кодом", memelingId))
+		return nil
 	end
 
-	for i, feature in ipairs(look.Features) do
-		local rotation = feature.Rotation or Vector3.zero
-		local featureCFrame = cframe
-			* CFrame.new(feature.Offset)
-			* CFrame.Angles(math.rad(rotation.X), math.rad(rotation.Y), math.rad(rotation.Z))
-		local detail = makeShape("Part" .. i, feature.Kind, feature.Size, featureCFrame, resolveColor(feature.Color, rarity), body)
-		if feature.Glow then
-			detail.Material = StyleConfig.GlowMaterial
+	local model = template:Clone()
+	model:PivotTo(cframe)
+	local core = model.PrimaryPart :: Part
+	-- Старые сварки модели убираем: дальше каждая деталь приварена прямо к ядру (так работает уменьшение в руках)
+	for _, joint in ipairs(model:GetDescendants()) do
+		if joint:IsA("JointInstance") or joint:IsA("WeldConstraint") then
+			joint:Destroy()
 		end
-		attachDetail(detail, body)
 	end
+	core.Name = name
+	core.Anchored = true
+	for _, part in ipairs(model:GetDescendants()) do -- список берём до переноса: детали могут лежать внутри ядра
+		if part:IsA("BasePart") and part ~= core then
+			part.Anchored = false
+			part.CanCollide = false
+			part.CanTouch = false
+			part.CanQuery = false
+			part.Massless = true
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = core
+			weld.Part1 = part
+			weld.Parent = part
+			part.Parent = core
+		end
+	end
+	core.Parent = parent
+	model:Destroy()
+	return core
+end
 
-	if rarity.Outline then
-		-- Только контур, без заливки; сквозь стены не виден
-		local outline = Instance.new("Highlight")
-		outline.FillTransparency = 1
-		outline.OutlineColor = rarity.Outline
-		outline.OutlineTransparency = 0
-		outline.DepthMode = Enum.HighlightDepthMode.Occluded
-		outline.Adornee = body
-		outline.Parent = body
+-- Мемлинг-персонаж: своя модель из ServerStorage.MemelingModels или модель из кода (MemelingBuilders),
+-- под ним кольцо цвета редкости. Возвращает ядро (Part) — с ним работают подбор, подписи и переноска;
+-- детали к нему приварены. Мемлинг смотрит лицом в сторону −Z переданного cframe.
+local function makeMemeling(name: string, memelingId: string, cframe: CFrame, parent: Instance): Part
+	local memeling = MemelingConfig.Memelings[memelingId]
+	local core = fromCustomModel(name, memelingId, cframe, parent)
+	if core == nil then
+		-- Ядро невидимое и без поворота: переноска и постаменты ставят мемлинга именно по нему
+		local plain = makePart(name, StyleConfig.Memeling.CoreSize, cframe, StyleConfig.Outline.Color, parent)
+		plain.Transparency = 1
+		plain.CastShadow = false
+		if not MemelingBuilders.Build(memelingId, MemelingKit.new(plain, cframe)) then
+			warn(string.format("[MapBuilder] Нет строителя для мемлинга %s", memelingId))
+		end
+		core = plain
 	end
-	if rarity.Light then
-		addLight(body, rarity.Body, rarity.Light.Brightness, rarity.Light.Range)
-	end
-	if rarity.Particles then
-		addParticles(body, rarity.Particles)
-	end
-	return body
+	local ready = core :: Part
+	MemelingKit.RarityRing(MemelingKit.new(ready, cframe), if memeling then memeling.Rarity else "Common")
+	MemelingKit.TagOutline(ready)
+	return ready
 end
 
 -- ── Хаб ────────────────────────────────────────────────────────────────────
@@ -897,7 +882,6 @@ end
 MapBuilder.MakePart = makePart
 MapBuilder.AddLabel = addLabel
 MapBuilder.MakeMemeling = makeMemeling
-MapBuilder.MakeDetail = makeDetail -- круглая мелкая деталь, приваренная к телу (глаза)
 
 -- Меняет текст подписи, созданной addLabel или addSignText (у таблички их две — с обеих сторон)
 function MapBuilder.SetLabelText(part: Instance?, text: string)

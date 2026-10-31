@@ -8,10 +8,12 @@ local TutorialController = require(script.Controllers.TutorialController)
 local ResultController = require(script.Controllers.ResultController)
 local PromptController = require(script.Controllers.PromptController)
 local ActionButtonsController = require(script.Controllers.ActionButtonsController)
+local OutlineController = require(script.Controllers.OutlineController)
 
 HudController.Start()
 HazardController.Start()
 PromptController.Start()
+OutlineController.Start()
 -- Эти ждут RemoteEvent от сервера — в отдельном потоке, чтобы не задерживать остальных
 task.spawn(AnnouncementController.Start)
 task.spawn(TutorialController.Start)

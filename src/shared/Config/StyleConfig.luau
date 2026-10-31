@@ -3,7 +3,8 @@
 -- облик мемлингов, раскладка HUD. Позиции карты — в MapConfig, тексты — в TextConfig.
 --
 -- Арт-правила (задача 1.8):
--- • Палитра — 5 основных цветов (крем, коралл, солнце, мята, слива) и их оттенки. Других цветов нет.
+-- • Палитра — 5 основных цветов (крем, коралл, солнце, мята, слива) и их оттенки: мир и интерфейс.
+--   Исключение (задача 5.4): у мемлингов и врага свои цвета персонажа — StyleConfig.Characters.
 -- • Один материал — SmoothPlastic; Neon только для того, что светится (портал, EXTRACT, лазер, искры).
 -- • Мягкие скруглённые формы: шары и цилиндры, острых коробок — минимум.
 -- • Все участки в одном стиле, отличаются только акцентным цветом.
@@ -61,30 +62,11 @@ export type Particles = {
 	LightEmission: number,
 }
 
--- Деталь облика мемлинга. Offset — от центра мемлинга (−Z = вперёд, к лицу; +Y = вверх).
--- Kind: "Ball" | "Block" | "Cylinder" | "Wedge". Цилиндр лежит вдоль X; Rotation — градусы по X, Y, Z.
--- Color: ключ палитры или "Body" / "BodyShade" — цвет редкости. Glow — неоновая (светится).
-export type Feature = {
-	Kind: string,
-	Size: Vector3,
-	Offset: Vector3,
-	Rotation: Vector3?,
-	Color: string,
-	Glow: boolean?,
-}
-
--- Облик мемлинга: Core — основная деталь (ей пользуются подбор, подписи и переноска),
--- она всегда без поворота; Hidden — ядро невидимое, а форму дают детали.
-export type Look = {
-	Core: { Kind: string, Size: Vector3, Color: string, Hidden: boolean? },
-	Features: { Feature },
-}
-
+-- Редкость видна по кольцу-подставке под мемлингом (тело — цвет персонажа, а не редкости)
 export type RarityStyle = {
-	Body: Color3, -- цвет тела: по нему читается редкость
-	Shade: Color3, -- более тёмный оттенок тела (лапки, уши, полоски)
-	Outline: Color3?, -- контур (Highlight): светлое тело не теряется на светлом полу
-	Light: { Brightness: number, Range: number }?, -- свечение вокруг мемлинга
+	Color: Color3, -- цвет кольца; им же красятся плашки объявлений и строки экрана результата
+	Glow: boolean?, -- кольцо светится (Neon)
+	Light: { Brightness: number, Range: number }?, -- свет вокруг мемлинга (только Epic и Legendary)
 	Particles: Particles?,
 }
 
@@ -223,24 +205,6 @@ StyleConfig.Hazards = {
 	SlamPopSeconds = 0.15,
 }
 
--- Враг Grumblob: тёмный коралл со сливовыми бровями — не похож ни на одну редкость мемлингов
-StyleConfig.Enemy = {
-	Body = Palette.CoralDark,
-	Brow = Palette.PlumDark, -- сердитые брови
-	BrowSize = v3(1.6, 0.35, 0.4),
-	BrowOffsets = { -- от центра тела; брови наклонены к центру
-		{ Position = v3(-0.9, 1.45, -2.2), Tilt = -20 },
-		{ Position = v3(0.9, 1.45, -2.2), Tilt = 20 },
-	},
-	EyeSize = 1.4,
-	PupilSize = 0.7,
-	EyeOffsets = {
-		v3(-0.9, 0.6, -2.0),
-		v3(0.9, 0.6, -2.0),
-	},
-	PupilForward = 0.5,
-}
-
 -- Событие Giant Object: колесо сыра с дырками и глупой рожицей
 StyleConfig.Event = {
 	Cheese = Palette.Sun,
@@ -274,32 +238,77 @@ StyleConfig.Extraction = {
 
 -- ── Мемлинги ───────────────────────────────────────────────────────────────
 
--- Два глаза: белок + зрачок. x — расстояние от середины, y — высота, z — глубина лица (обычно минус)
-local function eyes(x: number, y: number, z: number, size: number): { Feature }
-	local pupil = size * 0.5
-	local forward = size * 0.35
-	return {
-		{ Kind = "Ball", Size = v3(size, size, size), Offset = v3(-x, y, z), Color = "CreamLight" },
-		{ Kind = "Ball", Size = v3(size, size, size), Offset = v3(x, y, z), Color = "CreamLight" },
-		{ Kind = "Ball", Size = v3(pupil, pupil, pupil), Offset = v3(-x, y, z - forward), Color = "Ink" },
-		{ Kind = "Ball", Size = v3(pupil, pupil, pupil), Offset = v3(x, y, z - forward), Color = "Ink" },
-	}
-end
+-- Стиль «D · Микс» (задача 5.4): толстый тёмный контур, глянцевый блик сверху-слева,
+-- гранёная тень справа, крупные глаза разного размера с белой точкой-бликом, румянец.
+-- Модели собирает кодом server/Visual/MemelingBuilders; форма и места деталей — там,
+-- здесь — все цвета и общие размеры.
+local hex = Color3.fromHex
 
-local function join(...: { Feature }): { Feature }
-	local result: { Feature } = {}
-	for _, list in ipairs({ ... }) do
-		for _, feature in ipairs(list) do
-			table.insert(result, feature)
-		end
-	end
-	return result
-end
+-- Цвета персонажей: тело — цвет самого персонажа (тост остаётся тостом), редкость — кольцо под ним
+StyleConfig.Characters = {
+	ToastPaw = { Crust = hex("D07C33"), Crumb = hex("F2B25C"), Tongue = hex("FF6F8E"), Pads = hex("FF9DB5") },
+	SirWobbleton = {
+		Body = hex("F4E3B5"),
+		Feet = hex("E2C98E"),
+		Helmet = hex("C9CED8"),
+		Plume = hex("FF5A5A"),
+		Blade = hex("E4E8EF"),
+		Guard = hex("FFC83D"),
+	},
+	Grumbloaf = { Body = hex("C98A4B"), Cuts = hex("F0C890"), Legs = hex("9C6331") },
+	NoodleNinja = {
+		Cup = hex("E84A4A"),
+		Rim = hex("FF8C8C"),
+		Noodles = hex("F7D488"),
+		Band = hex("2A1638"),
+		Sticks = hex("D9A866"),
+	},
+	CaptainSockbeard = {
+		Sock = hex("3C8DFF"),
+		Stripes = hex("FFFFFF"),
+		Hat = hex("231C2B"),
+		HatDot = hex("FFD93D"),
+		Patch = hex("231C2B"),
+		Beard = hex("FFFFFF"),
+		Earring = hex("FFD93D"),
+	},
+	DiscoPickle = {
+		Body = hex("6CBF3E"),
+		Bumps = hex("4E9A2A"),
+		Glasses = hex("FF4FA3"),
+		DiscoBall = hex("D8DCE6"),
+		String = hex("FFFFFF"),
+	},
+	ProfessorBonk = {
+		Handle = hex("8B5A2B"),
+		Head = hex("B0B6C4"),
+		Glasses = hex("2A1638"),
+		Mustache = hex("5A3A22"),
+		Cap = hex("2A1638"),
+		Tassel = hex("FFC83D"),
+		Bump = hex("FF9E9E"),
+	},
+	MegaSnoozeasaurus = {
+		Body = hex("FFC83D"),
+		Belly = hex("FFF3C9"),
+		Spikes = hex("FF8A3D"),
+		Crown = hex("FFE27A"),
+		Jewel = hex("FF4FA3"),
+		Bubble = hex("BFE6FF"),
+	},
+	Grumblob = { Body = hex("7BD13A"), Brow = hex("2A1638") }, -- враг: зелёный желейный шар
+}
 
--- Вертикальный цилиндр (у Roblox цилиндр лежит вдоль X — поворачиваем на 90° вокруг Z)
-local UP = v3(0, 0, 90)
--- Цилиндр вдоль Z (вперёд-назад)
-local ALONG_Z = v3(0, 90, 0)
+-- Контур: Highlight только у ближних, у того, что в руках, и на своих постаментах.
+-- У Roblox на экране не больше 31 Highlight одновременно — держим запас.
+-- Ставит контур клиент (client/Controllers/OutlineController) всем с тегом Tag.
+StyleConfig.Outline = {
+	Tag = "Outlined", -- тег CollectionService: мемлинги и враги
+	Color = hex("2A1638"),
+	MaxCount = 25, -- сколько контуров сразу, не больше
+	Distance = 70, -- дальше этого контура нет (кроме своих: в руках и на своих постаментах)
+	RefreshSeconds = 0.3, -- как часто клиент пересчитывает, кому нужен контур
+}
 
 StyleConfig.Memeling = {
 	-- «Габарит» мемлинга: центр — в середине, низ — на 3 ниже, верх — около 3 выше (шляпы чуть выше).
@@ -317,17 +326,47 @@ StyleConfig.Memeling = {
 	},
 	CarryStackStep = v3(0, 3.8, 0), -- если слотов больше, чем мест выше, — ещё выше по стопке
 
-	-- Редкость читается по цвету тела и свечению: Common — без света, Rare — мягкий свет,
-	-- Epic — свет и искры, Legendary — яркий свет и много искр
+	-- Невидимое ядро: к нему приварены все детали, на нём кнопка подбора и подпись
+	CoreSize = v3(4, 5.6, 4),
+	-- Кольцо-подставка цвета редкости: низ кольца — низ габарита, мемлинг стоит на нём (верх кольца — −2,6)
+	RingDiameter = 5.2,
+	RingHeight = 0.4,
+
+	-- Общие детали лица и стиля
+	Face = {
+		EyeWhite = hex("FFFFFF"),
+		Pupil = hex("2A1638"),
+		Glint = hex("FFFFFF"), -- белая точка-блик в зрачке
+		PupilScale = 0.55, -- зрачок от размера глаза
+		GlintScale = 0.2,
+		Blush = hex("FF8A8A"),
+		BlushTransparency = 0.35,
+		Gloss = hex("FFFFFF"), -- глянцевый блик сверху-слева
+		GlossTransparency = 0.4,
+		ShadeDarken = 0.22, -- гранёная тень справа: цвет тела, смешанный с тёмным контуром на столько
+		Mouth = hex("2A1638"),
+	},
+
+	-- Буквы «Z z z» над Mega Snoozeasaurus (BillboardGui)
+	Snooze = {
+		Text = hex("FFFFFF"),
+		Stroke = hex("2A1638"),
+		Offset = v3(1.2, 3.6, 0), -- от центра мемлинга
+		WidthStuds = 3.2,
+		HeightStuds = 1.4,
+		MaxDistance = 60,
+	},
+
+	-- Редкость — кольцо-подставка: Common и Rare без света, Epic и Legendary — неон, свет и искры
 	Rarities = {
-		Common = { Body = Palette.CreamGray, Shade = Palette.CreamDark, Outline = Palette.Coral },
-		Rare = { Body = Palette.Mint, Shade = Palette.MintDark, Light = { Brightness = 1, Range = 9 } },
+		Common = { Color = hex("D6D6D0") },
+		Rare = { Color = hex("6FB2FF") },
 		Epic = {
-			Body = Palette.Plum,
-			Shade = Palette.PlumDark,
-			Light = { Brightness = 2, Range = 13 },
+			Color = hex("B98CFF"),
+			Glow = true,
+			Light = { Brightness = 1.5, Range = 12 },
 			Particles = {
-				Color = Palette.PlumLight,
+				Color = hex("D9C2FF"),
 				Rate = 2,
 				Lifetime = NumberRange.new(0.8, 1.2),
 				Speed = NumberRange.new(1, 2),
@@ -337,11 +376,11 @@ StyleConfig.Memeling = {
 			},
 		},
 		Legendary = {
-			Body = Palette.Sun,
-			Shade = Palette.SunDark,
-			Light = { Brightness = 3, Range = 18 },
+			Color = hex("FFC83D"),
+			Glow = true,
+			Light = { Brightness = 2.5, Range = 16 },
 			Particles = {
-				Color = Palette.SunLight,
+				Color = hex("FFE7A0"),
 				Rate = 5,
 				Lifetime = NumberRange.new(0.8, 1.4),
 				Speed = NumberRange.new(1, 2.5),
@@ -351,153 +390,6 @@ StyleConfig.Memeling = {
 			},
 		},
 	} :: { [string]: RarityStyle },
-
-	-- У каждого из 8 свой силуэт и характер. Ключ — Id из MemelingConfig
-	Looks = {
-		-- Toast Paw: тост-котик — ломтик с круглым верхом, кошачьи ушки, лапки и кусочек масла
-		ToastPaw = {
-			Core = { Kind = "Block", Size = v3(5, 3.6, 2.6), Color = "Body" },
-			Features = join({
-				{ Kind = "Cylinder", Size = v3(2.6, 5, 5), Offset = v3(0, 1.3, 0), Rotation = ALONG_Z, Color = "Body" },
-				{ Kind = "Wedge", Size = v3(0.6, 1.3, 1.3), Offset = v3(-1.6, 4.2, 0), Color = "BodyShade" },
-				{ Kind = "Wedge", Size = v3(0.6, 1.3, 1.3), Offset = v3(1.6, 4.2, 0), Color = "BodyShade" },
-				{ Kind = "Block", Size = v3(1.6, 0.4, 1.6), Offset = v3(0.9, 3.85, 0), Rotation = v3(0, 20, 0), Color = "SunLight" },
-				{ Kind = "Ball", Size = v3(1.5, 1.5, 1.5), Offset = v3(-1.4, -1.9, -1.1), Color = "CreamLight" },
-				{ Kind = "Ball", Size = v3(1.5, 1.5, 1.5), Offset = v3(1.4, -1.9, -1.1), Color = "CreamLight" },
-				{ Kind = "Block", Size = v3(0.9, 0.25, 0.25), Offset = v3(0, 0.2, -1.35), Color = "Ink" },
-			}, eyes(1.1, 1.3, -1.25, 1.1)),
-		},
-
-		-- Sir Wobbleton: яйцо-рыцарь — шлем с прорезью, коралловый плюмаж, усы и деревянный меч
-		SirWobbleton = {
-			Core = { Kind = "Ball", Size = v3(5, 5, 5), Color = "Body" },
-			Features = join({
-				{ Kind = "Cylinder", Size = v3(1.6, 4.4, 4.4), Offset = v3(0, 2.1, 0), Rotation = UP, Color = "PlumLight" },
-				{ Kind = "Block", Size = v3(2.6, 0.3, 0.4), Offset = v3(0, 2.1, -2.15), Color = "Ink" },
-				{ Kind = "Ball", Size = v3(1.3, 1.3, 1.3), Offset = v3(0, 3.3, 0.4), Color = "Coral" },
-				{ Kind = "Ball", Size = v3(1.1, 1.1, 1.1), Offset = v3(0, 4, 1.1), Color = "Coral" },
-				{ Kind = "Ball", Size = v3(0.9, 0.9, 0.9), Offset = v3(0, 4.4, 1.9), Color = "CoralLight" },
-				{ Kind = "Ball", Size = v3(0.8, 0.8, 0.8), Offset = v3(-0.45, -0.2, -2.3), Color = "CreamDark" },
-				{ Kind = "Ball", Size = v3(0.8, 0.8, 0.8), Offset = v3(0.45, -0.2, -2.3), Color = "CreamDark" },
-				{ Kind = "Cylinder", Size = v3(3.2, 0.35, 0.35), Offset = v3(2.7, -0.4, -0.8), Rotation = v3(0, 0, 70), Color = "SunDark" },
-				{ Kind = "Ball", Size = v3(1.2, 1.2, 1.2), Offset = v3(-1.3, -2.4, -0.3), Color = "BodyShade" },
-				{ Kind = "Ball", Size = v3(1.2, 1.2, 1.2), Offset = v3(1.3, -2.4, -0.3), Color = "BodyShade" },
-			}, eyes(0.9, 0.7, -2.1, 1)),
-		},
-
-		-- Grumbloaf: ворчливый батон — низкий и широкий, надрезы сверху, сердитые брови, ручки
-		Grumbloaf = {
-			Core = { Kind = "Block", Size = v3(6, 3, 4), Color = "Body" },
-			Features = join({
-				{ Kind = "Cylinder", Size = v3(6, 4, 4), Offset = v3(0, 0.6, 0), Color = "Body" },
-				{ Kind = "Block", Size = v3(0.35, 0.3, 2.8), Offset = v3(-1.6, 2.6, 0), Rotation = v3(0, 30, 0), Color = "BodyShade" },
-				{ Kind = "Block", Size = v3(0.35, 0.3, 2.8), Offset = v3(0, 2.65, 0), Rotation = v3(0, 30, 0), Color = "BodyShade" },
-				{ Kind = "Block", Size = v3(0.35, 0.3, 2.8), Offset = v3(1.6, 2.6, 0), Rotation = v3(0, 30, 0), Color = "BodyShade" },
-				{ Kind = "Block", Size = v3(1.2, 0.3, 0.3), Offset = v3(-1.1, 1.35, -2.05), Rotation = v3(0, 0, -15), Color = "Ink" },
-				{ Kind = "Block", Size = v3(1.2, 0.3, 0.3), Offset = v3(1.1, 1.35, -2.05), Rotation = v3(0, 0, 15), Color = "Ink" },
-				{ Kind = "Block", Size = v3(1.4, 0.25, 0.25), Offset = v3(0, -0.6, -2.05), Color = "Ink" },
-				{ Kind = "Ball", Size = v3(1.1, 1.1, 1.1), Offset = v3(-3.2, -0.4, 0), Color = "BodyShade" },
-				{ Kind = "Ball", Size = v3(1.1, 1.1, 1.1), Offset = v3(3.2, -0.4, 0), Color = "BodyShade" },
-			}, eyes(1.1, 0.55, -1.95, 1)),
-		},
-
-		-- Noodle Ninja: стаканчик лапши в повязке ниндзя — лапша сверху, палочки, хвостики повязки
-		NoodleNinja = {
-			Core = { Kind = "Ball", Size = v3(4, 4, 4), Color = "Body", Hidden = true },
-			Features = join({
-				{ Kind = "Cylinder", Size = v3(4.6, 4.4, 4.4), Offset = v3(0, -0.7, 0), Rotation = UP, Color = "Body" },
-				{ Kind = "Cylinder", Size = v3(1, 4.6, 4.6), Offset = v3(0, -1.6, 0), Rotation = UP, Color = "CreamLight" },
-				{ Kind = "Cylinder", Size = v3(0.7, 4.6, 4.6), Offset = v3(0, 1.1, 0), Rotation = UP, Color = "Coral" },
-				{ Kind = "Block", Size = v3(0.3, 0.5, 2.2), Offset = v3(-0.5, 1, 2.9), Rotation = v3(20, -15, 0), Color = "Coral" },
-				{ Kind = "Block", Size = v3(0.3, 0.5, 2.2), Offset = v3(0.5, 1, 2.9), Rotation = v3(20, 15, 0), Color = "Coral" },
-				{ Kind = "Ball", Size = v3(1.5, 1.5, 1.5), Offset = v3(-0.8, 2, -0.5), Color = "SunLight" },
-				{ Kind = "Ball", Size = v3(1.5, 1.5, 1.5), Offset = v3(0.8, 2.1, 0.4), Color = "SunLight" },
-				{ Kind = "Ball", Size = v3(1.3, 1.3, 1.3), Offset = v3(0, 2.4, -0.1), Color = "Sun" },
-				{ Kind = "Cylinder", Size = v3(4, 0.25, 0.25), Offset = v3(1.3, 3.2, 0.5), Rotation = v3(0, 0, 75), Color = "CreamDark" },
-				{ Kind = "Cylinder", Size = v3(4, 0.25, 0.25), Offset = v3(1.7, 3, 0.2), Rotation = v3(0, 0, 70), Color = "CreamDark" },
-			}, eyes(0.8, 0.25, -2.15, 1)),
-		},
-
-		-- Captain Sockbeard: носок-пират — полосатая резинка, борода, треуголка и повязка на глазу
-		CaptainSockbeard = {
-			Core = { Kind = "Block", Size = v3(3.6, 4.4, 3), Color = "Body" },
-			Features = {
-				{ Kind = "Ball", Size = v3(3.4, 3.4, 3.4), Offset = v3(0, -1.6, -0.9), Color = "Body" },
-				{ Kind = "Cylinder", Size = v3(1, 4, 4), Offset = v3(0, 2.4, 0), Rotation = UP, Color = "CreamLight" },
-				{ Kind = "Cylinder", Size = v3(0.4, 3.9, 3.9), Offset = v3(0, 1.6, 0), Rotation = UP, Color = "Coral" },
-				{ Kind = "Ball", Size = v3(2.6, 2.6, 2.6), Offset = v3(0, -0.3, -1.5), Color = "CreamDark" },
-				{ Kind = "Block", Size = v3(4.6, 0.6, 2.6), Offset = v3(0, 3.2, 0), Color = "PlumDark" },
-				{ Kind = "Ball", Size = v3(2.4, 2.4, 2.4), Offset = v3(0, 3.6, 0), Color = "PlumDark" },
-				{ Kind = "Ball", Size = v3(0.6, 0.6, 0.6), Offset = v3(0, 3.7, -1.2), Color = "CreamLight" },
-				{ Kind = "Ball", Size = v3(1, 1, 1), Offset = v3(-0.8, 1, -1.5), Color = "CreamLight" },
-				{ Kind = "Ball", Size = v3(0.5, 0.5, 0.5), Offset = v3(-0.8, 1, -1.85), Color = "Ink" },
-				{ Kind = "Block", Size = v3(1.1, 1.1, 0.3), Offset = v3(0.8, 1, -1.6), Color = "Ink" },
-			},
-		},
-
-		-- Disco Pickle: огурчик-диско — высокая «капсула», пышная причёска, очки и светящийся медальон
-		DiscoPickle = {
-			Core = { Kind = "Ball", Size = v3(3.6, 3.6, 3.6), Color = "Body" },
-			Features = join({
-				{ Kind = "Cylinder", Size = v3(3.2, 3.6, 3.6), Offset = v3(0, 0, 0), Rotation = UP, Color = "Body" },
-				{ Kind = "Ball", Size = v3(3.6, 3.6, 3.6), Offset = v3(0, 1.6, 0), Color = "Body" },
-				{ Kind = "Ball", Size = v3(3.6, 3.6, 3.6), Offset = v3(0, -1.6, 0), Color = "Body" },
-				{ Kind = "Ball", Size = v3(0.6, 0.6, 0.6), Offset = v3(-1.7, 0.3, -0.6), Color = "BodyShade" },
-				{ Kind = "Ball", Size = v3(0.6, 0.6, 0.6), Offset = v3(1.6, -1, -0.8), Color = "BodyShade" },
-				{ Kind = "Ball", Size = v3(4.4, 4.4, 4.4), Offset = v3(0, 3.5, 0.3), Color = "PlumDark" },
-				{ Kind = "Block", Size = v3(1.3, 0.8, 0.3), Offset = v3(-0.75, 1.4, -1.85), Color = "Ink" },
-				{ Kind = "Block", Size = v3(1.3, 0.8, 0.3), Offset = v3(0.75, 1.4, -1.85), Color = "Ink" },
-				{ Kind = "Block", Size = v3(0.5, 0.2, 0.2), Offset = v3(0, 1.5, -1.9), Color = "Ink" },
-				{ Kind = "Block", Size = v3(1.2, 0.3, 0.3), Offset = v3(0, 0.3, -1.85), Color = "Coral" },
-				{ Kind = "Ball", Size = v3(0.9, 0.9, 0.9), Offset = v3(0, -0.8, -1.9), Color = "Sun", Glow = true },
-			}),
-		},
-
-		-- Professor Bonk: профессор с шишкой — шапочка выпускника с кисточкой, круглые очки, усы, бабочка
-		ProfessorBonk = {
-			Core = { Kind = "Ball", Size = v3(5, 5, 5), Color = "Body" },
-			Features = join({
-				{ Kind = "Cylinder", Size = v3(0.8, 2.8, 2.8), Offset = v3(0, 2.5, 0), Rotation = UP, Color = "PlumDark" },
-				{ Kind = "Block", Size = v3(4.6, 0.3, 4.6), Offset = v3(0, 3, 0), Rotation = v3(0, 45, 0), Color = "PlumDark" },
-				{ Kind = "Block", Size = v3(0.25, 1.6, 0.25), Offset = v3(1.7, 2.3, -1.7), Color = "Sun" },
-				{ Kind = "Ball", Size = v3(0.55, 0.55, 0.55), Offset = v3(1.7, 1.45, -1.7), Color = "Sun" },
-				{ Kind = "Cylinder", Size = v3(0.2, 1.5, 1.5), Offset = v3(-0.9, 0.6, -2.35), Rotation = ALONG_Z, Color = "Ink" },
-				{ Kind = "Cylinder", Size = v3(0.2, 1.5, 1.5), Offset = v3(0.9, 0.6, -2.35), Rotation = ALONG_Z, Color = "Ink" },
-				{ Kind = "Ball", Size = v3(1.1, 1.1, 1.1), Offset = v3(1.5, 1.9, -1.3), Color = "CoralLight" },
-				{ Kind = "Ball", Size = v3(0.9, 0.9, 0.9), Offset = v3(-0.5, -0.5, -2.3), Color = "CreamLight" },
-				{ Kind = "Ball", Size = v3(0.9, 0.9, 0.9), Offset = v3(0.5, -0.5, -2.3), Color = "CreamLight" },
-				{ Kind = "Block", Size = v3(0.7, 0.6, 0.3), Offset = v3(-0.4, -1.8, -2), Rotation = v3(0, 0, 20), Color = "Coral" },
-				{ Kind = "Block", Size = v3(0.7, 0.6, 0.3), Offset = v3(0.4, -1.8, -2), Rotation = v3(0, 0, -20), Color = "Coral" },
-				{ Kind = "Ball", Size = v3(1.3, 1.3, 1.3), Offset = v3(-1.2, -2.5, -0.4), Color = "BodyShade" },
-				{ Kind = "Ball", Size = v3(1.3, 1.3, 1.3), Offset = v3(1.2, -2.5, -0.4), Color = "BodyShade" },
-			}, eyes(0.9, 0.6, -2.1, 0.9)),
-		},
-
-		-- Mega Snoozeasaurus: сонный динозавр — длинный хвост, шипы на спине, ночной колпак с помпоном,
-		-- глаза закрыты (спит!)
-		MegaSnoozeasaurus = {
-			Core = { Kind = "Ball", Size = v3(5, 5, 5), Color = "Body" },
-			Features = {
-				{ Kind = "Ball", Size = v3(3, 3, 3), Offset = v3(0, 0.1, -2.3), Color = "Body" },
-				{ Kind = "Ball", Size = v3(3.4, 3.4, 3.4), Offset = v3(0, -0.9, -1), Color = "SunLight" },
-				{ Kind = "Ball", Size = v3(0.35, 0.35, 0.35), Offset = v3(-0.5, 0.5, -3.75), Color = "Ink" },
-				{ Kind = "Ball", Size = v3(0.35, 0.35, 0.35), Offset = v3(0.5, 0.5, -3.75), Color = "Ink" },
-				{ Kind = "Block", Size = v3(1.1, 0.22, 0.25), Offset = v3(-1, 1.5, -2.1), Rotation = v3(0, 0, -8), Color = "Ink" },
-				{ Kind = "Block", Size = v3(1.1, 0.22, 0.25), Offset = v3(1, 1.5, -2.1), Rotation = v3(0, 0, 8), Color = "Ink" },
-				{ Kind = "Wedge", Size = v3(0.5, 1.4, 1.4), Offset = v3(0, 2.7, 0.6), Color = "BodyShade" },
-				{ Kind = "Wedge", Size = v3(0.5, 1.3, 1.3), Offset = v3(0, 2.2, 1.8), Color = "BodyShade" },
-				{ Kind = "Wedge", Size = v3(0.5, 1.1, 1.1), Offset = v3(0, 1.3, 2.6), Color = "BodyShade" },
-				{ Kind = "Ball", Size = v3(2.4, 2.4, 2.4), Offset = v3(0, -1.3, 3), Color = "Body" },
-				{ Kind = "Ball", Size = v3(1.8, 1.8, 1.8), Offset = v3(0, -1.9, 4.4), Color = "Body" },
-				{ Kind = "Ball", Size = v3(1.2, 1.2, 1.2), Offset = v3(0, -2.3, 5.5), Color = "BodyShade" },
-				{ Kind = "Cylinder", Size = v3(0.9, 3, 3), Offset = v3(-0.5, 2.7, -0.2), Rotation = UP, Color = "PlumLight" },
-				{ Kind = "Cylinder", Size = v3(0.7, 2, 2), Offset = v3(-0.8, 3.4, 0), Rotation = UP, Color = "PlumLight" },
-				{ Kind = "Ball", Size = v3(1, 1, 1), Offset = v3(-1.2, 3.95, 0.2), Color = "CreamLight" },
-				{ Kind = "Ball", Size = v3(1.6, 1.6, 1.6), Offset = v3(-1.4, -2.4, -0.7), Color = "BodyShade" },
-				{ Kind = "Ball", Size = v3(1.6, 1.6, 1.6), Offset = v3(1.4, -2.4, -0.7), Color = "BodyShade" },
-			},
-		},
-	} :: { [string]: Look },
 }
 
 -- ── Свет ───────────────────────────────────────────────────────────────────

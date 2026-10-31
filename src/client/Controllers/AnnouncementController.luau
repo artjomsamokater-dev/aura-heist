@@ -128,7 +128,7 @@ function AnnouncementController.Start()
 			local rarityStyle = StyleConfig.Memeling.Rarities[rarity]
 			show(
 				string.format(TextConfig.AnnounceSpawn, TextConfig.RarityNames[rarity] or rarity, TextConfig.ZonePartNames[part] or part),
-				if rarityStyle then rarityStyle.Body else HUD.BaseCard
+				if rarityStyle then rarityStyle.Color else HUD.BaseCard
 			)
 		end)
 	end

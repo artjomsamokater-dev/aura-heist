@@ -283,6 +283,7 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 		pedestal
 	)
 	body:SetAttribute("MemelingId", entry.memelingId)
+	body:SetAttribute("OwnerUserId", player.UserId) -- клиент рисует контур своим мемлингам на постаментах
 	MapBuilder.AddLabel(
 		body,
 		getMemelingLabel(entry, data),
