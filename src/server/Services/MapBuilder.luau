@@ -966,6 +966,89 @@ local function buildPortalDecor(zoneId: string, parent: Instance)
 	addBoardText(board, Enum.NormalId.Front, title, style.SignText, style.SignTextStroke, style.SignBorder)
 	addBoardText(board, Enum.NormalId.Back, title, style.SignText, style.SignTextStroke, style.SignBorder)
 
+	-- Хоругви по бокам: штанга от столба рамки, полотно цвета воронки с ласточкиным хвостом внизу,
+	-- золотая кайма, корона и название зоны (слово на строку) с обеих сторон
+	local banners = portalCfg.Banners
+	local bannerStyle = StyleConfig.Portal.Banner
+	local theme = StyleConfig.PortalThemes[zoneId] or StyleConfig.PortalThemes.Meme
+	local bannerTitle = string.gsub(title, " ", "\n")
+	for i, side in ipairs({ -1, 1 }) do
+		local cloth = banners.Size
+		local x = portalCfg.Position.X + side * banners.X
+		local rodFrom = portalCfg.Position.X + side * portalCfg.FramePillarX
+		local rodLength = math.abs(x - rodFrom) + cloth.X / 2 + 0.3
+		local rod = makePart(
+			"BannerRod" .. i,
+			Vector3.new(rodLength, 0.3, 0.3),
+			CFrame.new(hubPoint(Vector2.new((rodFrom + x + side * (cloth.X / 2 + 0.3)) / 2, banners.Z), banners.RodHeight)),
+			bannerStyle.Rod,
+			folder
+		)
+		rod.CanCollide = false
+		decorate(rod, false)
+		local center = hubPoint(Vector2.new(x, banners.Z), banners.Top - cloth.Y / 2)
+		local banner = makePart("Banner" .. i, cloth, CFrame.new(center), theme.Color, folder)
+		banner.CanCollide = false
+		decorate(banner, false)
+		-- Ласточкин хвост: квадрат, повёрнутый на 45°, торчит углом из низа полотна
+		local tip = makePart(
+			"BannerTip" .. i,
+			Vector3.new(cloth.X * 0.7, cloth.X * 0.7, cloth.Z),
+			CFrame.new(center - Vector3.new(0, cloth.Y / 2, 0)) * CFrame.Angles(0, 0, math.rad(45)),
+			theme.Color,
+			folder
+		)
+		tip.CanCollide = false
+		decorate(tip, false)
+		for t, dx in ipairs({ -1, 1 }) do
+			local trim = makePart("BannerTrim" .. i .. "_" .. t, Vector3.new(0.18, cloth.Y, cloth.Z + 0.04), CFrame.new(center + Vector3.new(dx * (cloth.X / 2 - 0.09), 0, 0)), bannerStyle.Trim, folder)
+			trim.CanCollide = false
+			decorate(trim, false)
+		end
+		-- Корона у верха полотна, спереди и сзади: обруч, три зубца-ромба и камешки
+		for _, face in ipairs({ -1, 1 }) do
+			local z = face * (cloth.Z / 2 + 0.06)
+			local crownY = cloth.Y / 2 - 1.1
+			local crownBase = makePart("BannerCrown" .. i, Vector3.new(1.3, 0.35, 0.12), CFrame.new(center + Vector3.new(0, crownY, z)), bannerStyle.Crown, folder)
+			crownBase.CanCollide = false
+			decorate(crownBase, false)
+			for k, dx in ipairs({ -0.45, 0, 0.45 }) do
+				local spike = makePart(
+					"BannerCrownSpike" .. i .. "_" .. k,
+					Vector3.new(0.38, 0.38, 0.12),
+					CFrame.new(center + Vector3.new(dx, crownY + 0.32 + (if dx == 0 then 0.08 else 0), z)) * CFrame.Angles(0, 0, math.rad(45)),
+					bannerStyle.Crown,
+					folder
+				)
+				spike.CanCollide = false
+				decorate(spike, false)
+			end
+			local jewel = makeShape("BannerJewel" .. i, "Ball", Vector3.one * 0.22, CFrame.new(center + Vector3.new(0, crownY, z + face * 0.06)), bannerStyle.CrownJewel, folder)
+			jewel.CanCollide = false
+			decorate(jewel, false)
+		end
+		-- Название — на нижних двух третях полотна, с обеих сторон
+		for _, face in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back }) do
+			local gui = Instance.new("SurfaceGui")
+			gui.Name = "Label"
+			gui.Face = face
+			gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+			gui.PixelsPerStud = StyleConfig.Label.SignPixelsPerStud
+			gui.Parent = banner
+			local label = Instance.new("TextLabel")
+			label.BackgroundTransparency = 1
+			label.Position = UDim2.fromScale(0.1, 0.32)
+			label.Size = UDim2.fromScale(0.8, 0.6)
+			label.TextScaled = true
+			label.Font = StyleConfig.Fonts.Label
+			label.TextColor3 = bannerStyle.Text
+			label.TextStrokeColor3 = bannerStyle.TextStroke
+			label.TextStrokeTransparency = 0
+			label.Text = bannerTitle
+			label.Parent = gui
+		end
+	end
+
 	-- Статуи — мемлинги этой зоны
 	local statueIds = portalCfg.Statues.Ids[zoneId] or {}
 	for i, offset in ipairs(portalCfg.Statues.Offsets) do

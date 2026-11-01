@@ -223,6 +223,15 @@ StyleConfig.Hub = {
 -- Вокруг крутится кольцо из бусин, в середину затягивает вихрь искр, рядом слышен гул.
 -- Кольцо и вихрь вращает клиент (client/Controllers/PortalController) — по сети вращение не идёт
 StyleConfig.Portal = {
+	-- Хоругви у портала (задача 7.8): полотно — цвет воронки зоны (PortalThemes), корона и кайма — золото
+	Banner = {
+		Rod = Palette.PlumDark,
+		Trim = Palette.Sun,
+		Crown = Palette.Sun,
+		CrownJewel = Palette.CreamLight,
+		Text = Palette.CreamLight,
+		TextStroke = Palette.Ink,
+	},
 	Color = Palette.Plum,
 	Core = Palette.PlumDark, -- тёмная середина воронки: кажется глубокой
 	Transparency = 0.15,
