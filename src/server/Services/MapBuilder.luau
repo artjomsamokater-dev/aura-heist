@@ -381,8 +381,8 @@ local function buildBridges(parent: Instance)
 		)
 		bridge.CastShadow = false
 
-		-- Видимая часть: от края квадратного хаба до переднего края участка
-		local fromDistance = (hub.Size.X / 2) / math.max(math.abs(direction.X), math.abs(direction.Z))
+		-- Видимая часть: от края круглой площади до переднего края участка
+		local fromDistance = hub.Radius
 		local toDistance = length - MapConfig.Plots.Size.Z / 2
 		local visible = toDistance - fromDistance
 		if visible > 0 then
@@ -532,13 +532,14 @@ local function buildSeaWalls(parent: Instance)
 	end
 
 	-- Край хаба
-	local hubHalf = hub.Size.X / 2 + cfg.SeaWallThickness / 2
-	seaWallLoop("HubWall", {
-		center + Vector3.new(-hubHalf, 0, -hubHalf),
-		center + Vector3.new(hubHalf, 0, -hubHalf),
-		center + Vector3.new(hubHalf, 0, hubHalf),
-		center + Vector3.new(-hubHalf, 0, hubHalf),
-	}, onBridge, folder)
+	-- Край круглой площади — многоугольником из 64 отрезков
+	local hubWallRadius = hub.Radius + cfg.SeaWallThickness / 2
+	local hubCorners: { Vector3 } = {}
+	for k = 0, 63 do
+		local a = k * 2 * math.pi / 64
+		table.insert(hubCorners, center + Vector3.new(math.cos(a), 0, math.sin(a)) * hubWallRadius)
+	end
+	seaWallLoop("HubWall", hubCorners, onBridge, folder)
 
 	local plotHalf = plotsCfg.Size.X / 2 + cfg.SeaWallThickness / 2
 	for i, d in ipairs(directions) do
@@ -551,7 +552,7 @@ local function buildSeaWalls(parent: Instance)
 			local fromDistance = 0
 			while fromDistance < toDistance do
 				local p = d * fromDistance + offset
-				if math.max(math.abs(p.X), math.abs(p.Z)) >= hubHalf then
+				if p.Magnitude >= hubWallRadius then
 					break
 				end
 				fromDistance += 0.25
@@ -590,6 +591,75 @@ end
 local function hubPoint(offset: Vector2, height: number): Vector3
 	local hub = MapConfig.Hub
 	return Vector3.new(hub.Center.X + offset.X, hub.Center.Y + hub.Size.Y / 2 + height, hub.Center.Z + offset.Y)
+end
+
+-- Точка на полу хаба по углу (градусы, 0° — +X, 90° — +Z) и расстоянию от центра
+local function hubPolar(angleDegrees: number, radius: number, height: number): Vector3
+	local a = math.rad(angleDegrees)
+	return hubPoint(Vector2.new(math.cos(a) * radius, math.sin(a) * radius), height)
+end
+
+-- Плоская полоса на полу площади от r1 до r2 по углу angle (дорожка)
+local function plazaStrip(name: string, angle: number, r1: number, r2: number, width: number, height: number, color: Color3, parent: Instance): Part
+	local from, to = hubPolar(angle, r1, height), hubPolar(angle, r2, height)
+	local strip = makePart(name, Vector3.new(width, 0.06, (to - from).Magnitude), CFrame.lookAt((from + to) / 2, to), color, parent)
+	strip.CanCollide = false
+	decorate(strip, false)
+	return strip
+end
+
+-- Пол площади: круг светлой мяты, кайма-пена, шахматная плитка второго оттенка (только целые квадраты
+-- внутри круга — по краю виден основной цвет), кремовый круг в центре и дорожки к порталу, витрине и мостикам
+local function buildPlazaFloor(parent: Instance)
+	local hub = MapConfig.Hub
+	local style = StyleConfig.Hub
+	local floorTop = hub.Center.Y + hub.Size.Y / 2
+	makeColumn("Floor", CFrame.new(hub.Center), hub.Size.Y, hub.Radius * 2, style.Floor, parent)
+	local foam = makeColumn(
+		"Foam",
+		CFrame.new(hub.Center - Vector3.new(0, hub.Size.Y / 2 - 0.1, 0)),
+		0.2,
+		hub.Radius * 2 + StyleConfig.Background.FoamWidth * 2,
+		StyleConfig.Background.Foam,
+		parent
+	)
+	decorate(foam, false)
+
+	local tiles = Instance.new("Folder")
+	tiles.Name = "Tiles"
+	tiles.Parent = parent
+	local size = hub.TileSize
+	local cells = math.ceil(hub.Radius / size)
+	for gx = -cells, cells - 1 do
+		for gz = -cells, cells - 1 do
+			local farX = math.max(math.abs(gx * size), math.abs((gx + 1) * size))
+			local farZ = math.max(math.abs(gz * size), math.abs((gz + 1) * size))
+			if (gx + gz) % 2 == 0 and math.sqrt(farX * farX + farZ * farZ) <= hub.Radius - 0.5 then
+				local tile = makePart(
+					"Tile",
+					Vector3.new(size, 0.04, size),
+					CFrame.new(hub.Center.X + (gx + 0.5) * size, floorTop + 0.02, hub.Center.Z + (gz + 0.5) * size),
+					style.FloorTile,
+					tiles
+				)
+				tile.CanCollide = false
+				decorate(tile, false)
+			end
+		end
+	end
+
+	local center = makeColumn("CenterCircle", CFrame.new(hubPoint(Vector2.zero, 0.035)), 0.07, hub.CenterRadius * 2, style.Path, parent)
+	center.CanCollide = false
+	decorate(center, false)
+	local start = hub.CenterRadius - 1
+	for i, path in ipairs(hub.Paths) do
+		plazaStrip("Path" .. i, path.Angle, start, path.To, hub.PathWidth, 0.03, style.Path, parent)
+	end
+	local plots = MapConfig.Plots
+	for i = 1, plots.Count do
+		local angle = plots.AngleOffsetDegrees + (i - 1) * 360 / plots.Count
+		plazaStrip("BridgePath" .. i, angle, start, hub.Radius, hub.PathWidth, 0.03, style.Path, parent)
+	end
 end
 
 -- Витрина «BEST HAUL»: ступенчатый подиум, подпись над ним. Мемлинга на него ставит сервис BestHaul
@@ -690,8 +760,7 @@ local function buildHub()
 	local portalCfg = MapConfig.Portal
 	local style = StyleConfig.Portal
 
-	local hubFloor = makePart("Floor", hub.Size, CFrame.new(hub.Center), StyleConfig.Hub.Floor, folder)
-	addFoam("Foam", hubFloor, folder)
+	buildPlazaFloor(folder)
 	buildBestHaul(folder)
 	buildProps(folder)
 

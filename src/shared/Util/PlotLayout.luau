@@ -12,7 +12,7 @@ local PlotLayout = {}
 function PlotLayout.PlotCFrame(index: number): CFrame
 	local cfg = MapConfig.Plots
 	local hubCenter = MapConfig.Hub.Center
-	local angle = (index - 1) * (2 * math.pi / cfg.Count)
+	local angle = math.rad(cfg.AngleOffsetDegrees) + (index - 1) * (2 * math.pi / cfg.Count)
 	local center = hubCenter + Vector3.new(math.cos(angle), 0, math.sin(angle)) * cfg.RingRadius
 	return CFrame.lookAt(center, hubCenter)
 end

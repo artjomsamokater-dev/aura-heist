@@ -49,6 +49,7 @@ local Palette = {
 	MintLight = rgb(176, 232, 210),
 	MintDark = rgb(48, 124, 118),
 	MintGrass = rgb(132, 194, 146),
+	MintTile = rgb(150, 218, 192), -- второй оттенок плитки на площади хаба
 	-- 5. Слива — фон мира: светло-фиолетовые полы участков, ограды, тени, обводки
 	Plum = rgb(134, 100, 176),
 	PlumLight = rgb(190, 166, 226),
@@ -129,6 +130,8 @@ StyleConfig.Background = {
 -- Хаб: светлый мятный пол (фон); портал — самое яркое в хабе
 StyleConfig.Hub = {
 	Floor = Palette.MintLight,
+	FloorTile = Palette.MintTile, -- шахматная плитка поверх пола (второй оттенок)
+	Path = Palette.CreamLight, -- дорожки и круг вокруг фонтана
 	Spawn = Palette.PlumLight,
 	-- Витрина «BEST HAUL»: подиум в фоновых цветах (на него не нажимают)
 	PodiumTiers = { Palette.PlumLight, Palette.Plum },
