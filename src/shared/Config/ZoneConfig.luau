@@ -1,5 +1,6 @@
 --!strict
--- ZoneConfig: числа Meme Zone — шансы появления, ресток, дистанции подбора и эвакуации.
+-- ZoneConfig: зоны вылазок (список и правила каждой) и общие числа — ресток, дистанции подбора и эвакуации.
+-- Геометрия зон — MapConfig.Zones[Id], ловушки — HazardConfig.Zones[Id], враги — EnemyConfig.Zones[Id].
 
 -- table.freeze замораживает только верхний уровень, поэтому замораживаем всё дерево
 local function deepFreeze<T>(t: T): T
@@ -13,12 +14,30 @@ end
 
 local ZoneConfig = {}
 
--- Шанс редкости при появлении мемлинга, в процентах (сумма в каждой части = 100).
--- Safe — от входа до MapConfig.Zone.DangerFromX, Danger — восточнее (там же ловушки и враги)
-ZoneConfig.SpawnChances = {
-	Safe = { Common = 80, Rare = 20, Epic = 0, Legendary = 0 },
-	Danger = { Common = 0, Rare = 55, Epic = 38, Legendary = 7 },
-} :: { [string]: { [string]: number } }
+export type Zone = {
+	-- Шанс редкости при появлении мемлинга, в процентах (сумма в каждой части = 100).
+	-- Safe — от входа до MapConfig.Zones[Id].DangerFromX, Danger — восточнее (там же ловушки и враги).
+	-- Какие мемлинги появляются — те, у кого MemelingConfig.Memelings[].Zone = Id этой зоны
+	SpawnChances: { [string]: { [string]: number } },
+	AccessCost: number?, -- nil — вход свободный; число — доступ покупается навсегда за столько Aura
+	Tutorial: boolean, -- шаги туториала засчитываются только в этой зоне
+}
+
+-- Порядок зон (у словаря порядка нет): первая — стартовая
+ZoneConfig.ZoneOrder = { "Meme" }
+
+ZoneConfig.Zones = {
+	Meme = {
+		SpawnChances = {
+			Safe = { Common = 80, Rare = 20, Epic = 0, Legendary = 0 },
+			Danger = { Common = 0, Rare = 55, Epic = 38, Legendary = 7 },
+		},
+		AccessCost = nil,
+		Tutorial = true,
+	},
+} :: { [string]: Zone }
+
+ZoneConfig.FirstZone = "Meme" -- стартовая зона: в неё ведёт туториал, по ней считаются подсказки клиента по умолчанию
 
 -- Раз в столько секунд все пустые точки спавна получают новых мемлингов.
 -- Для теста с игроками — 90; по документации — 180
@@ -28,7 +47,7 @@ ZoneConfig.RestockSeconds = 90
 ZoneConfig.AnnounceRarities = { "Epic", "Legendary" }
 ZoneConfig.EvacuationSeconds = 3 -- сколько секунд длится эвакуация на основном EXTRACT
 
--- Вторая точка эвакуации — у входа, в безопасной части (MapConfig.Zone.SideExtractionPosition):
+-- Вторая точка эвакуации — у входа, в безопасной части (MapConfig.Zones[Id].SideExtractionPosition):
 -- стоять дольше, и только если в руках нет мемлингов из BlockedRarities
 ZoneConfig.SideEvacuation = {
 	Seconds = 8,

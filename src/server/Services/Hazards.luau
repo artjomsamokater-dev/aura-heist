@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local HazardConfig = require(ReplicatedStorage.Shared.Config.HazardConfig)
+local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local HazardMath = require(ReplicatedStorage.Shared.Util.HazardMath)
 local MapBuilder = require(script.Parent.MapBuilder)
@@ -48,8 +49,8 @@ type Laser = {
 local lasers: { Laser } = {}
 local plates: { Plate } = {}
 
-local function zoneTop(): Vector3
-	local zone = MapConfig.Zone
+local function zoneTop(zoneId: string): Vector3
+	local zone = MapConfig.Zones[zoneId]
 	return zone.Center + Vector3.new(0, zone.Size.Y / 2, 0)
 end
 
@@ -107,15 +108,20 @@ local function addCracks(plate: BasePart)
 	end
 end
 
-local function build()
+-- Ловушки одной зоны: места — HazardConfig.Zones[zoneId] (смещения от центра верха пола зоны)
+local function build(zoneId: string)
+	local spots = HazardConfig.Zones[zoneId]
+	if spots == nil then
+		return -- в зоне нет ловушек
+	end
 	local folder = Instance.new("Folder")
 	folder.Name = "Hazards"
-	folder.Parent = MapBuilder.GetZoneFolder()
-	local top = zoneTop()
+	folder.Parent = MapBuilder.GetZoneFolder(zoneId)
+	local top = zoneTop(zoneId)
 	local style = StyleConfig.Hazards
 
 	-- Лазерные планки: на сервере стоят в начале дорожки, двигает их клиент (по тем же формулам)
-	for n, spec in ipairs(HazardConfig.Lasers) do
+	for n, spec in ipairs(spots.Lasers) do
 		local startPosition = top + spec.TrackStart
 		local endPosition = top + spec.TrackEnd
 		local bar = makeHazardPart("LaserBar" .. n, spec.Size, CFrame.new(startPosition), style.Laser, folder)
@@ -160,7 +166,7 @@ local function build()
 
 	-- Плиты-«хлопушки»
 	local slam = HazardConfig.Slam
-	for i, offset in ipairs(slam.Plates) do
+	for i, offset in ipairs(spots.Plates) do
 		local part = makeHazardPart(
 			"SlamPlate" .. i,
 			slam.Size,
@@ -240,7 +246,9 @@ end
 
 function Hazards.Start()
 	validateConfig()
-	build()
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		build(zoneId)
+	end
 
 	task.spawn(function()
 		while true do

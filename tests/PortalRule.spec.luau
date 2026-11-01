@@ -13,15 +13,16 @@ end
 
 print("PortalRule")
 
-test("в хабе, профиль загружен, жив, не на паузе — пускаем", function()
-	equal(PortalRule.Decide(false, true, true, true), "ok")
+test("в хабе, профиль загружен, жив, не на паузе, доступ есть — пускаем", function()
+	equal(PortalRule.Decide(false, true, true, true, true), "ok")
 end)
 
 test("каждая причина отказа называется своим ключом", function()
-	equal(PortalRule.Decide(true, true, true, true), "busy")
-	equal(PortalRule.Decide(false, false, true, true), "notInHub")
-	equal(PortalRule.Decide(false, true, false, true), "noProfile")
-	equal(PortalRule.Decide(false, true, true, false), "dead")
+	equal(PortalRule.Decide(true, true, true, true, true), "busy")
+	equal(PortalRule.Decide(false, false, true, true, true), "notInHub")
+	equal(PortalRule.Decide(false, true, false, true, true), "noProfile")
+	equal(PortalRule.Decide(false, true, true, false, true), "dead")
+	equal(PortalRule.Decide(false, true, true, true, false), "noAccess")
 end)
 
 test("игрок в середине портала — внутри; рядом с ним — нет", function()

@@ -11,6 +11,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
+local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
@@ -250,7 +251,8 @@ end
 -- Ведёт к ближайшей доступной точке (ExtractTarget): основной EXTRACT или медленная точка у входа.
 -- Вблизи маркер прячется, чтобы не закрывать имена мемлингов: площадку и так видно.
 local function buildExtractPointer(playerGui: Instance)
-	local target = MapConfig.Zone.ExtractionPosition + Vector3.new(0, HUD.MarkerHeight, 0)
+	-- Пока персонажа нет — над EXTRACT стартовой зоны; дальше каждый кадр — ближайшая точка своей зоны
+	local target = MapConfig.Zones[ZoneConfig.FirstZone].ExtractionPosition + Vector3.new(0, HUD.MarkerHeight, 0)
 
 	-- Невидимая точка-якорь только на этом клиенте: не зависит от того, загружена ли зона (streaming)
 	local anchor = Instance.new("Part")

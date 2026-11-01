@@ -355,6 +355,41 @@ StyleConfig.Zone = {
 	FloorTextureColor = Palette.CreamLight,
 }
 
+-- Оформление по зонам (Id — ZoneConfig.ZoneOrder): своя тема на основе StyleConfig.Zone (поменяны только цвета).
+-- Зоны без своей темы берут StyleConfig.Zone
+local function themeFrom(overrides: { [string]: any }): typeof(StyleConfig.Zone)
+	local theme = table.clone(StyleConfig.Zone) :: any
+	for key, value in overrides do
+		theme[key] = value
+	end
+	return theme
+end
+
+StyleConfig.ZoneThemes = {
+	Meme = StyleConfig.Zone,
+	-- Golden Zone: пол старого золота (приглушённый, не «интерактивный» жёлтый), опасная часть — тёмно-бордовая
+	Golden = themeFrom({
+		SafeFloor = Color3.fromRGB(150, 118, 70),
+		DangerFloor = Color3.fromRGB(58, 28, 26),
+		Path = Palette.CreamLight,
+		EntryGate = Palette.CreamDark,
+		GateCaps = Palette.CreamLight,
+		MushroomCap = Color3.fromRGB(196, 150, 84),
+		Crystal = Palette.CreamLight,
+		DangerTile = Color3.fromRGB(150, 100, 60),
+		DangerFog = {
+			Texture = "rbxasset://textures/particles/smoke_main.dds",
+			Color = Color3.fromRGB(170, 110, 60),
+			Rate = 1.2,
+			Lifetime = NumberRange.new(5, 7),
+			Speed = NumberRange.new(0.3, 0.8),
+			Size = 14,
+			Transparency = 0.78,
+		},
+		DangerLight = { Color = Color3.fromRGB(230, 120, 60), Brightness = 1.3, Range = 45 },
+	}),
+} :: { [string]: typeof(StyleConfig.Zone) }
+
 -- Ловушки: только красный и чёрный. Тёмно-красная плита = опасно, ярко-красная = сейчас ударит
 StyleConfig.Hazards = {
 	Laser = Palette.Coral,

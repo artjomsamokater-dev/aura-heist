@@ -1,7 +1,7 @@
 --!strict
 -- HazardConfig: ловушки в опасной части зоны — урон, тайминги, места.
 -- Позиции — смещения от центра верхней грани пола зоны (X на восток, Z на юг).
--- Зона 224 × 224 (смещения X и Z от −112 до 112). Опасная часть — от MapConfig.Zone.DangerFromX = 14;
+-- Зона 224 × 224 (смещения X и Z от −112 до 112). Опасная часть — от MapConfig.Zones[Id].DangerFromX = 14;
 -- площадка EXTRACT — на X = 90, радиус 12 (ловушки её не задевают).
 -- Урон умеренный: здоровье персонажа Roblox 100, от одного попадания не умирают (это проверяет тест).
 
@@ -31,13 +31,6 @@ HazardConfig.Laser = {
 	HitCooldownSeconds = 1, -- один игрок получает урон от планки не чаще раза в столько секунд
 	DwellSeconds = 1.2, -- стоит у конца и мигает перед следующим проездом
 }
--- Каждая планка: размер (длинная сторона — поперёк дорожки), начало и конец дорожки, время проезда.
--- Планка без поворота: дорожка вдоль Z — планка длинная по X, дорожка вдоль X — длинная по Z
-HazardConfig.Lasers = {
-	{ Size = Vector3.new(40, 1, 1), TrackStart = Vector3.new(40, 2.5, -100), TrackEnd = Vector3.new(40, 2.5, 100), SweepSeconds = 6 },
-	{ Size = Vector3.new(1, 1, 40), TrackStart = Vector3.new(20, 2.5, -65), TrackEnd = Vector3.new(105, 2.5, -65), SweepSeconds = 5 },
-}
-
 -- Плиты-«хлопушки»: каждые CycleSeconds бьют снизу. За WarnSeconds до удара подсвечиваются.
 -- Соседние плиты бьют не одновременно (StaggerSeconds), чтобы было где пробежать.
 HazardConfig.Slam = {
@@ -47,14 +40,30 @@ HazardConfig.Slam = {
 	StaggerSeconds = 1, -- плита N бьёт на (N − 1) × StaggerSeconds позже первой
 	Size = Vector3.new(10, 0.4, 10),
 	HitHeight = 6, -- удар достаёт до этой высоты над плитой
-	Plates = {
-		Vector3.new(35, 0, -25),
-		Vector3.new(35, 0, 25),
-		Vector3.new(62, 0, -30),
-		Vector3.new(62, 0, 40),
-		Vector3.new(85, 0, -80),
-		Vector3.new(85, 0, 75),
-	},
 }
+
+export type LaserSpec = { Size: Vector3, TrackStart: Vector3, TrackEnd: Vector3, SweepSeconds: number }
+export type ZoneHazards = { Lasers: { LaserSpec }, Plates: { Vector3 } }
+
+-- Места ловушек по зонам (Id — ZoneConfig.ZoneOrder).
+-- Каждая планка: размер (длинная сторона — поперёк дорожки), начало и конец дорожки, время проезда.
+-- Планка без поворота: дорожка вдоль Z — планка длинная по X, дорожка вдоль X — длинная по Z.
+-- Plates — центры плит-хлопушек на полу
+HazardConfig.Zones = {
+	Meme = {
+		Lasers = {
+			{ Size = Vector3.new(40, 1, 1), TrackStart = Vector3.new(40, 2.5, -100), TrackEnd = Vector3.new(40, 2.5, 100), SweepSeconds = 6 },
+			{ Size = Vector3.new(1, 1, 40), TrackStart = Vector3.new(20, 2.5, -65), TrackEnd = Vector3.new(105, 2.5, -65), SweepSeconds = 5 },
+		},
+		Plates = {
+			Vector3.new(35, 0, -25),
+			Vector3.new(35, 0, 25),
+			Vector3.new(62, 0, -30),
+			Vector3.new(62, 0, 40),
+			Vector3.new(85, 0, -80),
+			Vector3.new(85, 0, 75),
+		},
+	},
+} :: { [string]: ZoneHazards }
 
 return deepFreeze(HazardConfig)

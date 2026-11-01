@@ -25,7 +25,7 @@ TextConfig.Portal = "MEME ZONE"
 TextConfig.BestHaulTitle = "BEST HAUL"
 TextConfig.BestHaulEmpty = "BEST HAUL\nBring back something rare!"
 TextConfig.BestHaulOwner = "%s\nby %s" -- имя мемлинга, ник игрока
-TextConfig.Zone = "MEME ZONE"
+TextConfig.ZoneNames = { Meme = "MEME ZONE" } :: { [string]: string } -- название зоны по Id (пол, объявления)
 TextConfig.ZoneDanger = "DANGER"
 TextConfig.Entry = "Entry"
 TextConfig.Extraction = "EXTRACT"
@@ -75,7 +75,7 @@ TextConfig.SquadBonusBanner = "SQUAD BONUS! +%d%% income forever"
 TextConfig.SquadTag = "\nSQUAD +%d%% income"
 
 -- Объявление о редком спавне всем игрокам: «A LEGENDARY appeared in the DANGER zone!»
-TextConfig.AnnounceSpawn = "A %s appeared in the %s zone!" -- %s — редкость, %s — часть зоны
+TextConfig.AnnounceSpawn = "A %s appeared in the %s · %s!" -- редкость, название зоны, часть зоны
 TextConfig.RarityNames = { Common = "COMMON", Rare = "RARE", Epic = "EPIC", Legendary = "LEGENDARY" } :: { [string]: string }
 TextConfig.ZonePartNames = { Safe = "SAFE", Danger = "DANGER" } :: { [string]: string }
 TextConfig.ExtractMarker = "▼ EXTRACT ▼"

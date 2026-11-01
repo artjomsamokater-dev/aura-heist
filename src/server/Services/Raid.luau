@@ -16,6 +16,7 @@ local CarrySpeed = require(ReplicatedStorage.Shared.Util.CarrySpeed)
 local MemelingSize = require(ReplicatedStorage.Shared.Util.MemelingSize)
 local ExtractionRule = require(ReplicatedStorage.Shared.Util.ExtractionRule)
 local PortalRule = require(ReplicatedStorage.Shared.Util.PortalRule)
+local ZoneRule = require(ReplicatedStorage.Shared.Util.ZoneRule)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
@@ -57,14 +58,40 @@ local pickupLimiter =
 	RateLimiter.new(SecurityConfig.RateLimits.Pickup.MaxRequests, SecurityConfig.RateLimits.Pickup.WindowSeconds)
 local dropLimiter = RateLimiter.new(SecurityConfig.RateLimits.Drop.MaxRequests, SecurityConfig.RateLimits.Drop.WindowSeconds)
 
--- Сервер хранит состояние у себя; атрибут на игроке — только копия, чтобы видеть его в Studio
-local function setState(player: Player, state: string)
+local zones: { [Player]: string } = {} -- в какой зоне вылазка (Id из ZoneConfig.ZoneOrder)
+
+-- Сервер хранит состояние у себя; атрибуты на игроке — копия для клиента (HUD, маркер EXTRACT) и Studio.
+-- zoneId — зона вылазки (только для InRaid)
+local function setState(player: Player, state: string, zoneId: string?)
 	states[player] = state
+	if state == Raid.State.InRaid and zoneId then
+		zones[player] = zoneId
+	else
+		zones[player] = nil
+	end
 	player:SetAttribute("RaidState", state)
+	player:SetAttribute("RaidZone", zones[player])
 end
 
 function Raid.GetState(player: Player): string?
 	return states[player]
+end
+
+-- Зона текущей вылазки (nil — игрок в хабе)
+function Raid.GetZone(player: Player): string?
+	return zones[player]
+end
+
+-- Шаги туториала засчитываются только в зонах с Tutorial = true (стартовая)
+local function inTutorialZone(player: Player): boolean
+	local zoneId = zones[player]
+	return zoneId ~= nil and ZoneConfig.Zones[zoneId].Tutorial
+end
+
+-- Есть ли у игрока доступ в зону: бесплатная или купленная (профиль, zoneAccess)
+function Raid.HasZoneAccess(player: Player, zoneId: string): boolean
+	local data = PlayerData.GetData(player)
+	return ZoneRule.HasAccess(ZoneConfig.Zones[zoneId].AccessCost, if data then data.zoneAccess else nil, zoneId)
 end
 
 -- Сколько мемлингов игрок может нести: стартовое число или купленный уровень рюкзака
@@ -243,7 +270,9 @@ local function tryPickup(player: Player, instanceId: string)
 	for _, listener in ipairs(pickupListeners) do
 		task.spawn(listener, player, root.Position)
 	end
-	Tutorial.Notify(player, "PickUp")
+	if inTutorialZone(player) then
+		Tutorial.Notify(player, "PickUp")
+	end
 	local memeling = MemelingConfig.Memelings[record.MemelingId]
 	Analytics.MemelingPicked(player, if memeling then memeling.Rarity else "")
 end
@@ -272,27 +301,29 @@ local PORTAL_REASONS: { [string]: string } = {
 	notInHub = "игрок не в хабе (уже в вылазке)",
 	noProfile = "профиль ещё не загружен (PlayerData) — вынесенное было бы некуда сохранить",
 	dead = "персонаж мёртв",
+	noAccess = "доступ в эту зону не куплен (золотые ворота)",
 }
 local PORTAL_LOG_SECONDS = 2 -- одну и ту же причину для игрока пишем не чаще: касаний много в секунду
 local portalLog: { [Player]: { [string]: number } } = {}
 
-local function logPortal(player: Player, decision: string, source: string)
+local function logPortal(player: Player, zoneId: string, decision: string, source: string)
 	local now = os.clock()
 	local byReason = portalLog[player] or {}
 	portalLog[player] = byReason
-	if byReason[decision] and now - byReason[decision] < PORTAL_LOG_SECONDS then
+	local key = zoneId .. ":" .. decision
+	if byReason[key] and now - byReason[key] < PORTAL_LOG_SECONDS then
 		return
 	end
-	byReason[decision] = now
+	byReason[key] = now
 	if decision == "ok" then
-		print(string.format("[Portal] %s (%s): пустили в зону", player.Name, source))
+		print(string.format("[Portal] %s (%s, портал %s): пустили в зону", player.Name, source, zoneId))
 	else
-		print(string.format("[Portal] %s (%s): не пустили — %s", player.Name, source, PORTAL_REASONS[decision] or decision))
+		print(string.format("[Portal] %s (%s, портал %s): не пустили — %s", player.Name, source, zoneId, PORTAL_REASONS[decision] or decision))
 	end
 end
 
--- Вход в портал: и по касанию, и по проверке позиции (если Touched не сработал). Решение — PortalRule
-local function tryEnterPortal(player: Player, character: Model, source: string)
+-- Вход в портал зоны zoneId: и по касанию, и по проверке позиции (если Touched не сработал). Решение — PortalRule
+local function tryEnterPortal(player: Player, character: Model, zoneId: string, source: string)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	-- Пока профиль не загружен, в зону не пускаем: вынесенное было бы некуда сохранить
 	local data = PlayerData.GetData(player)
@@ -300,65 +331,70 @@ local function tryEnterPortal(player: Player, character: Model, source: string)
 		portalBusy[player] == true,
 		states[player] == Raid.State.InHub,
 		data ~= nil,
-		humanoid ~= nil and humanoid.Health > 0
+		humanoid ~= nil and humanoid.Health > 0,
+		Raid.HasZoneAccess(player, zoneId)
 	)
 	if decision == "busy" and states[player] ~= Raid.State.InHub then
 		return -- только что вошли: в зоне касаний портала уже нет, писать нечего
 	end
-	logPortal(player, decision, source)
+	logPortal(player, zoneId, decision, source)
 	if decision ~= "ok" or data == nil then
 		return
 	end
 
 	portalBusy[player] = true
-	character:PivotTo(MapBuilder.GetZoneEntryCFrame())
+	character:PivotTo(MapBuilder.GetZoneEntryCFrame(zoneId))
 	runs[player] = { Rewarded = false, StartedAt = os.clock() }
 	data.stats.raids += 1
-	Tutorial.Notify(player, "EnterZone")
+	setState(player, Raid.State.InRaid, zoneId)
+	if inTutorialZone(player) then
+		Tutorial.Notify(player, "EnterZone")
+	end
 	Analytics.RaidStarted(player)
-	setState(player, Raid.State.InRaid)
-	print(string.format("[Raid] %s вошёл в зону", player.Name))
+	print(string.format("[Raid] %s вошёл в зону %s", player.Name, zoneId))
 
 	task.delay(MapConfig.Portal.CooldownSeconds, function()
 		portalBusy[player] = nil
 	end)
 end
 
-local function onPortalTouched(hit: BasePart)
+local function onPortalTouched(zoneId: string, hit: BasePart)
 	-- hit может быть частью аксессуара, поэтому ищем персонажа выше по дереву (первая Model может быть
 	-- моделью-деталью, например Figure мемлинга, — поэтому проверяем все модели вверх)
 	local model = hit:FindFirstAncestorOfClass("Model")
 	while model do
 		local player = Players:GetPlayerFromCharacter(model)
 		if player then
-			tryEnterPortal(player, model, "касание")
+			tryEnterPortal(player, model, zoneId, "касание")
 			return
 		end
 		model = model:FindFirstAncestorOfClass("Model")
 	end
 end
 
--- Запасной путь: раз в PortalCheckSeconds — кто из игроков в хабе стоит внутри портала.
+-- Запасной путь: раз в PortalCheckSeconds — кто из игроков в хабе стоит внутри какого-нибудь портала.
 -- Работает, даже если Touched не пришёл (тонкий триггер, быстрый бег, лаг)
 local function checkPortalOverlap()
-	local portal = MapBuilder.GetPortal()
-	local half = portal.Size / 2
-	for player, state in states do
-		if state == Raid.State.InHub and not portalBusy[player] then
-			local character, root = RemoteGuard.GetAliveCharacter(player)
-			if character and root then
-				local offset = portal.CFrame:PointToObjectSpace(root.Position)
-				if PortalRule.IsInside(offset.X, offset.Y, offset.Z, half.X, half.Y, half.Z, MapConfig.Portal.OverlapMargin) then
-					tryEnterPortal(player, character, "позиция")
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		local portal = MapBuilder.GetPortal(zoneId)
+		local half = portal.Size / 2
+		for player, state in states do
+			if state == Raid.State.InHub and not portalBusy[player] then
+				local character, root = RemoteGuard.GetAliveCharacter(player)
+				if character and root then
+					local offset = portal.CFrame:PointToObjectSpace(root.Position)
+					if PortalRule.IsInside(offset.X, offset.Y, offset.Z, half.X, half.Y, half.Z, MapConfig.Portal.OverlapMargin) then
+						tryEnterPortal(player, character, zoneId, "позиция")
+					end
 				end
 			end
 		end
 	end
 end
 
--- Проверка при старте: триггер портала существует, в мире, касаем и стоит на полу хаба
-local function validatePortal()
-	local portal = MapBuilder.GetPortal()
+-- Проверка при старте: триггер портала зоны существует, в мире, касаем и стоит на полу хаба
+local function validatePortal(zoneId: string)
+	local portal = MapBuilder.GetPortal(zoneId)
 	local problems: { string } = {}
 	if not portal:IsDescendantOf(Workspace) then
 		table.insert(problems, "деталь не в Workspace")
@@ -373,9 +409,9 @@ local function validatePortal()
 		table.insert(problems, string.format("стоит не на уровне игрока (низ %.1f, пол хаба %.1f)", bottom, floorTop))
 	end
 	if #problems > 0 then
-		warn("[Portal] Триггер портала неисправен: " .. table.concat(problems, "; "))
+		warn(string.format("[Portal] Триггер портала %s неисправен: %s", zoneId, table.concat(problems, "; ")))
 	else
-		print(string.format("[Portal] Триггер портала в порядке: %s, размер %s, CanTouch", tostring(portal.Position), tostring(portal.Size)))
+		print(string.format("[Portal] Триггер портала в порядке (%s): %s, размер %s, CanTouch", zoneId, tostring(portal.Position), tostring(portal.Size)))
 	end
 end
 
@@ -425,7 +461,7 @@ local function dropCarriedAsLoot(player: Player, position: Vector3)
 	if list == nil or #list == 0 then
 		return
 	end
-	local zone = MapConfig.Zone
+	local zone = MapConfig.Zones[zones[player] or ZoneConfig.FirstZone]
 	local half = zone.Size / 2
 	local margin = ZoneConfig.LootSpreadStuds + StyleConfig.Memeling.Size.X
 	local x = math.clamp(position.X, zone.Center.X - half.X + margin, zone.Center.X + half.X - margin)
@@ -460,10 +496,11 @@ end
 -- Страховка: игрок InRaid провалился ниже пола зоны — как после смерти:
 -- всё из рук теряется, новый персонаж появляется в хабе
 local function checkFallenPlayers()
-	local zone = MapConfig.Zone
-	local limitY = zone.Center.Y + zone.Size.Y / 2 - zone.FallLimitStuds
 	for player, state in states do
-		if state == Raid.State.InRaid then
+		local zoneId = zones[player]
+		if state == Raid.State.InRaid and zoneId then
+			local zone = MapConfig.Zones[zoneId]
+			local limitY = zone.Center.Y + zone.Size.Y / 2 - zone.FallLimitStuds
 			local _, root = RemoteGuard.GetAliveCharacter(player)
 			if root and root.Position.Y < limitY then
 				print(string.format("[Raid] %s выпал из зоны, возвращаем в хаб", player.Name))
@@ -514,14 +551,19 @@ local function onPlayerRemoving(player: Player)
 	loseCarried(player, "выход из игры")
 	Spawn.LoseLootOf(player)
 	states[player] = nil
+	zones[player] = nil
 	portalBusy[player] = nil
 	portalLog[player] = nil
 	runs[player] = nil
 end
 
 function Raid.Start()
-	validatePortal()
-	MapBuilder.GetPortal().Touched:Connect(onPortalTouched)
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		validatePortal(zoneId)
+		MapBuilder.GetPortal(zoneId).Touched:Connect(function(hit: BasePart)
+			onPortalTouched(zoneId, hit)
+		end)
+	end
 	task.spawn(function()
 		while true do
 			task.wait(MapConfig.Portal.CheckSeconds)
@@ -542,7 +584,7 @@ function Raid.Start()
 
 	task.spawn(function()
 		while true do
-			task.wait(MapConfig.Zone.FallCheckSeconds)
+			task.wait(MapConfig.Zones[ZoneConfig.FirstZone].FallCheckSeconds)
 			checkFallenPlayers()
 		end
 	end)

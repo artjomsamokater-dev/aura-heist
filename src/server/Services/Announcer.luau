@@ -3,7 +3,7 @@
 -- • «A LEGENDARY appeared in the DANGER zone!» — всем, когда при спавне или рестоке появился
 --   мемлинг редкости из ZoneConfig.AnnounceRarities. Одно объявление на один спавн — только про самого редкого.
 -- • «SQUAD BONUS!» — двум игрокам, которые эвакуировались вместе (сервис Extraction).
--- Клиенту уходят только Id редкости и части зоны; текст и цвет он берёт из TextConfig и StyleConfig.
+-- Клиенту уходят только Id редкости, части и зоны; текст и цвет он берёт из TextConfig и StyleConfig.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -51,8 +51,9 @@ function Announcer.AnnounceSpawn(spawned: { RarityRoll.Spawned })
 		return
 	end
 	local rarest = spawned[index]
-	event:FireAllClients(rarest.Rarity, rarest.Part)
-	print(string.format("[Announcer] Объявление всем: %s в части %s", rarest.Rarity, rarest.Part))
+	local zoneId = rarest.Zone or ZoneConfig.FirstZone
+	event:FireAllClients(rarest.Rarity, rarest.Part, zoneId)
+	print(string.format("[Announcer] Объявление всем: %s в зоне %s, часть %s", rarest.Rarity, zoneId, rarest.Part))
 end
 
 function Announcer.Start()

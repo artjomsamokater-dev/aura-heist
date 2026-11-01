@@ -4,6 +4,7 @@
 local RarityRoll = require("../src/shared/Util/RarityRoll")
 local ZoneConfig = require("../src/shared/Config/ZoneConfig")
 local MemelingConfig = require("../src/shared/Config/MemelingConfig")
+local ZoneRule = require("../src/shared/Util/ZoneRule")
 local TestKit = require("./TestKit")
 
 local test, equal = TestKit.test, TestKit.equal
@@ -13,8 +14,10 @@ local TOLERANCE_PERCENT = 1.5 -- допуск: при 10 000 бросках ра
 
 print("RarityRoll")
 
-for _, part in ipairs({ "Safe", "Danger" }) do
-	local chances = ZoneConfig.SpawnChances[part]
+for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+for _, zonePart in ipairs({ "Safe", "Danger" }) do
+	local chances = ZoneConfig.Zones[zoneId].SpawnChances[zonePart]
+	local part = zoneId .. " " .. zonePart
 
 	test(part .. ": шансы в сумме 100%", function()
 		local total = 0
@@ -42,23 +45,54 @@ for _, part in ipairs({ "Safe", "Danger" }) do
 		end
 	end)
 
-	test(part .. ": у каждой выпадающей редкости есть мемлинги", function()
+	test(part .. ": у каждой выпадающей редкости есть мемлинги этой зоны", function()
 		for rarity, chance in chances do
 			if chance > 0 then
-				local found = false
-				for _, memeling in MemelingConfig.Memelings do
-					if memeling.Rarity == rarity then
-						found = true
-					end
-				end
-				equal(found, true, rarity)
+				equal(#ZoneRule.MemelingsOf(MemelingConfig.Memelings, zoneId, rarity) > 0, true, rarity)
 			end
 		end
 	end)
 end
+end
+
+test("Meme Zone как раньше: Safe 80/20 Common/Rare, Danger 55/38/7 Rare/Epic/Legendary", function()
+	local meme = ZoneConfig.Zones.Meme.SpawnChances
+	equal(meme.Safe.Common, 80)
+	equal(meme.Safe.Rare, 20)
+	equal(meme.Danger.Rare, 55)
+	equal(meme.Danger.Epic, 38)
+	equal(meme.Danger.Legendary, 7)
+	equal(ZoneConfig.FirstZone, "Meme")
+	equal(ZoneConfig.Zones.Meme.AccessCost, nil)
+	equal(ZoneConfig.Zones.Meme.Tutorial, true)
+end)
+
+test("Meme Zone как раньше: те же 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary)", function()
+	local counts = { Common = 3, Rare = 2, Epic = 2, Legendary = 1 }
+	for rarity, count in counts do
+		equal(#ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Meme", rarity), count, rarity)
+	end
+	equal(ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Meme", "Legendary")[1], "MegaSnoozeasaurus")
+end)
+
+test("каждая зона из ZoneOrder описана, у каждого мемлинга — существующая зона", function()
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		equal(ZoneConfig.Zones[zoneId] ~= nil, true, zoneId)
+	end
+	for id, memeling in MemelingConfig.Memelings do
+		equal(ZoneConfig.Zones[memeling.Zone] ~= nil, true, id)
+	end
+end)
+
+test("доступ: бесплатная зона открыта всем, платная — только купившим", function()
+	equal(ZoneRule.HasAccess(nil, nil, "Meme"), true)
+	equal(ZoneRule.HasAccess(25000, nil, "Golden"), false)
+	equal(ZoneRule.HasAccess(25000, { Golden = false }, "Golden"), false)
+	equal(ZoneRule.HasAccess(25000, { Golden = true }, "Golden"), true)
+end)
 
 test("края броска: 0 — первая редкость, почти 1 — последняя ненулевая", function()
-	local danger = ZoneConfig.SpawnChances.Danger
+	local danger = ZoneConfig.Zones.Meme.SpawnChances.Danger
 	equal(RarityRoll.Pick(danger, MemelingConfig.RarityOrder, 0), "Rare")
 	equal(RarityRoll.Pick(danger, MemelingConfig.RarityOrder, 0.9999999), "Legendary")
 end)

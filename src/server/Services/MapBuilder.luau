@@ -1,6 +1,6 @@
 --!strict
 -- MapBuilder: при старте сервера строит карту по MapConfig (формы, места) и StyleConfig (цвета, облик).
--- Хаб → Workspace.Hub, участки → Workspace.PlayerStudios, зона → Workspace.RaidZone.
+-- Хаб → Workspace.Hub, участки → Workspace.PlayerStudios, зоны → Workspace.RaidZone_<Id> (ZoneConfig.ZoneOrder).
 -- Здесь же ставится мемлинг (MakeMemeling — им пользуются Spawn и Studio): модель из
 -- ServerStorage.MemelingModels или из кода (server/Visual/MemelingBuilders) и кольцо редкости.
 --
@@ -33,11 +33,20 @@ local UPRIGHT = CFrame.Angles(0, 0, math.rad(90)) -- цилиндр Roblox ле�
 
 local built = false
 local plots: { Model } = {} -- [номер участка] = Model участка
-local portalPart: Part? = nil
-local zoneFolder: Folder? = nil
-local zoneEntryPart: Part? = nil
-local extractionPad: Part? = nil
-local sideExtractionPad: Part? = nil
+local portalParts: { [string]: Part } = {} -- триггеры порталов по Id зоны
+-- Детали зон вылазок по Id зоны (ZoneConfig.ZoneOrder)
+local zoneFolders: { [string]: Folder } = {}
+local zoneEntryParts: { [string]: Part } = {}
+local extractionPads: { [string]: Part } = {}
+local sideExtractionPads: { [string]: Part } = {}
+
+type ZoneMap = typeof(MapConfig.Zones.Meme)
+type ZoneTheme = typeof(StyleConfig.Zone)
+
+-- Оформление зоны: своя тема или общая (StyleConfig.ZoneThemes)
+local function zoneTheme(zoneId: string): ZoneTheme
+	return StyleConfig.ZoneThemes[zoneId] or StyleConfig.Zone
+end
 local bestHaulPodium: Part? = nil -- верхняя ступень подиума «BEST HAUL» (на ней подпись)
 local bestHaulStand: CFrame? = nil -- точка на верхней ступени, мемлинг смотрит на центр хаба
 
@@ -1011,7 +1020,7 @@ local function buildHub()
 	portal.CastShadow = false
 	portal.CanCollide = false -- сквозь портал проходят
 	portal.CanTouch = true -- на касание этой детали подписан Raid; декор поверх неё касаний не ловит
-	portalPart = portal -- название «MEME ZONE» — на большой вывеске над рамкой (buildPortalDecor)
+	portalParts.Meme = portal -- название «MEME ZONE» — на большой вывеске над рамкой (buildPortalDecor)
 
 	local facing = CFrame.new(portalCfg.Position) * CFrame.Angles(0, math.rad(90), 0) -- ось цилиндра — вдоль Z: диск смотрит на хаб
 	local function portalDisc(name: string, thickness: number, diameter: number, color: Color3): Part
@@ -1302,8 +1311,7 @@ end
 -- ── Зона ───────────────────────────────────────────────────────────────────
 
 -- Узор плиткой на верхней грани пола зоны
-local function addFloorTexture(floor: BasePart)
-	local style = StyleConfig.Zone
+local function addFloorTexture(floor: BasePart, style: ZoneTheme)
 	local texture = Instance.new("Texture")
 	texture.Texture = style.FloorTexture
 	texture.Face = Enum.NormalId.Top
@@ -1315,8 +1323,7 @@ local function addFloorTexture(floor: BasePart)
 end
 
 -- Ворота поперёк дорожки на линии x (смещение от центра зоны)
-local function buildGate(name: string, x: number, color: Color3, parent: Instance)
-	local zone = MapConfig.Zone
+local function buildGate(zone: ZoneMap, style: ZoneTheme, name: string, x: number, color: Color3, parent: Instance)
 	local decor = zone.Decor
 	local top = zone.Center.Y + zone.Size.Y / 2
 	local base = zone.Center + Vector3.new(x, 0, 0)
@@ -1335,7 +1342,7 @@ local function buildGate(name: string, x: number, color: Color3, parent: Instanc
 			"Ball",
 			Vector3.one * decor.GateCapDiameter,
 			CFrame.new(base.X, top + decor.GateHeight, base.Z + side * decor.GatePillarZ),
-			StyleConfig.Zone.GateCaps,
+			style.GateCaps,
 			parent
 		)
 		decorate(cap, false)
@@ -1352,10 +1359,8 @@ end
 
 -- Опасная часть: полосатая красно-чёрная лента по границе, полосы на воротах, череп под балкой,
 -- местный туман и фиолетово-красный свет (частицы и PointLight только над опасной частью), светящиеся плиты
-local function buildDangerArea(parent: Instance)
-	local zone = MapConfig.Zone
+local function buildDangerArea(zone: ZoneMap, style: ZoneTheme, parent: Instance)
 	local decor = zone.Decor
-	local style = StyleConfig.Zone
 	local top = zone.Center.Y + zone.Size.Y / 2
 	local borderX = zone.Center.X + zone.DangerFromX
 	local stripes = style.DangerStripes
@@ -1461,10 +1466,8 @@ local function buildDangerArea(parent: Instance)
 	end
 end
 
-local function buildLandmarks(parent: Instance)
-	local zone = MapConfig.Zone
+local function buildLandmarks(zone: ZoneMap, style: ZoneTheme, parent: Instance)
 	local decor = zone.Decor
-	local style = StyleConfig.Zone
 	local top = zone.Center.Y + zone.Size.Y / 2
 
 	-- Грибы-великаны в безопасной части
@@ -1512,12 +1515,13 @@ local function buildLandmarks(parent: Instance)
 	end
 end
 
-local function buildZone()
-	local folder = makeFolder("RaidZone")
-	zoneFolder = folder
-	local zone = MapConfig.Zone
+-- Зона вылазки zoneId: Workspace.RaidZone_<Id>. Геометрия — MapConfig.Zones[Id], оформление — zoneTheme(Id)
+local function buildZone(zoneId: string)
+	local folder = makeFolder("RaidZone_" .. zoneId)
+	zoneFolders[zoneId] = folder
+	local zone = MapConfig.Zones[zoneId]
 	local decor = zone.Decor
-	local style = StyleConfig.Zone
+	local style = zoneTheme(zoneId)
 	local top = zone.Center.Y + zone.Size.Y / 2
 
 	-- Пол из двух частей: безопасная (у входа) и опасная (дальше, тёмная слива)
@@ -1531,7 +1535,7 @@ local function buildZone()
 		style.SafeFloor,
 		folder
 	)
-	addLabel(safeFloor, TextConfig.Zone)
+	addLabel(safeFloor, TextConfig.ZoneNames[zoneId] or zoneId)
 	local dangerFloor = makePart(
 		"DangerFloor",
 		Vector3.new(dangerWidth, zone.Size.Y, zone.Size.Z),
@@ -1540,14 +1544,14 @@ local function buildZone()
 		folder
 	)
 	addLabel(dangerFloor, TextConfig.ZoneDanger)
-	addFloorTexture(safeFloor)
-	addFloorTexture(dangerFloor)
+	addFloorTexture(safeFloor, style)
+	addFloorTexture(dangerFloor, style)
 
 	local decorFolder = Instance.new("Folder")
 	decorFolder.Name = "Decor"
 	decorFolder.Parent = folder
 
-	buildDangerArea(decorFolder)
+	buildDangerArea(zone, style, decorFolder)
 
 	-- Дорожка от входа к EXTRACT
 	local pathLength = decor.PathToX - decor.PathFromX
@@ -1562,9 +1566,9 @@ local function buildZone()
 	decorate(path, false)
 
 	-- Ворота: у входа (мята) и в опасную часть (коралл)
-	buildGate("EntryGate", decor.EntryGateX, style.EntryGate, decorFolder)
-	buildGate("DangerGate", zone.DangerFromX, style.DangerGate, decorFolder)
-	buildLandmarks(decorFolder)
+	buildGate(zone, style, "EntryGate", decor.EntryGateX, style.EntryGate, decorFolder)
+	buildGate(zone, style, "DangerGate", zone.DangerFromX, style.DangerGate, decorFolder)
+	buildLandmarks(zone, style, decorFolder)
 
 	-- Плоская плитка на полу: сюда портал переносит игрока
 	local entry = makePart(
@@ -1577,7 +1581,7 @@ local function buildZone()
 	entry.CanCollide = false
 	entry.CastShadow = false
 	addLabel(entry, TextConfig.Entry, { Scale = StyleConfig.Label.EntryScale })
-	zoneEntryPart = entry
+	zoneEntryParts[zoneId] = entry
 
 	-- Круглая площадка эвакуации: её радиус совпадает с дистанцией из ZoneConfig.
 	-- Цилиндр в Roblox лежит вдоль оси X, поэтому поворачиваем его на 90°, чтобы он стал «блином».
@@ -1612,7 +1616,7 @@ local function buildZone()
 		beacon.CanCollide = false
 		return pad
 	end
-	extractionPad = buildExtractionPad(
+	extractionPads[zoneId] = buildExtractionPad(
 		"ExtractionPoint",
 		zone.ExtractionPosition,
 		ZoneConfig.EvacuationDistance,
@@ -1621,7 +1625,7 @@ local function buildZone()
 		TextConfig.Extraction
 	)
 	-- Вторая, медленная точка у входа: другой цвет и столб пониже — не спутать с главной
-	sideExtractionPad = buildExtractionPad(
+	sideExtractionPads[zoneId] = buildExtractionPad(
 		"SideExtractionPoint",
 		zone.SideExtractionPosition,
 		ZoneConfig.SideEvacuation.Distance,
@@ -1695,8 +1699,10 @@ function MapBuilder.Build()
 	buildBackground()
 	buildHub()
 	buildPlots()
-	buildZone()
-	print(string.format("[MapBuilder] Карта построена: море, хаб, %d участков, зона", #plots))
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		buildZone(zoneId)
+	end
+	print(string.format("[MapBuilder] Карта построена: море, хаб, %d участков, зон: %d", #plots, #ZoneConfig.ZoneOrder))
 end
 
 -- Список участков по порядку (Model)
@@ -1704,19 +1710,20 @@ function MapBuilder.GetPlots(): { Model }
 	return plots
 end
 
-function MapBuilder.GetPortal(): Part
-	return assert(portalPart, "MapBuilder.Build() ещё не вызван")
+-- Триггер портала в зону zoneId (касание = вход)
+function MapBuilder.GetPortal(zoneId: string): Part
+	return assert(portalParts[zoneId], "MapBuilder.Build() ещё не вызван или нет портала " .. zoneId)
 end
 
--- Папка Workspace.RaidZone
-function MapBuilder.GetZoneFolder(): Folder
-	return assert(zoneFolder, "MapBuilder.Build() ещё не вызван")
+-- Папка зоны Workspace.RaidZone_<Id>
+function MapBuilder.GetZoneFolder(zoneId: string): Folder
+	return assert(zoneFolders[zoneId], "MapBuilder.Build() ещё не вызван или нет зоны " .. zoneId)
 end
 
 -- Куда ставить персонажа при входе в зону: лицом на восток — к воротам, дорожке и EXTRACT
-function MapBuilder.GetZoneEntryCFrame(): CFrame
-	local entry = assert(zoneEntryPart, "MapBuilder.Build() ещё не вызван")
-	local position = entry.Position + Vector3.new(0, MapConfig.Zone.EntrySpawnHeight, 0)
+function MapBuilder.GetZoneEntryCFrame(zoneId: string): CFrame
+	local entry = assert(zoneEntryParts[zoneId], "MapBuilder.Build() ещё не вызван или нет зоны " .. zoneId)
+	local position = entry.Position + Vector3.new(0, MapConfig.Zones[zoneId].EntrySpawnHeight, 0)
 	return CFrame.lookAt(position, position + Vector3.xAxis)
 end
 
@@ -1733,12 +1740,13 @@ function MapBuilder.GetBestHaul(): (Part, CFrame)
 	return (assert(bestHaulPodium, "MapBuilder.Build() ещё не вызван")), (assert(bestHaulStand, "MapBuilder.Build() ещё не вызван"))
 end
 
-function MapBuilder.GetSideExtractionPad(): Part
-	return (assert(sideExtractionPad, "MapBuilder.Build() ещё не вызван"))
+-- Площадки эвакуации зоны (на них же подпись с прогрессом)
+function MapBuilder.GetSideExtractionPad(zoneId: string): Part
+	return (assert(sideExtractionPads[zoneId], "MapBuilder.Build() ещё не вызван или нет зоны " .. zoneId))
 end
 
-function MapBuilder.GetExtractionPad(): Part
-	return (assert(extractionPad, "MapBuilder.Build() ещё не вызван"))
+function MapBuilder.GetExtractionPad(zoneId: string): Part
+	return (assert(extractionPads[zoneId], "MapBuilder.Build() ещё не вызван или нет зоны " .. zoneId))
 end
 
 -- Вид участка: занят — видны кнопки (улучшения, запас, Rebirth); свободен — вместо них табличка

@@ -23,6 +23,7 @@ local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local EnemyConfig = require(ReplicatedStorage.Shared.Config.EnemyConfig)
+local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local EnemyMath = require(ReplicatedStorage.Shared.Util.EnemyMath)
@@ -39,6 +40,7 @@ local MAX_HEALTH = 100 -- здоровье персонажа Roblox по умо
 local ROOT_SIZE = Vector3.new(2, 2, 1)
 
 type Chaser = {
+	ZoneId: string, -- в какой зоне живёт (Id из ZoneConfig.ZoneOrder)
 	Model: Model,
 	Root: Part,
 	Body: Part,
@@ -69,24 +71,24 @@ local chasers: { Chaser } = {}
 local random = Random.new()
 local perf = { DamageSeconds = 0, ThinkSeconds = 0, PathComputes = 0 }
 
-local function zoneTop(): Vector3
-	local zone = MapConfig.Zone
+local function zoneTop(zoneId: string): Vector3
+	local zone = MapConfig.Zones[zoneId]
 	return zone.Center + Vector3.new(0, zone.Size.Y / 2, 0)
 end
 
--- Прямоугольник опасной части по полу; margin — отступ от краёв
-local function dangerArea(margin: number): (number, number, number, number)
-	local zone = MapConfig.Zone
+-- Прямоугольник опасной части зоны по полу; margin — отступ от краёв
+local function dangerArea(zoneId: string, margin: number): (number, number, number, number)
+	local zone = MapConfig.Zones[zoneId]
 	local center = zone.Center
 	local half = zone.Size / 2
 	return center.X + zone.DangerFromX + margin, center.X + half.X - margin, center.Z - half.Z + margin, center.Z + half.Z - margin
 end
 
--- Игроки в вылазке с живым персонажем
-local function getTargets(): { Target }
+-- Игроки в вылазке в этой зоне с живым персонажем
+local function getTargets(zoneId: string): { Target }
 	local targets: { Target } = {}
 	for _, player in ipairs(Players:GetPlayers()) do
-		if Raid.GetState(player) == Raid.State.InRaid then
+		if Raid.GetState(player) == Raid.State.InRaid and Raid.GetZone(player) == zoneId then
 			local _, root = RemoteGuard.GetAliveCharacter(player)
 			if root then
 				table.insert(targets, { Player = player, Root = root })
@@ -103,7 +105,7 @@ local function weld(part: BasePart, root: BasePart)
 	constraint.Parent = part
 end
 
-local function buildChaser(index: number, floorPosition: Vector3, parent: Instance): Chaser
+local function buildChaser(zoneId: string, index: number, floorPosition: Vector3, parent: Instance): Chaser
 	local cfg = EnemyConfig.Chaser
 	local bodyColor = StyleConfig.Characters.Grumblob.Body
 	local center = floorPosition + Vector3.new(0, cfg.BodySize / 2, 0)
@@ -155,6 +157,7 @@ local function buildChaser(index: number, floorPosition: Vector3, parent: Instan
 	alertSound.Parent = body
 
 	local chaser: Chaser = {
+		ZoneId = zoneId,
 		Model = model,
 		Root = root,
 		Body = body,
@@ -217,14 +220,14 @@ local function flat(a: Vector3, b: Vector3): number
 	return EnemyMath.FlatDistance(a.X, a.Z, b.X, b.Z)
 end
 
-local function inDanger(p: Vector3): boolean
-	local minX, maxX, minZ, maxZ = dangerArea(0)
+local function inDanger(zoneId: string, p: Vector3): boolean
+	local minX, maxX, minZ, maxZ = dangerArea(zoneId, 0)
 	return EnemyMath.IsInArea(p.X, p.Z, minX, maxX, minZ, maxZ)
 end
 
--- У EXTRACT (в круге ExtractionKeepOut) враги не гонятся и туда не заходят
-local function atExtract(p: Vector3): boolean
-	return flat(p, MapConfig.Zone.ExtractionPosition) < EnemyConfig.Chaser.ExtractionKeepOut
+-- У EXTRACT своей зоны (в круге ExtractionKeepOut) враги не гонятся и туда не заходят
+local function atExtract(zoneId: string, p: Vector3): boolean
+	return flat(p, MapConfig.Zones[zoneId].ExtractionPosition) < EnemyConfig.Chaser.ExtractionKeepOut
 end
 
 local DROP_TEXT: { [string]: string } = {
@@ -236,7 +239,8 @@ local DROP_TEXT: { [string]: string } = {
 -- Можно ли гнаться за этим игроком (nil) или почему нельзя (ключ EnemyMath.DropReason)
 local function chaseBlock(chaser: Chaser, target: Target): string?
 	local p = target.Root.Position
-	return EnemyMath.ChaseBlock(flat(chaser.Root.Position, p), EnemyConfig.Chaser.LeashRadius, inDanger(p), atExtract(p))
+	local zoneId = chaser.ZoneId
+	return EnemyMath.ChaseBlock(flat(chaser.Root.Position, p), EnemyConfig.Chaser.LeashRadius, inDanger(zoneId, p), atExtract(zoneId, p))
 end
 
 -- Куда идти на самом деле: внутри опасной части (с отступом), не в круге у EXTRACT.
@@ -244,11 +248,11 @@ end
 local function walkGoal(chaser: Chaser, x: number, z: number): Vector3
 	local cfg = EnemyConfig.Chaser
 	local position = chaser.Root.Position
-	local minX, maxX, minZ, maxZ = dangerArea(cfg.AreaMargin)
+	local minX, maxX, minZ, maxZ = dangerArea(chaser.ZoneId, cfg.AreaMargin)
 	local cx, cz = EnemyMath.ClampToArea(x, z, minX, maxX, minZ, maxZ)
-	local extract = MapConfig.Zone.ExtractionPosition
+	local extract = MapConfig.Zones[chaser.ZoneId].ExtractionPosition
 	local gx, gz = EnemyMath.PushOutOfCircle(cx, cz, extract.X, extract.Z, cfg.ExtractionKeepOut, position.X, position.Z)
-	if atExtract(position) then
+	if atExtract(chaser.ZoneId, position) then
 		gx, gz = EnemyMath.PushOutOfCircle(position.X, position.Z, extract.X, extract.Z, cfg.ExtractionKeepOut, position.X - 1, position.Z)
 	end
 	return Vector3.new(gx, chaser.Home.Y, gz)
@@ -289,7 +293,7 @@ end
 local function decide(chaser: Chaser)
 	local cfg = EnemyConfig.Chaser
 	local startedAt = os.clock()
-	local targets = getTargets()
+	local targets = getTargets(chaser.ZoneId)
 	local position = chaser.Root.Position
 
 	local nearest = math.huge
@@ -432,9 +436,14 @@ end
 -- Охрана: игрок подобрал мемлинга — все враги ближе AggroRadius сразу просыпаются и гонятся за ним
 local function onPickup(player: Player, position: Vector3)
 	local cfg = EnemyConfig.Chaser
+	local zoneId = Raid.GetZone(player)
 	for _, chaser in ipairs(chasers) do
 		local distance = flat(chaser.Root.Position, position)
-		if chaser.Target ~= player and EnemyMath.ShouldAggro(distance, cfg.AggroRadius, inDanger(position), atExtract(position)) then
+		if
+			chaser.ZoneId == zoneId
+			and chaser.Target ~= player
+			and EnemyMath.ShouldAggro(distance, cfg.AggroRadius, inDanger(chaser.ZoneId, position), atExtract(chaser.ZoneId, position))
+		then
 			chaser.Target = player
 			chaser.PatrolPoint = nil
 			setSleeping(chaser, false)
@@ -462,8 +471,12 @@ local function checkHits()
 	local startedAt = os.clock()
 	local cfg = EnemyConfig.Chaser
 	local now = os.clock()
-	local targets = getTargets()
+	local targetsByZone: { [string]: { Target } } = {}
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		targetsByZone[zoneId] = getTargets(zoneId)
+	end
 	for _, chaser in ipairs(chasers) do
+		local targets: { Target } = targetsByZone[chaser.ZoneId] or {}
 		local position = chaser.Root.Position
 		local windup = chaser.Windup
 		if chaser.Sleeping then
@@ -498,8 +511,8 @@ end
 
 -- Страховка: враг упал с зоны — возвращаем домой
 local function rescueFallen()
-	local limitY = zoneTop().Y - MapConfig.Zone.FallLimitStuds
 	for _, chaser in ipairs(chasers) do
+		local limitY = zoneTop(chaser.ZoneId).Y - MapConfig.Zones[chaser.ZoneId].FallLimitStuds
 		if chaser.Root.Position.Y < limitY then
 			chaser.Waypoints = nil
 			chaser.Model:PivotTo(CFrame.new(chaser.Home))
@@ -535,13 +548,21 @@ function Enemy.Start()
 		warn("[Enemy] Урон врага убивает с одного касания — уменьши EnemyConfig.Chaser.Damage")
 	end
 
-	local folder = Instance.new("Folder")
-	folder.Name = "Enemies"
-	folder.Parent = MapBuilder.GetZoneFolder()
-	local top = zoneTop()
-	local count = math.min(cfg.Count, #cfg.SpawnPoints)
-	for i = 1, count do
-		table.insert(chasers, buildChaser(i, top + cfg.SpawnPoints[i], folder))
+	-- Враги каждой зоны: сколько и где дома — EnemyConfig.Zones[Id]
+	local total = 0
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		local spec = EnemyConfig.Zones[zoneId]
+		if spec then
+			local folder = Instance.new("Folder")
+			folder.Name = "Enemies"
+			folder.Parent = MapBuilder.GetZoneFolder(zoneId)
+			local top = zoneTop(zoneId)
+			local count = math.min(spec.Count, #spec.SpawnPoints)
+			for i = 1, count do
+				total += 1
+				table.insert(chasers, buildChaser(zoneId, total, top + spec.SpawnPoints[i], folder))
+			end
+		end
 	end
 
 	-- У каждого врага свой цикл решений, со случайным сдвигом: пересчёты путей не совпадают по времени
@@ -582,7 +603,7 @@ function Enemy.Start()
 
 	Raid.OnPickup(onPickup)
 
-	print(string.format("[Enemy] В опасной части врагов: %d", count))
+	print(string.format("[Enemy] Врагов в опасных частях всех зон: %d", total))
 end
 
 return Enemy

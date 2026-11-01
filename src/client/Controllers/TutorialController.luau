@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
+local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local TutorialSteps = require(ReplicatedStorage.Shared.Util.TutorialSteps)
@@ -40,9 +41,9 @@ local function getPlot(): (Instance?, number?)
 	return studios and studios:FindFirstChild("Studio" .. index), index
 end
 
--- Ближайший мемлинг в зоне (у них есть атрибут InstanceId)
+-- Ближайший мемлинг в стартовой зоне (туториал только там; у мемлингов есть атрибут InstanceId)
 local function nearestMemeling(): Vector3?
-	local zone = Workspace:FindFirstChild("RaidZone")
+	local zone = Workspace:FindFirstChild("RaidZone_" .. ZoneConfig.FirstZone)
 	local folder = zone and zone:FindFirstChild("Memelings")
 	local root = getRoot()
 	if folder == nil or root == nil then
@@ -97,9 +98,9 @@ local function getTarget(step: number): Vector3?
 	if name == "EnterZone" or ((name == "PickUp" or name == "Extract") and not inRaid) then
 		return MapConfig.Portal.Position
 	elseif name == "PickUp" then
-		return nearestMemeling() or MapConfig.Zone.Center
+		return nearestMemeling() or MapConfig.Zones[ZoneConfig.FirstZone].Center
 	elseif name == "Extract" then
-		return MapConfig.Zone.ExtractionPosition
+		return MapConfig.Zones[ZoneConfig.FirstZone].ExtractionPosition
 	elseif name == "VisitPedestal" or name == "Collect" then
 		return ownPedestal()
 	elseif name == "BuyUpgrade" then

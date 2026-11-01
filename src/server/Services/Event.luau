@@ -14,6 +14,7 @@ local TweenService = game:GetService("TweenService")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local EventConfig = require(ReplicatedStorage.Shared.Config.EventConfig)
+local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local HazardConfig = require(ReplicatedStorage.Shared.Config.HazardConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
@@ -27,6 +28,7 @@ local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 local Event = {}
 
 local MAX_HEALTH = 100 -- здоровье персонажа Roblox по умолчанию
+local EVENT_ZONE = ZoneConfig.FirstZone -- колесо сыра катится только в стартовой зоне (маршрут — под её раскладку)
 
 local random = Random.new()
 local eventFolder: Folder? = nil
@@ -38,7 +40,7 @@ type Target = {
 }
 
 local function zoneTop(): Vector3
-	local zone = MapConfig.Zone
+	local zone = MapConfig.Zones[EVENT_ZONE]
 	return zone.Center + Vector3.new(0, zone.Size.Y / 2, 0)
 end
 
@@ -56,7 +58,7 @@ end
 local function getTargets(): { Target }
 	local targets: { Target } = {}
 	for _, player in ipairs(Players:GetPlayers()) do
-		if Raid.GetState(player) == Raid.State.InRaid then
+		if Raid.GetState(player) == Raid.State.InRaid and Raid.GetZone(player) == EVENT_ZONE then
 			local _, root = RemoteGuard.GetAliveCharacter(player)
 			if root then
 				table.insert(targets, { Player = player, Root = root })
@@ -292,7 +294,7 @@ function Event.Start()
 
 	local folder = Instance.new("Folder")
 	folder.Name = "Events"
-	folder.Parent = MapBuilder.GetZoneFolder()
+	folder.Parent = MapBuilder.GetZoneFolder(EVENT_ZONE)
 	eventFolder = folder
 	knockbackEvent = RemoteGuard.CreateRemote(Remotes.Knockback) -- только сервер → игрок, сервер его не слушает
 

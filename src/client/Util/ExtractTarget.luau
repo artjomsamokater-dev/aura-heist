@@ -18,16 +18,18 @@ export type Target = { Position: Vector3, Radius: number, Marker: string, Color:
 
 local player = Players.LocalPlayer
 
--- Ближайшая доступная точка от позиции from
+-- Ближайшая доступная точка от позиции from — в зоне, где сейчас игрок (атрибут RaidZone от сервера)
 function ExtractTarget.Get(from: Vector3): Target
+	local zoneId = player:GetAttribute("RaidZone")
+	local zone = MapConfig.Zones[if type(zoneId) == "string" then zoneId else ZoneConfig.FirstZone] or MapConfig.Zones[ZoneConfig.FirstZone]
 	local main: Target = {
-		Position = MapConfig.Zone.ExtractionPosition,
+		Position = zone.ExtractionPosition,
 		Radius = ZoneConfig.EvacuationDistance,
 		Marker = TextConfig.ExtractMarker,
 		Color = StyleConfig.Extraction.Color,
 	}
 	local side: Target = {
-		Position = MapConfig.Zone.SideExtractionPosition,
+		Position = zone.SideExtractionPosition,
 		Radius = ZoneConfig.SideEvacuation.Distance,
 		Marker = TextConfig.SideExtractMarker,
 		Color = StyleConfig.Extraction.SideColor,

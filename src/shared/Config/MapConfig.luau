@@ -261,12 +261,13 @@ MapConfig.Plots = {
 	ClaimFlowerOffsets = { Vector3.new(-9, 0, -9), Vector3.new(9, 0, -9), Vector3.new(-18, 0, -9), Vector3.new(18, 0, -9) },
 }
 
--- Meme Zone: отдельная площадка в стороне от хаба, поднятая в воздух.
--- Пешком или прыжком туда не попасть, только через портал.
+-- Зоны вылазок: отдельные площадки в стороне от хаба, поднятые в воздух (Y = 300).
+-- Пешком или прыжком туда не попасть, только через портал своей зоны. Список и правила зон — ZoneConfig.Zones,
+-- здесь — геометрия: у всех зон одна раскладка (zoneLayout) относительно центра верхней грани пола.
 local ZONE_FLOOR_Y = 300 -- высота нижней грани пола зоны
-local ZONE_TOP = Vector3.new(500, ZONE_FLOOR_Y + 1, 0) -- центр верхней грани пола зоны; от него считаем точки
 
-MapConfig.Zone = {
+local function zoneLayout(ZONE_TOP: Vector3)
+	return {
 	Center = ZONE_TOP - Vector3.new(0, 0.5, 0),
 	Size = Vector3.new(224, 1, 224), -- смещения X и Z от −112 до 112
 	-- Пол делится на две части: от входа (запад) — безопасная, восточнее этой линии — опасная.
@@ -372,7 +373,12 @@ MapConfig.Zone = {
 		ZONE_TOP + Vector3.new(100, 0, -35),
 		ZONE_TOP + Vector3.new(100, 0, 35),
 	},
-}
+	}
+end
 
+-- Геометрия зон по Id (Id и порядок — ZoneConfig.ZoneOrder). Meme — восточнее хаба
+MapConfig.Zones = {
+	Meme = zoneLayout(Vector3.new(500, ZONE_FLOOR_Y + 1, 0)),
+}
 
 return deepFreeze(MapConfig)

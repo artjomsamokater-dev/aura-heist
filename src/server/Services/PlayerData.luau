@@ -22,8 +22,8 @@ local PlayerData = {}
 
 local STORE_NAME = "PlayerProfiles" -- имя DataStore; сменишь — все начнут с нуля
 -- 1 — первая схема; 2 — запас стал списком записей (с флагом бонуса отряда), а не просто Id;
--- 3 — появилось поле rebirths
-local SCHEMA_VERSION = 3
+-- 3 — появилось поле rebirths; 4 — zoneAccess (купленный доступ в платные зоны)
+local SCHEMA_VERSION = 4
 
 -- Мемлинг на постаменте
 export type ShowcaseEntry = {
@@ -54,6 +54,7 @@ export type Data = {
 		completed: boolean,
 	},
 	rebirths: number, -- сколько раз сделан Rebirth: доход постаментов выше (EconomyConfig.Rebirth)
+	zoneAccess: { [string]: boolean }, -- [Id зоны] = true — доступ куплен навсегда (ZoneConfig.Zones[Id].AccessCost)
 	stats: {
 		raids: number,
 		extractions: number,
@@ -73,6 +74,7 @@ local TEMPLATE: Data = {
 	upgrades = { pedestals = 0, carrySlots = 0, storage = 0 },
 	tutorial = { step = 1, completed = false },
 	rebirths = 0,
+	zoneAccess = {},
 	stats = {
 		raids = 0,
 		extractions = 0,
@@ -122,6 +124,11 @@ local function migrate(data: Data): boolean
 	-- 2 → 3: rebirths. Обычно его дописывает Reconcile; на случай испорченного значения — 0
 	if type(data.rebirths) ~= "number" or data.rebirths < 0 then
 		data.rebirths = 0
+	end
+
+	-- 3 → 4: zoneAccess. Обычно его дописывает Reconcile; испорченное значение — пустой список
+	if type(data.zoneAccess) ~= "table" then
+		data.zoneAccess = {}
 	end
 
 	data.schemaVersion = SCHEMA_VERSION

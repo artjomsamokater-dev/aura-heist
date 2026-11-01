@@ -30,8 +30,9 @@ local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
 local Extraction = {}
 
--- Точка эвакуации: где, какого радиуса, сколько стоять, кому можно
+-- Точка эвакуации: в какой зоне, где, какого радиуса, сколько стоять, кому можно
 type Point = {
+	ZoneId: string,
 	Name: string,
 	Position: Vector3,
 	Distance: number,
@@ -42,30 +43,39 @@ type Point = {
 	LastLabelText: string,
 }
 
-local points: { Point } = {
-	{
-		Name = "EXTRACT",
-		Position = MapConfig.Zone.ExtractionPosition,
+-- В каждой зоне две точки: основной EXTRACT и медленная у входа
+local points: { Point } = {}
+for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+	local zone = MapConfig.Zones[zoneId]
+	table.insert(points, {
+		ZoneId = zoneId,
+		Name = "EXTRACT " .. zoneId,
+		Position = zone.ExtractionPosition,
 		Distance = ZoneConfig.EvacuationDistance,
 		Seconds = ZoneConfig.EvacuationSeconds,
 		Allowed = function(_player: Player): boolean
 			return true
 		end,
-		GetPad = MapBuilder.GetExtractionPad,
+		GetPad = function(): Part
+			return MapBuilder.GetExtractionPad(zoneId)
+		end,
 		IdleText = TextConfig.Extraction,
 		LastLabelText = "",
-	},
-	{
-		Name = "медленная точка у входа",
-		Position = MapConfig.Zone.SideExtractionPosition,
+	})
+	table.insert(points, {
+		ZoneId = zoneId,
+		Name = "медленная точка у входа " .. zoneId,
+		Position = zone.SideExtractionPosition,
 		Distance = ZoneConfig.SideEvacuation.Distance,
 		Seconds = ZoneConfig.SideEvacuation.Seconds,
 		Allowed = Raid.CanUseSideExtraction,
-		GetPad = MapBuilder.GetSideExtractionPad,
+		GetPad = function(): Part
+			return MapBuilder.GetSideExtractionPad(zoneId)
+		end,
 		IdleText = TextConfig.SideExtraction,
 		LastLabelText = "",
-	},
-}
+	})
+end
 
 -- Кто на какой точке и с какого момента (os.clock)
 type Hold = { Point: Point, StartedAt: number }
@@ -76,13 +86,13 @@ local warnedBlocked: { [Player]: boolean } = {} -- чтобы «нельзя с 
 local function isOnPoint(root: BasePart, point: Point): boolean
 	local offset = root.Position - point.Position
 	local flatDistance = Vector3.new(offset.X, 0, offset.Z).Magnitude
-	return flatDistance <= point.Distance and offset.Y >= 0 and offset.Y <= MapConfig.Zone.ExtractionMaxHeight
+	return flatDistance <= point.Distance and offset.Y >= 0 and offset.Y <= MapConfig.Zones[point.ZoneId].ExtractionMaxHeight
 end
 
--- На какой площадке стоит персонаж (nil — ни на какой)
-local function findPoint(root: BasePart): Point?
+-- На какой площадке своей зоны стоит персонаж (nil — ни на какой)
+local function findPoint(root: BasePart, zoneId: string?): Point?
 	for _, point in ipairs(points) do
-		if isOnPoint(root, point) then
+		if point.ZoneId == zoneId and isOnPoint(root, point) then
 			return point
 		end
 	end
@@ -160,7 +170,8 @@ end
 local function complete(player: Player)
 	-- Где игрок эвакуировался — запоминаем до переноса в хаб (для бонуса отряда)
 	local _, root = RemoteGuard.GetAliveCharacter(player)
-	local position = if root then root.Position else MapConfig.Zone.ExtractionPosition -- запасной вариант, если персонажа нет
+	local zoneId = Raid.GetZone(player) or ZoneConfig.FirstZone
+	local position = if root then root.Position else MapConfig.Zones[zoneId].ExtractionPosition
 
 	local memelingIds, raidSeconds = Raid.ClaimExtraction(player)
 	if memelingIds == nil then
@@ -177,7 +188,9 @@ local function complete(player: Player)
 	Raid.ReturnToHub(player)
 	Announcer.ExtractionResult(player, memelingIds, raidSeconds, squad)
 	Analytics.ExtractionSuccess(player, #memelingIds, rarestOf(memelingIds), squad)
-	Tutorial.Notify(player, "Extract")
+	if ZoneConfig.Zones[zoneId].Tutorial then
+		Tutorial.Notify(player, "Extract") -- туториал — только в стартовой зоне
+	end
 	print(
 		string.format(
 			"[Extraction] %s эвакуировался, на витрину: %d (%s)",
@@ -222,7 +235,7 @@ local function check()
 	local now = os.clock()
 	for _, player in ipairs(Players:GetPlayers()) do
 		local _, root = RemoteGuard.GetAliveCharacter(player)
-		local point = if root ~= nil and Raid.GetState(player) == Raid.State.InRaid then findPoint(root) else nil
+		local point = if root ~= nil and Raid.GetState(player) == Raid.State.InRaid then findPoint(root, Raid.GetZone(player)) else nil
 		if point and not point.Allowed(player) then
 			if not warnedBlocked[player] then
 				warnedBlocked[player] = true

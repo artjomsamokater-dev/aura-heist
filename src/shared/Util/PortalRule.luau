@@ -4,10 +4,11 @@
 
 local PortalRule = {}
 
-export type Decision = "ok" | "busy" | "notInHub" | "noProfile" | "dead"
+export type Decision = "ok" | "busy" | "notInHub" | "noProfile" | "dead" | "noAccess"
 
--- Решение по одному касанию: порядок проверок как в Raid (сначала дешёвые)
-function PortalRule.Decide(busy: boolean, inHub: boolean, hasProfile: boolean, alive: boolean): Decision
+-- Решение по одному касанию: порядок проверок как в Raid (сначала дешёвые).
+-- hasAccess — доступ в зону этого портала (платная зона — куплен ли, ZoneRule.HasAccess)
+function PortalRule.Decide(busy: boolean, inHub: boolean, hasProfile: boolean, alive: boolean, hasAccess: boolean): Decision
 	if busy then
 		return "busy"
 	end
@@ -19,6 +20,9 @@ function PortalRule.Decide(busy: boolean, inHub: boolean, hasProfile: boolean, a
 	end
 	if not alive then
 		return "dead"
+	end
+	if not hasAccess then
+		return "noAccess"
 	end
 	return "ok"
 end

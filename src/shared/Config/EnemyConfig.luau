@@ -16,16 +16,24 @@ end
 local EnemyConfig = {}
 
 -- Grumblob: ворчливый желейный шар, гонится за игроками в опасной части
-EnemyConfig.Chaser = {
-	Count = 5, -- сколько врагов в зоне (не больше, чем SpawnPoints)
-	SpawnPoints = { -- по всей опасной части, в стороне от EXTRACT
-		Vector3.new(30, 0, -100),
-		Vector3.new(30, 0, 100),
-		Vector3.new(70, 0, -100),
-		Vector3.new(70, 0, 100),
-		Vector3.new(105, 0, -60),
-		Vector3.new(105, 0, 60),
+-- Сколько врагов и где их дома — по зонам (Id — ZoneConfig.ZoneOrder). Count не больше, чем SpawnPoints;
+-- точки — по всей опасной части, в стороне от EXTRACT
+EnemyConfig.Zones = {
+	Meme = {
+		Count = 5,
+		SpawnPoints = {
+			Vector3.new(30, 0, -100),
+			Vector3.new(30, 0, 100),
+			Vector3.new(70, 0, -100),
+			Vector3.new(70, 0, 100),
+			Vector3.new(105, 0, -60),
+			Vector3.new(105, 0, 60),
+		},
 	},
+} :: { [string]: { Count: number, SpawnPoints: { Vector3 } } }
+
+-- Поведение одинаковое во всех зонах
+EnemyConfig.Chaser = {
 	-- Вокруг EXTRACT круг такого радиуса (от центра площадки), куда враги не заходят — как в безопасную часть:
 	-- эвакуацию караулить нельзя (площадка — 12 студов, до врага у края круга ещё 8)
 	ExtractionKeepOut = 20,

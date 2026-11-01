@@ -40,6 +40,7 @@ end
 export type Spawned = {
 	Rarity: string,
 	Part: string,
+	Zone: string?, -- Id зоны (для текста объявления)
 }
 
 -- Для объявления: самый редкий из появившихся за один спавн, если его редкость есть в announce.

@@ -127,13 +127,19 @@ function AnnouncementController.Start()
 	-- Редкий спавн: всем игрокам на сервере
 	local announcement = folder:WaitForChild(Remotes.Announcement)
 	if announcement:IsA("RemoteEvent") then
-		announcement.OnClientEvent:Connect(function(rarity: unknown, part: unknown)
+		announcement.OnClientEvent:Connect(function(rarity: unknown, part: unknown, zone: unknown)
 			if type(rarity) ~= "string" or type(part) ~= "string" then
 				return
 			end
+			local zoneId = if type(zone) == "string" then zone else ""
 			local rarityStyle = StyleConfig.Memeling.Rarities[rarity]
 			show(
-				string.format(TextConfig.AnnounceSpawn, TextConfig.RarityNames[rarity] or rarity, TextConfig.ZonePartNames[part] or part),
+				string.format(
+					TextConfig.AnnounceSpawn,
+					TextConfig.RarityNames[rarity] or rarity,
+					TextConfig.ZoneNames[zoneId] or zoneId,
+					TextConfig.ZonePartNames[part] or part
+				),
 				if rarityStyle then rarityStyle.Color else HUD.BaseCard
 			)
 		end)

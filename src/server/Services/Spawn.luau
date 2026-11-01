@@ -1,7 +1,8 @@
 --!strict
--- Spawn: ставит мемлингов на точки спавна в зоне и помнит, где какой.
--- Редкость каждой точки — по шансам её части зоны (ZoneConfig.SpawnChances, граница MapConfig.Zone.DangerFromX),
--- выбор — чистая функция shared/Util/RarityRoll.
+-- Spawn: ставит мемлингов на точки спавна во всех зонах (ZoneConfig.ZoneOrder) и помнит, где какой.
+-- Редкость каждой точки — по шансам её части зоны (ZoneConfig.Zones[Id].SpawnChances, граница
+-- MapConfig.Zones[Id].DangerFromX), мемлинг — из тех, кто живёт в этой зоне (ZoneRule.MemelingsOf).
+-- Выбор — чистые функции shared/Util/RarityRoll и ZoneRule. У каждой зоны свой журнал точек.
 -- Ресток: при старте и каждые ZoneConfig.RestockSeconds все свободные точки получают новых мемлингов.
 -- Что на каждой точке, ведёт журнал shared/Util/SpawnPointBook: занятые и ждущие возврата
 -- потерянного мемлинга точки ресток не трогает — двух мемлингов на одной точке не бывает.
@@ -21,6 +22,7 @@ local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local RarityRoll = require(ReplicatedStorage.Shared.Util.RarityRoll)
 local SpawnPointBook = require(ReplicatedStorage.Shared.Util.SpawnPointBook)
+local ZoneRule = require(ReplicatedStorage.Shared.Util.ZoneRule)
 local MemelingSize = require(ReplicatedStorage.Shared.Util.MemelingSize)
 local MapBuilder = require(script.Parent.MapBuilder)
 local Announcer = require(script.Parent.Announcer)
@@ -43,7 +45,8 @@ export type Record = {
 	State: string,
 	Part: Part,
 	Owner: Player?,
-	SpawnIndex: number, -- номер точки спавна (MapConfig.Zone.SpawnPoints), куда он вернётся, если его потеряют
+	ZoneId: string, -- в какой зоне
+	SpawnIndex: number, -- номер точки спавна (MapConfig.Zones[ZoneId].SpawnPoints), куда он вернётся, если его потеряют
 }
 
 -- Атрибуты выпавшего лута на ядре мемлинга: клиент владельца рисует «YOUR LOOT» и таймер,
@@ -54,35 +57,28 @@ Spawn.LootExpiresAttribute = "LootExpiresAt" -- время сервера (GetSe
 type PickupHandler = (player: Player, instanceId: string) -> ()
 
 local random = Random.new()
-local memelingsFolder: Folder? = nil
+local memelingsFolders: { [string]: Folder } = {} -- по Id зоны
 local nextNumber = 0
 local pickupHandler: PickupHandler? = nil
-local book = SpawnPointBook.new(#MapConfig.Zone.SpawnPoints)
+local books: { [string]: SpawnPointBook.Book } = {} -- журнал точек каждой зоны
+for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+	books[zoneId] = SpawnPointBook.new(#MapConfig.Zones[zoneId].SpawnPoints)
+end
 
 -- Все мемлинги в мире: [InstanceId] = запись
 local memelings: { [string]: Record } = {}
 
--- Id мемлингов нужной редкости, отсортированные, чтобы порядок не зависел от словаря
-local function getIdsOfRarity(rarity: string): { string }
-	local ids = {}
-	for id, memeling in MemelingConfig.Memelings do
-		if memeling.Rarity == rarity then
-			table.insert(ids, id)
-		end
-	end
-	table.sort(ids)
-	return ids
-end
-
--- Какой мемлинг появится на точке: часть зоны → редкость по шансам → случайный мемлинг этой редкости
-local function rollMemeling(floorPosition: Vector3): (string?, string, string?)
-	local offsetX = floorPosition.X - MapConfig.Zone.Center.X
-	local part = RarityRoll.ZonePart(offsetX, MapConfig.Zone.DangerFromX)
-	local rarity = RarityRoll.Pick(ZoneConfig.SpawnChances[part] or {}, MemelingConfig.RarityOrder, random:NextNumber())
+-- Какой мемлинг появится на точке зоны: часть зоны → редкость по шансам зоны → случайный мемлинг
+-- этой редкости из живущих в этой зоне
+local function rollMemeling(zoneId: string, floorPosition: Vector3): (string?, string, string?)
+	local zone = MapConfig.Zones[zoneId]
+	local offsetX = floorPosition.X - zone.Center.X
+	local part = RarityRoll.ZonePart(offsetX, zone.DangerFromX)
+	local rarity = RarityRoll.Pick(ZoneConfig.Zones[zoneId].SpawnChances[part] or {}, MemelingConfig.RarityOrder, random:NextNumber())
 	if rarity == nil then
 		return nil, part, nil
 	end
-	local ids = getIdsOfRarity(rarity)
+	local ids = ZoneRule.MemelingsOf(MemelingConfig.Memelings :: any, zoneId, rarity)
 	if #ids == 0 then
 		return nil, part, rarity
 	end
@@ -109,8 +105,8 @@ local function addPickupPrompt(part: Part, instanceId: string, memelingId: strin
 	end)
 end
 
--- Мемлинг в мире на полу зоны: модель, подпись с именем и кнопка подбора
-local function placeInWorld(instanceId: string, memelingId: string, floorPosition: Vector3): Part
+-- Мемлинг в мире на полу зоны zoneId: модель, подпись с именем и кнопка подбора
+local function placeInWorld(zoneId: string, instanceId: string, memelingId: string, floorPosition: Vector3): Part
 	local size = StyleConfig.Memeling.Size
 	local displayName = TextConfig.MemelingNames[memelingId] or memelingId
 
@@ -120,7 +116,7 @@ local function placeInWorld(instanceId: string, memelingId: string, floorPositio
 		instanceId,
 		memelingId,
 		CFrame.lookAt(position, position - Vector3.xAxis),
-		(assert(memelingsFolder, "Spawn.Start() ещё не вызван"))
+		(assert(memelingsFolders[zoneId], "Spawn.Start() ещё не вызван"))
 	)
 	part:SetAttribute("InstanceId", instanceId)
 	part:SetAttribute("MemelingId", memelingId)
@@ -137,11 +133,11 @@ local function placeInWorld(instanceId: string, memelingId: string, floorPositio
 	return part
 end
 
--- Ставит мемлинга на точку. Точка в журнале уже должна быть отмечена (Occupy / FinishReturn)
-local function spawnAt(memelingId: string, spawnIndex: number): Record
+-- Ставит мемлинга на точку зоны. Точка в журнале уже должна быть отмечена (Occupy / FinishReturn)
+local function spawnAt(zoneId: string, memelingId: string, spawnIndex: number): Record
 	nextNumber += 1
 	local instanceId = "M" .. nextNumber
-	local part = placeInWorld(instanceId, memelingId, MapConfig.Zone.SpawnPoints[spawnIndex])
+	local part = placeInWorld(zoneId, instanceId, memelingId, MapConfig.Zones[zoneId].SpawnPoints[spawnIndex])
 
 	local record: Record = {
 		InstanceId = instanceId,
@@ -149,27 +145,32 @@ local function spawnAt(memelingId: string, spawnIndex: number): Record
 		State = Spawn.State.InZone,
 		Part = part,
 		Owner = nil,
+		ZoneId = zoneId,
 		SpawnIndex = spawnIndex,
 	}
 	memelings[instanceId] = record
 	return record
 end
 
--- Ресток: каждая свободная точка получает нового мемлинга. Вернёт редкости и части зоны появившихся
+-- Ресток: каждая свободная точка каждой зоны получает нового мемлинга.
+-- Вернёт редкости, части и зоны появившихся (для одного общего объявления)
 local function restock(): { RarityRoll.Spawned }
 	local spawned: { RarityRoll.Spawned } = {}
-	local names: { string } = {}
-	for _, index in ipairs(SpawnPointBook.FreePoints(book)) do
-		local memelingId, part, rarity = rollMemeling(MapConfig.Zone.SpawnPoints[index])
-		if memelingId and rarity and SpawnPointBook.Occupy(book, index) then
-			spawnAt(memelingId, index)
-			table.insert(spawned, { Rarity = rarity, Part = part })
-			table.insert(names, string.format("%s:%s", part, memelingId))
-		elseif memelingId == nil then
-			warn(string.format("[Spawn] Точка %d в части %s: нет мемлинга (редкость %s)", index, part, tostring(rarity)))
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		local book = books[zoneId]
+		local names: { string } = {}
+		for _, index in ipairs(SpawnPointBook.FreePoints(book)) do
+			local memelingId, part, rarity = rollMemeling(zoneId, MapConfig.Zones[zoneId].SpawnPoints[index])
+			if memelingId and rarity and SpawnPointBook.Occupy(book, index) then
+				spawnAt(zoneId, memelingId, index)
+				table.insert(spawned, { Rarity = rarity, Part = part, Zone = zoneId })
+				table.insert(names, string.format("%s:%s", part, memelingId))
+			elseif memelingId == nil then
+				warn(string.format("[Spawn] %s, точка %d в части %s: нет мемлинга (редкость %s)", zoneId, index, part, tostring(rarity)))
+			end
 		end
+		print(string.format("[Spawn] Ресток %s: появилось %d (%s)", zoneId, #names, if #names > 0 then table.concat(names, ", ") else "все точки заняты"))
 	end
-	print(string.format("[Spawn] Ресток: появилось %d (%s)", #spawned, if #names > 0 then table.concat(names, ", ") else "все точки заняты"))
 	return spawned
 end
 
@@ -200,7 +201,7 @@ function Spawn.MarkCarried(instanceId: string, owner: Player): boolean
 		return false
 	end
 	if record.State == Spawn.State.InZone then
-		SpawnPointBook.Release(book, record.SpawnIndex)
+		SpawnPointBook.Release(books[record.ZoneId], record.SpawnIndex)
 	end
 	record.State = Spawn.State.Carried
 	record.Owner = owner
@@ -224,7 +225,7 @@ function Spawn.Despawn(instanceId: string)
 	end
 	memelings[instanceId] = nil
 	if record.State == Spawn.State.InZone then
-		SpawnPointBook.Release(book, record.SpawnIndex)
+		SpawnPointBook.Release(books[record.ZoneId], record.SpawnIndex)
 	end
 	record.Part:Destroy()
 end
@@ -240,13 +241,14 @@ function Spawn.Lose(instanceId: string)
 	Spawn.Despawn(instanceId)
 
 	local index = record.SpawnIndex
+	local book = books[record.ZoneId]
 	if not SpawnPointBook.ReserveReturn(book, index) then
-		print(string.format("[Spawn] %s не вернётся: на его точке %d уже новый мемлинг", record.MemelingId, index))
+		print(string.format("[Spawn] %s не вернётся: на его точке %d (%s) уже новый мемлинг", record.MemelingId, index, record.ZoneId))
 		return
 	end
 	task.delay(ZoneConfig.LostRespawnSeconds, function()
 		if SpawnPointBook.FinishReturn(book, index) then
-			spawnAt(record.MemelingId, index)
+			spawnAt(record.ZoneId, record.MemelingId, index)
 		end
 	end)
 end
@@ -264,7 +266,7 @@ function Spawn.DropAsLoot(instanceId: string, owner: Player, floorPosition: Vect
 		return
 	end
 	record.Part:Destroy()
-	local part = placeInWorld(instanceId, record.MemelingId, floorPosition)
+	local part = placeInWorld(record.ZoneId, instanceId, record.MemelingId, floorPosition)
 	record.Part = part
 	record.State = Spawn.State.Dropped
 	record.Owner = owner
@@ -295,10 +297,12 @@ function Spawn.LoseLootOf(player: Player)
 end
 
 function Spawn.Start()
-	local folder = Instance.new("Folder")
-	folder.Name = "Memelings"
-	folder.Parent = MapBuilder.GetZoneFolder()
-	memelingsFolder = folder
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		local folder = Instance.new("Folder")
+		folder.Name = "Memelings"
+		folder.Parent = MapBuilder.GetZoneFolder(zoneId)
+		memelingsFolders[zoneId] = folder
+	end
 
 	Announcer.AnnounceSpawn(restock()) -- при старте игроков ещё нет, но правило одно для всех спавнов
 
