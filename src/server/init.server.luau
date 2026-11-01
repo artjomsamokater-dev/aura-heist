@@ -43,22 +43,36 @@ local Tutorial = require(Services.Tutorial)
 local Analytics = require(Services.Analytics)
 local DebugCommands = require(Services.DebugCommands)
 
+-- Ошибка при запуске одного сервиса не должна молча выключать все следующие (например, портал в Raid):
+-- она видна в Output с именем сервиса, остальные запускаются дальше
+local failed: { string } = {}
+local function start(name: string, fn: () -> ())
+	local ok, err = xpcall(fn :: any, debug.traceback)
+	if not ok then
+		table.insert(failed, name)
+		warn(string.format("[Server] Сервис %s упал при запуске: %s", name, tostring(err)))
+	end
+end
+
 -- Порядок важен: сначала карта, потом сервисы, которые её используют
-LightingSetup.Apply()
-MapBuilder.Build()
-Announcer.Start() -- раньше Spawn: первый спавн уже может объявлять
-Economy.Start()
-Studio.Start()
-Raid.Start()
-Spawn.Start()
-Extraction.Start()
-Hazards.Start()
-Enemy.Start()
-Event.Start()
-Tutorial.Start()
-Analytics.Start()
-DebugCommands.Start() -- только в Studio
+start("LightingSetup", LightingSetup.Apply)
+start("MapBuilder", MapBuilder.Build)
+start("Announcer", Announcer.Start) -- раньше Spawn: первый спавн уже может объявлять
+start("Economy", Economy.Start)
+start("Studio", Studio.Start)
+start("Raid", Raid.Start)
+start("Spawn", Spawn.Start)
+start("Extraction", Extraction.Start)
+start("Hazards", Hazards.Start)
+start("Enemy", Enemy.Start)
+start("Event", Event.Start)
+start("Tutorial", Tutorial.Start)
+start("Analytics", Analytics.Start)
+start("DebugCommands", DebugCommands.Start) -- только в Studio
 -- Последним: все сервисы уже подписались на PlayerData.OnLoaded
-PlayerData.Start()
+start("PlayerData", PlayerData.Start)
+if #failed > 0 then
+	warn("[Server] Не запустились: " .. table.concat(failed, ", ") .. " — смотри ошибки выше")
+end
 
 print("[Server] Сервисы запущены: MapBuilder, Economy, Studio, Raid, Spawn, Extraction, Hazards, Enemy, Event, Tutorial, Analytics, Announcer, PlayerData")

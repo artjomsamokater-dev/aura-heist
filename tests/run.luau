@@ -17,6 +17,7 @@ require("./TutorialSteps.spec")
 require("./RebirthMath.spec")
 require("./MemelingSize.spec")
 require("./ExtractionRule.spec")
+require("./PortalRule.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

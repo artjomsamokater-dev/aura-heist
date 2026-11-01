@@ -61,6 +61,10 @@ MapConfig.Portal = {
 	Position = Vector3.new(0, 7, 34),
 	Size = Vector3.new(10, 12, 2),
 	CooldownSeconds = 2, -- защита от повторного срабатывания для одного игрока
+	-- Кроме касания (Touched) сервер раз в CheckSeconds сам смотрит, кто стоит внутри портала
+	-- (с запасом OverlapMargin студов): вход срабатывает, даже если касание не пришло
+	CheckSeconds = 0.2,
+	OverlapMargin = 1,
 	-- Видимая воронка поверх невидимой детали-«входа» (Size): диск и тёмная середина
 	DiscDiameter = 10,
 	CoreDiameter = 5.5,

@@ -6,6 +6,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
@@ -14,6 +15,7 @@ local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
 local CarrySpeed = require(ReplicatedStorage.Shared.Util.CarrySpeed)
 local MemelingSize = require(ReplicatedStorage.Shared.Util.MemelingSize)
 local ExtractionRule = require(ReplicatedStorage.Shared.Util.ExtractionRule)
+local PortalRule = require(ReplicatedStorage.Shared.Util.PortalRule)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
@@ -254,24 +256,47 @@ local function tryDrop(player: Player)
 	print(string.format("[Raid] %s отпустил мемлинга %s", player.Name, instanceId))
 end
 
-local function onPortalTouched(hit: BasePart)
-	-- hit может быть частью аксессуара, поэтому ищем модель персонажа выше по дереву
-	local character = hit:FindFirstAncestorOfClass("Model")
-	local player = character and Players:GetPlayerFromCharacter(character)
-	if character == nil or player == nil then
+-- Почему портал не пустил — для Output (ключи — shared/Util/PortalRule)
+local PORTAL_REASONS: { [string]: string } = {
+	busy = "пауза после прошлого входа (MapConfig.Portal.CooldownSeconds)",
+	notInHub = "игрок не в хабе (уже в вылазке)",
+	noProfile = "профиль ещё не загружен (PlayerData) — вынесенное было бы некуда сохранить",
+	dead = "персонаж мёртв",
+}
+local PORTAL_LOG_SECONDS = 2 -- одну и ту же причину для игрока пишем не чаще: касаний много в секунду
+local portalLog: { [Player]: { [string]: number } } = {}
+
+local function logPortal(player: Player, decision: string, source: string)
+	local now = os.clock()
+	local byReason = portalLog[player] or {}
+	portalLog[player] = byReason
+	if byReason[decision] and now - byReason[decision] < PORTAL_LOG_SECONDS then
 		return
 	end
-	if portalBusy[player] or states[player] ~= Raid.State.InHub then
-		return
+	byReason[decision] = now
+	if decision == "ok" then
+		print(string.format("[Portal] %s (%s): пустили в зону", player.Name, source))
+	else
+		print(string.format("[Portal] %s (%s): не пустили — %s", player.Name, source, PORTAL_REASONS[decision] or decision))
 	end
+end
+
+-- Вход в портал: и по касанию, и по проверке позиции (если Touched не сработал). Решение — PortalRule
+local function tryEnterPortal(player: Player, character: Model, source: string)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	-- Пока профиль не загружен, в зону не пускаем: вынесенное было бы некуда сохранить
 	local data = PlayerData.GetData(player)
-	if data == nil then
-		return
+	local decision = PortalRule.Decide(
+		portalBusy[player] == true,
+		states[player] == Raid.State.InHub,
+		data ~= nil,
+		humanoid ~= nil and humanoid.Health > 0
+	)
+	if decision == "busy" and states[player] ~= Raid.State.InHub then
+		return -- только что вошли: в зоне касаний портала уже нет, писать нечего
 	end
-
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid == nil or humanoid.Health <= 0 then
+	logPortal(player, decision, source)
+	if decision ~= "ok" or data == nil then
 		return
 	end
 
@@ -287,6 +312,61 @@ local function onPortalTouched(hit: BasePart)
 	task.delay(MapConfig.Portal.CooldownSeconds, function()
 		portalBusy[player] = nil
 	end)
+end
+
+local function onPortalTouched(hit: BasePart)
+	-- hit может быть частью аксессуара, поэтому ищем персонажа выше по дереву (первая Model может быть
+	-- моделью-деталью, например Figure мемлинга, — поэтому проверяем все модели вверх)
+	local model = hit:FindFirstAncestorOfClass("Model")
+	while model do
+		local player = Players:GetPlayerFromCharacter(model)
+		if player then
+			tryEnterPortal(player, model, "касание")
+			return
+		end
+		model = model:FindFirstAncestorOfClass("Model")
+	end
+end
+
+-- Запасной путь: раз в PortalCheckSeconds — кто из игроков в хабе стоит внутри портала.
+-- Работает, даже если Touched не пришёл (тонкий триггер, быстрый бег, лаг)
+local function checkPortalOverlap()
+	local portal = MapBuilder.GetPortal()
+	local half = portal.Size / 2
+	for player, state in states do
+		if state == Raid.State.InHub and not portalBusy[player] then
+			local character, root = RemoteGuard.GetAliveCharacter(player)
+			if character and root then
+				local offset = portal.CFrame:PointToObjectSpace(root.Position)
+				if PortalRule.IsInside(offset.X, offset.Y, offset.Z, half.X, half.Y, half.Z, MapConfig.Portal.OverlapMargin) then
+					tryEnterPortal(player, character, "позиция")
+				end
+			end
+		end
+	end
+end
+
+-- Проверка при старте: триггер портала существует, в мире, касаем и стоит на полу хаба
+local function validatePortal()
+	local portal = MapBuilder.GetPortal()
+	local problems: { string } = {}
+	if not portal:IsDescendantOf(Workspace) then
+		table.insert(problems, "деталь не в Workspace")
+	end
+	if not portal.CanTouch then
+		table.insert(problems, "CanTouch = false — касания не придут")
+	end
+	local hub = MapConfig.Hub
+	local floorTop = hub.Center.Y + hub.Size.Y / 2
+	local bottom = portal.Position.Y - portal.Size.Y / 2
+	if bottom > floorTop + 1 or portal.Position.Y + portal.Size.Y / 2 < floorTop + 3 then
+		table.insert(problems, string.format("стоит не на уровне игрока (низ %.1f, пол хаба %.1f)", bottom, floorTop))
+	end
+	if #problems > 0 then
+		warn("[Portal] Триггер портала неисправен: " .. table.concat(problems, "; "))
+	else
+		print(string.format("[Portal] Триггер портала в порядке: %s, размер %s, CanTouch", tostring(portal.Position), tostring(portal.Size)))
+	end
 end
 
 -- Забирает добычу успешной эвакуации. Вернёт MemelingId всего, что было в руках, и сколько секунд
@@ -425,11 +505,19 @@ local function onPlayerRemoving(player: Player)
 	Spawn.LoseLootOf(player)
 	states[player] = nil
 	portalBusy[player] = nil
+	portalLog[player] = nil
 	runs[player] = nil
 end
 
 function Raid.Start()
+	validatePortal()
 	MapBuilder.GetPortal().Touched:Connect(onPortalTouched)
+	task.spawn(function()
+		while true do
+			task.wait(MapConfig.Portal.CheckSeconds)
+			checkPortalOverlap()
+		end
+	end)
 	Spawn.SetPickupHandler(tryPickup)
 	RemoteGuard.ConnectRemote(RemoteGuard.CreateRemote(Remotes.DropCarried), "бросок", tryDrop)
 

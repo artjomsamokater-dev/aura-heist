@@ -590,6 +590,7 @@ local function buildHub()
 	portal.Transparency = 1
 	portal.CastShadow = false
 	portal.CanCollide = false -- сквозь портал проходят
+	portal.CanTouch = true -- на касание этой детали подписан Raid; декор поверх неё касаний не ловит
 	addLabel(portal, TextConfig.Portal)
 	portalPart = portal
 
