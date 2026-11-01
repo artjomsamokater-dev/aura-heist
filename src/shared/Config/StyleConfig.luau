@@ -966,6 +966,39 @@ StyleConfig.CosmeticsLayout = {
 }
 
 -- Окно магазина (client/Controllers/ShopController)
+-- Меню слева и его панели (задача 7.8): светлые панели, яркие пункты, закрытые — бледные с замком
+StyleConfig.MenuUi = {
+	ButtonSize = 64, -- круглая кнопка меню слева по центру высоты (на месте прежней кнопки SHOP)
+	ButtonColor = Palette.Sun,
+	Panel = Palette.CreamLight,
+	Header = Palette.Mint,
+	HeaderText = Palette.Ink,
+	Item = Palette.PlumPale,
+	ItemActive = Palette.Sun,
+	ItemLocked = Palette.CreamDark,
+	ItemHeight = 46,
+	PanelWidth = 240,
+	InfoWidth = 360, -- панели Base / Upgrades / Rebirth
+	Good = Palette.Mint, -- «готово» на панели Rebirth
+	Hint = Palette.Plum,
+}
+
+-- Окно коллекции (задача 7.8): плитки с 3D-превью, у неоткрытых — тёмный силуэт и замок
+StyleConfig.CollectionUi = {
+	Width = 720,
+	Height = 460,
+	Panel = Palette.CreamLight,
+	Header = Palette.Mint,
+	HeaderText = Palette.Ink,
+	Section = Palette.Plum,
+	Tile = Palette.PlumPale,
+	TileSize = 96,
+	Silhouette = Palette.PlumDark, -- цвет неоткрытого мемлинга в превью
+	CardBack = Palette.PlumPale,
+	PedestalColor = Palette.PlumLight, -- подсвеченный постамент на карточке
+	SpinSeconds = 8, -- один оборот модели на карточке
+}
+
 StyleConfig.ShopUi = {
 	Panel = Palette.CreamLight,
 	Header = Palette.PlumDark,
@@ -981,8 +1014,6 @@ StyleConfig.ShopUi = {
 	Width = 620,
 	Height = 420,
 	CardSize = Vector2.new(170, 132),
-	HudButtonSize = 64,
-	HudButtonColor = Palette.Sun,
 }
 
 -- Свой выпавший лут (после смерти): золотая подсветка сквозь стены и подпись «YOUR LOOT» с таймером.

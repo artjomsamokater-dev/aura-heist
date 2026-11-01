@@ -9,6 +9,7 @@
 --   "Pedestal" — круглый постамент со звёздочкой сверху
 --   "Box"      — ящик с крышкой (запас)
 --   "Star"     — звезда (Rebirth)
+--   "Lock", "Menu", "Home", "Book", "ArrowUp", "Scroll", "Gift", "Shop" — меню слева и коллекция (задача 7.8)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -110,6 +111,76 @@ local function star(holder: Frame)
 	frame(holder, Palette.CreamLight, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.3, 0.3), CIRCLE)
 end
 
+-- Замок: дужка (рамка-кольцо) и корпус со скважиной (закрытые пункты меню, неоткрытые мемлинги)
+local function lock(holder: Frame)
+	local shackle = frame(holder, Palette.CreamLight, UDim2.fromScale(0.5, 0.36), UDim2.fromScale(0.46, 0.46), CIRCLE)
+	shackle.BackgroundTransparency = 1
+	stroke(shackle, Palette.PlumDark, 3)
+	local body = frame(holder, Palette.Sun, UDim2.fromScale(0.5, 0.64), UDim2.fromScale(0.66, 0.48), UDim.new(0.18, 0))
+	stroke(body, Palette.PlumDark, 2)
+	frame(body, Palette.PlumDark, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.16, 0.36), UDim.new(0.5, 0))
+end
+
+-- Меню: три полоски
+local function menu(holder: Frame)
+	for i = 0, 2 do
+		frame(holder, Palette.PlumDark, UDim2.fromScale(0.5, 0.28 + i * 0.22), UDim2.fromScale(0.7, 0.13), UDim.new(0.5, 0))
+	end
+end
+
+-- Дом: крыша-ромб и стены с дверью (Base)
+local function home(holder: Frame)
+	local roof = frame(holder, Palette.Plum, UDim2.fromScale(0.5, 0.4), UDim2.fromScale(0.5, 0.5), UDim.new(0.1, 0))
+	roof.Rotation = 45
+	stroke(roof, Palette.PlumDark, 2)
+	local walls = frame(holder, Palette.CreamLight, UDim2.fromScale(0.5, 0.66), UDim2.fromScale(0.58, 0.4), UDim.new(0.1, 0))
+	stroke(walls, Palette.PlumDark, 2)
+	frame(walls, Palette.Mint, UDim2.fromScale(0.5, 0.65), UDim2.fromScale(0.28, 0.7), UDim.new(0.2, 0))
+end
+
+-- Книга-альбом: обложка с закладкой (Collection)
+local function book(holder: Frame)
+	local cover = frame(holder, Palette.Mint, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.62, 0.78), UDim.new(0.12, 0))
+	stroke(cover, Palette.PlumDark, 2)
+	frame(cover, Palette.CreamLight, UDim2.fromScale(0.82, 0.5), UDim2.fromScale(0.12, 0.84), nil)
+	frame(cover, Palette.Sun, UDim2.fromScale(0.42, 0.42), UDim2.fromScale(0.4, 0.4), CIRCLE)
+end
+
+-- Стрелка вверх (Upgrades)
+local function arrowUp(holder: Frame)
+	local tip = frame(holder, Palette.Mint, UDim2.fromScale(0.5, 0.38), UDim2.fromScale(0.48, 0.48), UDim.new(0.12, 0))
+	tip.Rotation = 45
+	stroke(tip, Palette.PlumDark, 2)
+	local shaft = frame(holder, Palette.Mint, UDim2.fromScale(0.5, 0.66), UDim2.fromScale(0.26, 0.42), UDim.new(0.2, 0))
+	stroke(shaft, Palette.PlumDark, 2)
+end
+
+-- Свиток с галочкой (Quests)
+local function scroll(holder: Frame)
+	local paper = frame(holder, Palette.CreamLight, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.6, 0.76), UDim.new(0.14, 0))
+	stroke(paper, Palette.PlumDark, 2)
+	for i = 0, 2 do
+		frame(paper, Palette.PlumLight, UDim2.fromScale(0.5, 0.3 + i * 0.2), UDim2.fromScale(0.6, 0.08), nil)
+	end
+end
+
+-- Подарок: коробка с лентой (Daily rewards)
+local function gift(holder: Frame)
+	local boxFrame = frame(holder, Palette.Plum, UDim2.fromScale(0.5, 0.6), UDim2.fromScale(0.7, 0.52), UDim.new(0.12, 0))
+	stroke(boxFrame, Palette.PlumDark, 2)
+	frame(holder, Palette.Plum, UDim2.fromScale(0.5, 0.32), UDim2.fromScale(0.8, 0.16), UDim.new(0.2, 0))
+	frame(holder, Palette.Sun, UDim2.fromScale(0.5, 0.56), UDim2.fromScale(0.14, 0.62), nil)
+end
+
+-- Тележка-корзинка (Shop)
+local function shop(holder: Frame)
+	local basket = frame(holder, Palette.Sun, UDim2.fromScale(0.5, 0.56), UDim2.fromScale(0.72, 0.44), UDim.new(0.16, 0))
+	stroke(basket, Palette.PlumDark, 2)
+	local handle = frame(holder, Palette.CreamLight, UDim2.fromScale(0.5, 0.32), UDim2.fromScale(0.42, 0.34), CIRCLE)
+	handle.BackgroundTransparency = 1
+	stroke(handle, Palette.PlumDark, 3)
+end
+
 local DRAW: { [string]: (Frame) -> () } = {
 	Aura = aura,
 	Bag = bag,
@@ -118,6 +189,14 @@ local DRAW: { [string]: (Frame) -> () } = {
 	Pedestal = pedestal,
 	Box = box,
 	Star = star,
+	Lock = lock,
+	Menu = menu,
+	Home = home,
+	Book = book,
+	ArrowUp = arrowUp,
+	Scroll = scroll,
+	Gift = gift,
+	Shop = shop,
 }
 
 -- Иконка kind размером size × size пикселей (или по размеру родителя, если size не задан)

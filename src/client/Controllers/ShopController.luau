@@ -1,6 +1,6 @@
 --!strict
--- ShopController: окно магазина косметики (задача 7.4). Открывается кнопкой SHOP слева на экране
--- и кнопкой «Open shop» у киоска на площади. Вкладки — категории ShopConfig, карточки — вещи по цене.
+-- ShopController: окно магазина косметики (задача 7.4). Открывается пунктом Shop в меню слева
+-- (задача 7.8, client/Ui/Windows) и кнопкой «Open shop» у киоска на площади. Вкладки — категории ShopConfig, карточки — вещи по цене.
 -- Клиент только показывает и просит: Remotes.ShopBuy / ShopEquip с Id вещи. Цену проверяет и Aura
 -- списывает сервер (сервис Shop); что куплено и надето, клиент читает из атрибутов ShopOwned / ShopEquipped.
 
@@ -16,6 +16,7 @@ local ShopRule = require(ReplicatedStorage.Shared.Util.ShopRule)
 local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Icons = require(ReplicatedStorage.Shared.Ui.Icons)
+local Windows = require(script.Parent.Parent.Ui.Windows)
 
 local ShopController = {}
 
@@ -262,8 +263,9 @@ function ShopController.Start()
 			refresh()
 		end
 	end
+	Windows.Register("Shop", setOpen)
 	close.Activated:Connect(function()
-		setOpen(false)
+		Windows.Close("Shop")
 	end)
 	for _, name in ipairs({ "ShopOwned", "ShopEquipped", "BankedAura" }) do
 		player:GetAttributeChangedSignal(name):Connect(function()
@@ -273,25 +275,11 @@ function ShopController.Start()
 		end)
 	end
 
-	-- Кнопка SHOP слева на экране (по центру высоты — не мешает джойстику и HUD)
-	local hudGui = Instance.new("ScreenGui")
-	hudGui.Name = "ShopButton"
-	hudGui.ResetOnSpawn = false
-	hudGui.IgnoreGuiInset = true
-	hudGui.Parent = playerGui
-	local open = button(hudGui, TextConfig.ShopHudButton, UI.HudButtonColor, UDim2.fromOffset(UI.HudButtonSize, UI.HudButtonSize))
-	open.AnchorPoint = Vector2.new(0, 0.5)
-	open.Position = UDim2.new(0, HUD.Margin, 0.5, 0)
-	open.TextSize = 16
-	corner(open, UDim.new(1, 0))
-	open.Activated:Connect(function()
-		setOpen(not gui.Enabled)
-	end)
-
-	-- Кнопка «Open shop» у киоска: сервер её не обрабатывает, окно открывает этот клиент
+	-- Кнопка «Open shop» у киоска: сервер её не обрабатывает, окно открывает этот клиент.
+	-- Кнопки SHOP на экране больше нет — магазин в меню слева (MenuController)
 	ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
 		if prompt.Name == "ShopPrompt" then
-			setOpen(true)
+			Windows.Open("Shop")
 		end
 	end)
 end

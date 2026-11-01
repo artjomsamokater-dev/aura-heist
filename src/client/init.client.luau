@@ -18,6 +18,8 @@ local RainbowController = require(script.Controllers.RainbowController)
 local ShopController = require(script.Controllers.ShopController)
 local FireworksController = require(script.Controllers.FireworksController)
 local BountyController = require(script.Controllers.BountyController)
+local CollectionController = require(script.Controllers.CollectionController)
+local MenuController = require(script.Controllers.MenuController)
 
 HudController.Start()
 HazardController.Start()
@@ -37,3 +39,5 @@ task.spawn(WandererController.Start) -- ждёт, пока хаб появитс
 task.spawn(ShopController.Start) -- ждёт RemoteEvent магазина
 task.spawn(FireworksController.Start) -- свой бесконечный цикл салюта
 task.spawn(BountyController.Start) -- «Охота»: табличка у портала, плашка в зоне, метки
+task.spawn(CollectionController.Start) -- окно коллекции (строит плитки при первом открытии)
+task.spawn(MenuController.Start) -- меню слева: Base, Collection, Upgrades, Rebirth, Shop

@@ -28,10 +28,59 @@ TextConfig.UnlockAction = "Unlock" -- кнопка у золотых ворот 
 TextConfig.SecretHint = "?" -- маленький знак у входа в секретный паркур (других подсказок нет)
 TextConfig.Error404Text = "404" -- надпись на спине Error404Kitten
 
+-- Меню слева (задача 7.8): пункты, закрытые «скоро», панели Base / Upgrades / Rebirth
+TextConfig.MenuTitle = "MENU"
+TextConfig.MenuItems = {
+	Base = "Base",
+	Collection = "Collection",
+	Upgrades = "Upgrades",
+	Rebirth = "Rebirth",
+	Shop = "Shop",
+	Quests = "Quests",
+	Daily = "Daily rewards",
+} :: { [string]: string }
+TextConfig.MenuSoon = "Soon"
+TextConfig.BaseTitle = "YOUR BASE"
+TextConfig.BasePlot = "Plot #%d"
+TextConfig.BaseNoPlot = "No plot yet"
+TextConfig.BasePedestals = "Pedestals: %d / %d"
+TextConfig.BaseReserve = "In reserve: %d"
+TextConfig.BaseIncome = "Income: +%s Aura/s"
+TextConfig.BaseStorage = "Stored: %s / %s Aura"
+TextConfig.BaseHint = "Collect Aura at your pedestals"
+TextConfig.UpgradesTitle = "UPGRADES"
+TextConfig.UpgradeNames = { pedestals = "Pedestals", carrySlots = "Backpack", storage = "Storage" } :: { [string]: string }
+-- Текущее значение улучшения (%d — число постаментов, слотов или множитель хранилища)
+TextConfig.UpgradeValues = { pedestals = "%d pedestals", carrySlots = "%d slots", storage = "x%d storage" } :: { [string]: string }
+TextConfig.UpgradeLevel = "Level %d / %d"
+TextConfig.UpgradeNext = "Next: %s Aura"
+TextConfig.UpgradesHint = "Buy at the gold buttons on your base"
+TextConfig.RebirthTitle = "REBIRTH"
+TextConfig.RebirthCount = "Rebirths: %d"
+TextConfig.RebirthBonus = "Income bonus: +%d%%"
+TextConfig.RebirthCost = "Next rebirth: %s Aura"
+TextConfig.RebirthNeedMax = "Max all upgrades first"
+TextConfig.RebirthNeedAura = "Collect more Aura"
+TextConfig.RebirthReady = "Ready! Hold the plum pad on your base"
+TextConfig.RebirthHint = "Your memelings stay with you"
+
+-- Коллекция (задача 7.8)
+TextConfig.CollectionTitle = "COLLECTION"
+TextConfig.CollectionCounter = "%d/%d"
+TextConfig.CollectionSecretSection = "SECRET"
+TextConfig.CollectionUnknown = "???"
+TextConfig.CollectionIncome = "Income: +%s Aura/s"
+TextConfig.CollectionSell = "Sell price: %s Aura"
+TextConfig.CollectionSpeed = "Speed with it: %d"
+TextConfig.CollectionWhere = "Found in: %s"
+TextConfig.CollectionWhereSecret = "Found in: a secret place"
+TextConfig.CollectionOwned = "You have: %d"
+TextConfig.CollectionLocked = "Extract it once to unlock!"
+TextConfig.CollectionBack = "Back"
+
 -- Магазин косметики (киоск на площади и кнопка в HUD)
 TextConfig.ShopTitle = "SHOP"
 TextConfig.ShopOpenAction = "Open shop"
-TextConfig.ShopHudButton = "SHOP"
 TextConfig.ShopBuy = "BUY"
 TextConfig.ShopEquip = "EQUIP"
 TextConfig.ShopUnequip = "TAKE OFF"
