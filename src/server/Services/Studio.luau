@@ -311,6 +311,7 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 	)
 	body:SetAttribute("MemelingId", entry.memelingId)
 	body:SetAttribute("OwnerUserId", player.UserId) -- клиент рисует контур своим мемлингам на постаментах
+	MapBuilder.AddGlassDome(body, pedestal, entry.memelingId) -- витрина: стеклянный колпак и свечение редкости
 	-- Одна плашка прямо над макушкой мемлинга (крупный — выше): сверху имя и доход, снизу «N Aura».
 	-- Обе подписи у одной точки и одного размера в пикселях — не налезают и не растут с расстоянием
 	local height = size.Y * MapBuilder.GetMemelingScale(entry.memelingId)

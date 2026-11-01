@@ -2076,6 +2076,49 @@ function MapBuilder.SetPlotClaimed(plot: Model, claimed: boolean)
 end
 
 -- Прозрачность видимой части скруглённой детали (постамент-«призрак», пока не куплен)
+-- Стеклянный колпак над мемлингом на постаменте (задача 7.8): подставка с неоновым кольцом и свечением
+-- цвета редкости, стеклянные стенки и купол. Детали лежат внутри ядра мемлинга (уйдёт мемлинг — уйдёт и колпак)
+-- и ничему не мешают: без столкновений, касаний и лучей — кнопки постамента видят игрока сквозь стекло
+function MapBuilder.AddGlassDome(core: BasePart, pedestal: BasePart, memelingId: string)
+	local style = StyleConfig.Showcase
+	local memeling = MemelingConfig.Memelings[memelingId]
+	local rarity = StyleConfig.Memeling.Rarities[if memeling then memeling.Rarity else "Common"]
+	local rarityColor = if rarity then rarity.Color else style.Knob
+	local scale = getMemelingScale(memelingId)
+	local size = StyleConfig.Memeling.Size
+	local diameter = math.min(style.MaxDiameter, size.X * scale * style.WidthShare)
+	local wallHeight = size.Y * scale + style.Headroom
+	local top = pedestal.CFrame * CFrame.new(0, pedestal.Size.Y / 2, 0)
+	local folder = Instance.new("Folder")
+	folder.Name = "GlassDome"
+	folder.Parent = core
+	local function finish(part: BasePart)
+		part.CanCollide = false
+		decorate(part, false)
+	end
+	finish(makeColumn("Base", top * CFrame.new(0, 0.05, 0), 0.2, diameter + 0.4, style.Base, folder))
+	local ring = makeColumn("Ring", top * CFrame.new(0, 0.1, 0), 0.22, diameter + 0.6, rarityColor, folder)
+	makeGlow(ring, style.RingTransparency)
+	finish(ring)
+	local glow = makeColumn("Glow", top * CFrame.new(0, 0.18, 0), 0.06, diameter - 0.4, rarityColor, folder)
+	makeGlow(glow, style.GlowTransparency)
+	finish(glow)
+	local wall = makeColumn("Wall", top * CFrame.new(0, 0.2 + wallHeight / 2, 0), wallHeight, diameter, style.GlassColor, folder)
+	wall.Material = style.GlassMaterial
+	wall.Transparency = style.GlassTransparency
+	finish(wall)
+	local capHeight = diameter * style.CapHeightShare
+	local cap = makeShape("Cap", "Ball", Vector3.one * diameter, top * CFrame.new(0, 0.2 + wallHeight, 0), style.GlassColor, folder)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Scale = Vector3.new(1, capHeight / diameter, 1)
+	mesh.Parent = cap
+	cap.Material = style.GlassMaterial
+	cap.Transparency = style.GlassTransparency
+	finish(cap)
+	finish(makeShape("Knob", "Ball", Vector3.one * 0.5, top * CFrame.new(0, 0.2 + wallHeight + capHeight / 2 + 0.15, 0), style.Knob, folder))
+end
+
 function MapBuilder.SetLookTransparency(part: Instance, transparency: number)
 	for _, child in ipairs(part:GetChildren()) do
 		if child.Name == LOOK and child:IsA("BasePart") then
