@@ -24,8 +24,9 @@ local STORE_NAME = "PlayerProfiles" -- имя DataStore; сменишь — вс
 -- 1 — первая схема; 2 — запас стал списком записей (с флагом бонуса отряда), а не просто Id;
 -- 3 — появилось поле rebirths; 4 — zoneAccess (купленный доступ в платные зоны);
 -- 5 — secret (секретный паркур: найден ли, когда была последняя ежедневная награда);
--- 6 — cosmetics (магазин: что куплено навсегда и что надето)
-local SCHEMA_VERSION = 6
+-- 6 — cosmetics (магазин: что куплено навсегда и что надето);
+-- 7 — discovered (коллекция: кого игрок хоть раз выносил)
+local SCHEMA_VERSION = 7
 
 -- Мемлинг на постаменте
 export type ShowcaseEntry = {
@@ -67,6 +68,7 @@ export type Data = {
 		owned: { [string]: boolean }, -- [Id вещи] = true — куплена навсегда
 		equipped: { [string]: { string } }, -- [категория] = Id надетых вещей
 	},
+	discovered: { [string]: boolean }, -- коллекция: [Id мемлинга] = true — хоть раз вынесен (Rebirth и продажа не трогают)
 	stats: {
 		raids: number,
 		extractions: number,
@@ -89,6 +91,7 @@ local TEMPLATE: Data = {
 	zoneAccess = {},
 	secret = { found = false, lastDailyAt = 0 },
 	cosmetics = { owned = {}, equipped = {} },
+	discovered = {},
 	stats = {
 		raids = 0,
 		extractions = 0,
@@ -155,6 +158,23 @@ local function migrate(data: Data): boolean
 		data.cosmetics = { owned = {}, equipped = {} }
 	elseif type(data.cosmetics.equipped) ~= "table" then
 		data.cosmetics.equipped = {}
+	end
+
+	-- 6 → 7: discovered. Открытыми считаем всех, кто уже стоит на витрине и в запасе, и Secret, если он выдан
+	if type(data.discovered) ~= "table" then
+		data.discovered = {}
+	end
+	if data.schemaVersion < 7 then
+		for _, list in ipairs({ data.showcase :: { any }, data.reserve :: { any } }) do
+			for _, entry in ipairs(list) do
+				if type(entry) == "table" and type(entry.memelingId) == "string" then
+					data.discovered[entry.memelingId] = true
+				end
+			end
+		end
+		if data.secret.found then
+			data.discovered[EconomyConfig.SecretObby.MemelingId] = true
+		end
 	end
 
 	data.schemaVersion = SCHEMA_VERSION

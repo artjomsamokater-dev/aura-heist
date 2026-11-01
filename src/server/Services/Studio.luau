@@ -26,6 +26,7 @@ local SquadRule = require(ReplicatedStorage.Shared.Util.SquadRule)
 local ZoneRule = require(ReplicatedStorage.Shared.Util.ZoneRule)
 local ShowcaseRule = require(ReplicatedStorage.Shared.Util.ShowcaseRule)
 local BountyRule = require(ReplicatedStorage.Shared.Util.BountyRule)
+local CollectionRule = require(ReplicatedStorage.Shared.Util.CollectionRule)
 local RebirthMath = require(ReplicatedStorage.Shared.Util.RebirthMath)
 local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerData = require(script.Parent.PlayerData)
@@ -236,10 +237,29 @@ local function refreshReserve(plotIndex: number, data: PlayerData.Data?)
 	end
 end
 
+-- Коллекция и уровни улучшений для меню (задача 7.8): кого игрок открыл, сколько каждого у него сейчас
+-- (витрина + запас), уровни улучшений — клиент только показывает (CollectionRule, UpgradeValues)
+local function publishCollection(player: Player, data: PlayerData.Data)
+	local counts: { [string]: number } = {}
+	for _, list in ipairs({ data.showcase :: { any }, data.reserve :: { any } }) do
+		for _, entry in ipairs(list) do
+			counts[entry.memelingId] = (counts[entry.memelingId] or 0) + 1
+		end
+	end
+	player:SetAttribute("CollectionOwned", CollectionRule.EncodeCounts(counts))
+	player:SetAttribute("CollectionDiscovered", CollectionRule.EncodeSet(data.discovered))
+	for _, id in ipairs(UpgradeValues.GetIds()) do
+		player:SetAttribute("UpgradeLevel_" .. id, getLevel(data, id))
+	end
+end
+
 local function publishCounts(player: Player)
 	local data = PlayerData.GetData(player)
 	player:SetAttribute("PedestalMemelings", if data then #data.showcase else 0)
 	player:SetAttribute("ReserveCount", if data then #data.reserve else 0)
+	if data then
+		publishCollection(player, data)
+	end
 	local plotIndex = playerPlots[player]
 	if plotIndex then
 		refreshReserve(plotIndex, data)
@@ -257,6 +277,7 @@ local function publishBaseStats(player: Player, data: PlayerData.Data, at: numbe
 		stored += PedestalMath.GetStored(rate, entry.lastCollect, at, storageSeconds)
 		capacity += rate * storageSeconds
 	end
+	publishCollection(player, data) -- уровни улучшений меняются покупкой и Rebirth
 	player:SetAttribute("BaseIncome", math.floor(income))
 	player:SetAttribute("BaseStored", math.floor(stored))
 	player:SetAttribute("BaseStorageCap", math.floor(capacity))
@@ -571,6 +592,7 @@ function Studio.AddToShowcase(player: Player, memelingIds: { string }, bounty: {
 	local plotIndex = playerPlots[player]
 
 	for i, memelingId in ipairs(memelingIds) do
+		data.discovered[memelingId] = true -- коллекция: открыт навсегда
 		local isBounty = if bounty and bounty[i] then true else nil
 		local freeIndex = findFreePedestal(data)
 		if freeIndex then

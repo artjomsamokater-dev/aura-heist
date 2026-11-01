@@ -1971,6 +1971,30 @@ local function validatePlotLayout()
 	end
 end
 
+-- Шаблоны всех мемлингов для окна коллекции (задача 7.8): ReplicatedStorage.MemelingPreviews.<Id> — модель,
+-- клиент копирует её в ViewportFrame. Вне Workspace — не рисуется в мире и не считается физикой
+local function buildPreviewTemplates()
+	local old = ReplicatedStorage:FindFirstChild("MemelingPreviews")
+	if old then
+		old:Destroy()
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "MemelingPreviews"
+	for memelingId in MemelingConfig.Memelings do
+		local model = Instance.new("Model")
+		model.Name = memelingId
+		local core = makeMemeling("Core", memelingId, CFrame.new(), model)
+		model.PrimaryPart = core
+		for _, child in ipairs(core:GetDescendants()) do
+			if child:IsA("ParticleEmitter") or child:IsA("Light") then
+				child:Destroy() -- в ViewportFrame они не видны
+			end
+		end
+		model.Parent = folder
+	end
+	folder.Parent = ReplicatedStorage
+end
+
 function MapBuilder.Build()
 	if built then
 		return
@@ -1984,6 +2008,7 @@ function MapBuilder.Build()
 	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
 		buildZone(zoneId)
 	end
+	buildPreviewTemplates()
 	print(string.format("[MapBuilder] Карта построена: море, хаб, %d участков, зон: %d", #plots, #ZoneConfig.ZoneOrder))
 end
 
