@@ -234,6 +234,9 @@ MapConfig.Plots = {
 	ReserveOffset = Vector3.new(18, 0.8, -9),
 	-- Площадка Rebirth: на коврике ближе к арке — между столбцами подписей ряда, не под ними
 	RebirthOffset = Vector3.new(0, 0.8, -15),
+	-- Свободный участок: вместо кнопок — табличка «Join to claim!» и цветы (на занятом их не видно)
+	ClaimSignOffset = Vector3.new(0, 0, -9), -- на полу участка, в середине ряда кнопок
+	ClaimFlowerOffsets = { Vector3.new(-9, 0, -9), Vector3.new(9, 0, -9), Vector3.new(-18, 0, -9), Vector3.new(18, 0, -9) },
 }
 
 -- Meme Zone: отдельная площадка в стороне от хаба, поднятая в воздух.

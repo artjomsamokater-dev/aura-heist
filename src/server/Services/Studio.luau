@@ -423,6 +423,7 @@ local function assignPlot(player: Player)
 			playerPlots[player] = index
 			plot:SetAttribute("OwnerUserId", player.UserId)
 			player:SetAttribute("StudioIndex", index)
+			MapBuilder.SetPlotClaimed(plot, true) -- появляются кнопки, табличка «Join to claim!» прячется
 			MapBuilder.SetLabelText(plot:FindFirstChild("Sign"), string.format(TextConfig.OwnedPlot, player.DisplayName))
 			print(string.format("[Studio] %s получил участок %d", player.Name, index))
 			renderShowcase(player) -- если профиль уже загружен
@@ -452,6 +453,7 @@ local function releasePlot(player: Player)
 	if plot then
 		plot:SetAttribute("OwnerUserId", 0)
 		MapBuilder.SetLabelText(plot:FindFirstChild("Sign"), TextConfig.FreePlot)
+		MapBuilder.SetPlotClaimed(plot, false)
 	end
 	print(string.format("[Studio] Участок %d освобождён (%s вышел)", index, player.Name))
 end

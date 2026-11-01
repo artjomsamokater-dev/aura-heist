@@ -250,6 +250,28 @@ local function buildGarland(index: number, angle: number, from: number, to: numb
 	end
 end
 
+-- Декор свободного участка: табличка «Join to claim!» на столбике и крупные цветы на местах кнопок.
+-- plotCFrame — центр участка на уровне его пола (верх пола = Y + толщина/2)
+function HubDecor.BuildClaimDecor(plotCFrame: CFrame, parent: Instance): Model
+	local cfg = MapConfig.Plots
+	local style = StyleConfig.Hub.Decor
+	local m = model("ClaimDecor", parent)
+	local top = cfg.Size.Y / 2
+	local sign = plotCFrame * CFrame.new(cfg.ClaimSignOffset + Vector3.new(0, top, 0))
+	part("Post", "Cylinder", Vector3.new(4, 0.5, 0.5), sign * CFrame.new(0, 2, 0) * UPRIGHT, style.SignPost, m)
+	local board = part("Board", "Block", Vector3.new(9, 2.6, 0.4), sign * CFrame.new(0, 4.6, 0), style.SignBoard, m)
+	signText(board, Enum.NormalId.Front, TextConfig.ClaimPlot, style.SignText)
+	signText(board, Enum.NormalId.Back, TextConfig.ClaimPlot, style.SignText)
+	for i, offset in ipairs(cfg.ClaimFlowerOffsets) do
+		local spot = plotCFrame * CFrame.new(offset + Vector3.new(0, top, 0))
+		part("Stem" .. i, "Cylinder", Vector3.new(2.4, 0.3, 0.3), spot * CFrame.new(0, 1.2, 0) * UPRIGHT, style.Stem, m)
+		part("Petals" .. i, "Cylinder", Vector3.new(0.4, 2.2, 2.2), spot * CFrame.new(0, 2.4, 0) * UPRIGHT, style.Petals[(i - 1) % #style.Petals + 1], m)
+		part("Center" .. i, "Ball", Vector3.one * 0.9, spot * CFrame.new(0, 2.7, 0), style.FlowerCenter, m)
+		part("Leaf" .. i, "Oval", Vector3.new(1.4, 0.3, 0.7), spot * CFrame.new(0.6, 1, 0) * CFrame.Angles(0, 0, math.rad(25)), style.Stem, m)
+	end
+	return m
+end
+
 -- ── Гиганты ───────────────────────────────────────────────────────────────
 
 -- Гигантский мемный предмет kind на полу в точке base, лицом к центру площади. Вернёт false, если такого нет

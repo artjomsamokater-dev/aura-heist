@@ -1127,8 +1127,10 @@ local function buildPlots()
 		makeRoundLook(rebirth, StyleConfig.PlotParts.RebirthPad, StyleConfig.PlotParts.RebirthRim)
 		addIconLabel(rebirth, StyleConfig.PlotParts.RebirthIcon)
 
+		HubDecor.BuildClaimDecor(plotCFrame, decor)
 		model.Parent = folder
 		plots[i] = model
+		MapBuilder.SetPlotClaimed(model, false) -- пока участок свободен: табличка и цветы вместо кнопок
 	end
 end
 
@@ -1572,6 +1574,35 @@ end
 
 function MapBuilder.GetExtractionPad(): Part
 	return (assert(extractionPad, "MapBuilder.Build() ещё не вызван"))
+end
+
+-- Вид участка: занят — видны кнопки (улучшения, запас, Rebirth); свободен — вместо них табличка
+-- «Join to claim!» и цветы (HubDecor.BuildClaimDecor). Кнопки «Buy» на свободном участке выключает Studio
+function MapBuilder.SetPlotClaimed(plot: Model, claimed: boolean)
+	local buttons = plot:FindFirstChild("Buttons")
+	if buttons then
+		for _, button in ipairs(buttons:GetChildren()) do
+			if button:IsA("BasePart") then
+				MapBuilder.SetLookTransparency(button, if claimed then 0 else 1)
+				button.CanCollide = claimed
+				local label = button:FindFirstChild("Label")
+				if label and label:IsA("BillboardGui") then
+					label.Enabled = claimed
+				end
+			end
+		end
+	end
+	local decor = plot:FindFirstChild("Decor")
+	local claim = decor and decor:FindFirstChild("ClaimDecor")
+	if claim then
+		for _, child in ipairs(claim:GetDescendants()) do
+			if child:IsA("BasePart") then
+				child.Transparency = if claimed then 1 else 0
+			elseif child:IsA("SurfaceGui") then
+				child.Enabled = not claimed
+			end
+		end
+	end
 end
 
 -- Прозрачность видимой части скруглённой детали (постамент-«призрак», пока не куплен)
