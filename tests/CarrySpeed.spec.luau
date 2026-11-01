@@ -31,6 +31,23 @@ test("несколько в руках — берётся самая медле�
 	equal(CarrySpeed.Compute(BASE, { speedOf("Common"), speedOf("Legendary"), speedOf("Epic") }), 11)
 end)
 
+-- Как EnemyConfig.Chaser.WalkSpeed и ChaseRadius / HitRadius (EnemyConfig здесь не загрузить: в нём Vector3)
+local ENEMY_SPEED = 10
+local CHASE_RADIUS = 45
+local HIT_RADIUS = 4.5
+
+test("от Grumblob убегает любой: даже с Legendary игрок быстрее врага", function()
+	for _, rarity in ipairs(MemelingConfig.RarityOrder) do
+		equal(CarrySpeed.Compute(BASE, { speedOf(rarity) }) > ENEMY_SPEED, true, rarity)
+	end
+end)
+
+test("без лута — легко: отрыв 6 студов/с, из радиуса погони меньше чем за 7 с", function()
+	local gap = CarrySpeed.Compute(BASE, {}) - ENEMY_SPEED
+	equal(gap, 6)
+	equal((CHASE_RADIUS - HIT_RADIUS) / gap < 7, true)
+end)
+
 test("никогда не быстрее обычной скорости", function()
 	equal(CarrySpeed.Compute(12, { speedOf("Common") }), 12)
 end)
