@@ -101,6 +101,7 @@ StyleConfig.Label = {
 	MaxDistance = 200, -- обычные подписи (портал, зона, EXTRACT)
 	MemelingMaxDistance = 25, -- имена мемлингов видны только вблизи, чтобы не было каши из надписей
 	MemelingScale = 0.5, -- имя мемлинга вдвое меньше обычной подписи
+	BestHaulScale = 0.7, -- имя и ник на витрине BEST HAUL — крупнее, видно с площади
 	PedestalAuraGap = 2.5, -- насколько подпись «накоплено» выше подписи мемлинга на постаменте
 	-- Плотность имени владельца на табличке (SurfaceGui). TextScaled не растит текст больше 100 пикселей,
 	-- поэтому при 20 пикселях на студ имя заполняет табличку по высоте
@@ -129,6 +130,13 @@ StyleConfig.Background = {
 StyleConfig.Hub = {
 	Floor = Palette.MintLight,
 	Spawn = Palette.PlumLight,
+	-- Витрина «BEST HAUL»: подиум в фоновых цветах (на него не нажимают)
+	PodiumTiers = { Palette.PlumLight, Palette.Plum },
+	PodiumRim = Palette.CreamLight,
+	-- Гигантские мемные предметы: свои цвета предмета (как цвета персонажей), без жёлтого и красного
+	Mug = { Body = Palette.PlumLight, Band = Palette.Mint, Coffee = Color3.fromHex("6B4226"), Steam = Palette.CreamLight },
+	Cheese = { Body = Color3.fromHex("FFE08A"), Holes = Color3.fromHex("E8B850") },
+	Donut = { Dough = Color3.fromHex("D9A866"), Frosting = Palette.PlumLight, Sprinkles = { Palette.Mint, Palette.CreamLight, Palette.PlumDark } },
 	SpawnForceFieldSeconds = 0, -- без силового поля при появлении
 }
 

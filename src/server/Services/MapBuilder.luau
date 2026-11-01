@@ -35,6 +35,8 @@ local zoneFolder: Folder? = nil
 local zoneEntryPart: Part? = nil
 local extractionPad: Part? = nil
 local sideExtractionPad: Part? = nil
+local bestHaulPodium: Part? = nil -- верхняя ступень подиума «BEST HAUL» (на ней подпись)
+local bestHaulStand: CFrame? = nil -- точка на верхней ступени, мемлинг смотрит на центр хаба
 
 -- ── Детали ─────────────────────────────────────────────────────────────────
 
@@ -458,6 +460,104 @@ local function buildBackground()
 	buildBridges(folder)
 end
 
+-- Точка на полу хаба по смещению (X, Z) от центра
+local function hubPoint(offset: Vector2, height: number): Vector3
+	local hub = MapConfig.Hub
+	return Vector3.new(hub.Center.X + offset.X, hub.Center.Y + hub.Size.Y / 2 + height, hub.Center.Z + offset.Y)
+end
+
+-- Витрина «BEST HAUL»: ступенчатый подиум, подпись над ним. Мемлинга на него ставит сервис BestHaul
+local function buildBestHaul(parent: Instance)
+	local cfg = MapConfig.Hub.BestHaul
+	local style = StyleConfig.Hub
+	local folder = Instance.new("Folder")
+	folder.Name = "BestHaul"
+	folder.Parent = parent
+	local height = 0
+	local top: Part? = nil
+	for i, tier in ipairs(cfg.Tiers) do
+		local part = makeColumn(
+			"Tier" .. i,
+			CFrame.new(hubPoint(cfg.Offset, height + tier.Height / 2)),
+			tier.Height,
+			tier.Diameter,
+			style.PodiumTiers[(i - 1) % #style.PodiumTiers + 1],
+			folder
+		)
+		decorate(part, true)
+		height += tier.Height
+		top = part
+	end
+	local last = cfg.Tiers[#cfg.Tiers]
+	local rim = makeColumn("Rim", CFrame.new(hubPoint(cfg.Offset, height + 0.1)), 0.2, last.Diameter + 0.4, style.PodiumRim, folder)
+	decorate(rim, false)
+	local podium = assert(top, "у подиума нет ступеней")
+	addLabel(podium, TextConfig.BestHaulEmpty, { Height = cfg.SignHeight - height })
+	bestHaulPodium = podium
+	-- Мемлинг на подиуме смотрит на центр хаба
+	local stand = hubPoint(cfg.Offset, height)
+	bestHaulStand = CFrame.lookAt(stand, Vector3.new(MapConfig.Hub.Center.X, stand.Y, MapConfig.Hub.Center.Z))
+end
+
+-- Гигантские мемные предметы на площади: кружка, кусок сыра, пончик. Только декор
+local function buildProps(parent: Instance)
+	local style = StyleConfig.Hub
+	local folder = Instance.new("Folder")
+	folder.Name = "Props"
+	folder.Parent = parent
+	local function add(part: BasePart, shadow: boolean): BasePart
+		decorate(part, shadow)
+		return part
+	end
+	for i, prop in ipairs(MapConfig.Hub.Props) do
+		local base = hubPoint(prop.Offset, 0)
+		local model = Instance.new("Model")
+		model.Name = prop.Kind .. i
+		if prop.Kind == "Mug" then
+			local mug = style.Mug
+			add(makeColumn("Body", CFrame.new(base + Vector3.new(0, 4.5, 0)), 9, 7, mug.Body, model), true)
+			add(makeColumn("Band", CFrame.new(base + Vector3.new(0, 5, 0)), 1.2, 7.15, mug.Band, model), false)
+			add(makeColumn("Coffee", CFrame.new(base + Vector3.new(0, 8.9, 0)), 0.4, 6.2, mug.Coffee, model), false)
+			-- Ручка «]» из трёх брусков сбоку
+			add(makePart("HandleTop", Vector3.new(2.6, 1, 1.2), CFrame.new(base + Vector3.new(4.4, 7.2, 0)), mug.Body, model), false)
+			add(makePart("HandleSide", Vector3.new(1, 4.4, 1.2), CFrame.new(base + Vector3.new(5.2, 5, 0)), mug.Body, model), false)
+			add(makePart("HandleBottom", Vector3.new(2.6, 1, 1.2), CFrame.new(base + Vector3.new(4.4, 2.8, 0)), mug.Body, model), false)
+			for s, offset in ipairs({ Vector3.new(-0.8, 10.6, 0), Vector3.new(0.9, 12, 0.4) }) do
+				local steam = add(makeShape("Steam" .. s, "Ball", Vector3.one * (2.2 - s * 0.4), CFrame.new(base + offset), mug.Steam, model), false)
+				steam.Transparency = 0.4
+			end
+		elseif prop.Kind == "Cheese" then
+			local cheese = style.Cheese
+			add(makeShape("Wedge", "Wedge", Vector3.new(7, 7, 11), CFrame.new(base + Vector3.new(0, 3.5, 0)) * CFrame.Angles(0, math.rad(30), 0), cheese.Body, model), true)
+			for h, offset in ipairs({ Vector3.new(3.4, 2, 0.8), Vector3.new(3.4, 4.2, 3), Vector3.new(-3.4, 1.8, 2.2), Vector3.new(-3.4, 3.6, -1.6) }) do
+				local hole = makeShape("Hole" .. h, "Ball", Vector3.one * (1.6 - (h % 2) * 0.4), CFrame.new(base + Vector3.new(0, 3.5, 0)) * CFrame.Angles(0, math.rad(30), 0) * CFrame.new(offset - Vector3.new(0, 3.5, 0)), cheese.Holes, model)
+				add(hole, false)
+			end
+		elseif prop.Kind == "Donut" then
+			-- Пончик стоит на ребре: кольцо из шаров теста и глазурь спереди
+			local donut = style.Donut
+			local center = base + Vector3.new(0, 6.4, 0)
+			local facing = CFrame.lookAt(center, Vector3.new(MapConfig.Hub.Center.X, center.Y, MapConfig.Hub.Center.Z))
+			local count = 10
+			for b = 1, count do
+				local angle = (b - 1) * 2 * math.pi / count
+				local ring = facing * CFrame.Angles(0, 0, angle) * CFrame.new(3.8, 0, 0)
+				add(makeShape("Dough" .. b, "Ball", Vector3.one * 4.4, ring, donut.Dough, model), b == 1)
+				add(makeShape("Frosting" .. b, "Ball", Vector3.one * 3.6, ring * CFrame.new(0, 0, -1.1), donut.Frosting, model), false)
+				local sprinkle = makePart(
+					"Sprinkle" .. b,
+					Vector3.new(0.3, 0.9, 0.3),
+					ring * CFrame.new(0.6, 0.4, -2.8) * CFrame.Angles(0, 0, math.rad(b * 37)),
+					donut.Sprinkles[(b - 1) % #donut.Sprinkles + 1],
+					model
+				)
+				add(sprinkle, false)
+			end
+		end
+		model.Parent = folder
+	end
+end
+
 local function buildHub()
 	local folder = makeFolder("Hub")
 	local hub = MapConfig.Hub
@@ -466,6 +566,8 @@ local function buildHub()
 
 	local hubFloor = makePart("Floor", hub.Size, CFrame.new(hub.Center), StyleConfig.Hub.Floor, folder)
 	addFoam("Foam", hubFloor, folder)
+	buildBestHaul(folder)
+	buildProps(folder)
 
 	-- Игрок появляется лицом к порталу: персонаж смотрит туда же, куда точка появления
 	local spawnPosition = MapConfig.Spawn.Position
@@ -1099,6 +1201,11 @@ function MapBuilder.GetHubArrivalCFrame(): CFrame
 end
 
 -- Площадка эвакуации в зоне (на ней же подпись с прогрессом)
+-- Подиум «BEST HAUL»: верхняя ступень (на ней подпись) и точка, где стоит мемлинг
+function MapBuilder.GetBestHaul(): (Part, CFrame)
+	return (assert(bestHaulPodium, "MapBuilder.Build() ещё не вызван")), (assert(bestHaulStand, "MapBuilder.Build() ещё не вызван"))
+end
+
 function MapBuilder.GetSideExtractionPad(): Part
 	return (assert(sideExtractionPad, "MapBuilder.Build() ещё не вызван"))
 end

@@ -19,6 +19,10 @@ local TextConfig = {}
 TextConfig.FreePlot = "Empty plot"
 TextConfig.OwnedPlot = "%s's Studio" -- %s заменяется на имя игрока
 TextConfig.Portal = "MEME ZONE"
+-- Витрина в хабе: самый редкий мемлинг, вынесенный на этом сервере за сессию
+TextConfig.BestHaulTitle = "BEST HAUL"
+TextConfig.BestHaulEmpty = "BEST HAUL\nBring back something rare!"
+TextConfig.BestHaulOwner = "%s\nby %s" -- имя мемлинга, ник игрока
 TextConfig.Zone = "MEME ZONE"
 TextConfig.ZoneDanger = "DANGER"
 TextConfig.Entry = "Entry"

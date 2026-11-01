@@ -23,6 +23,7 @@ local Studio = require(script.Parent.Studio)
 local PlayerData = require(script.Parent.PlayerData)
 local Tutorial = require(script.Parent.Tutorial)
 local Analytics = require(script.Parent.Analytics)
+local BestHaul = require(script.Parent.BestHaul)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
@@ -165,6 +166,7 @@ local function complete(player: Player)
 		return -- награда за эту вылазку уже выдана
 	end
 	local entries = Studio.AddToShowcase(player, memelingIds)
+	BestHaul.Offer(player, memelingIds)
 	local squad = applySquadBonus(player, position, entries)
 	local data = PlayerData.GetData(player)
 	if data then
