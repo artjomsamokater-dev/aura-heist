@@ -92,6 +92,27 @@ MapConfig.Hub = {
 			{ Angle = 45, Radius = 12.5 },
 			{ Angle = 225, Radius = 12.5 },
 		},
+		-- Гирлянды флажков над дорожками: угол дорожки, от и до (расстояние от центра)
+		Garlands = {
+			{ Angle = 90, From = 21, To = 26.5 }, -- между точкой появления и подиумом портала
+			{ Angle = 0, From = 13, To = 23 },
+			{ Angle = 202.5, From = 14, To = 46 },
+			{ Angle = 337.5, From = 14, To = 46 },
+		},
+		GarlandHeight = 9,
+		GarlandSag = 1.5, -- на сколько провисает середина
+	},
+	-- Декоративные мемлинги, которые бродят по площади (подобрать нельзя). Ходит каждый вокруг своего «дома»
+	-- не дальше WanderRadius; движение считает клиент (client/Controllers/WandererController)
+	Wanderers = {
+		WanderRadius = 5,
+		List = {
+			{ MemelingId = "ToastPaw", Angle = 30, Radius = 26 },
+			{ MemelingId = "SirWobbleton", Angle = 150, Radius = 26 },
+			{ MemelingId = "Grumbloaf", Angle = 240, Radius = 26 },
+			{ MemelingId = "NoodleNinja", Angle = 300, Radius = 26 },
+			{ MemelingId = "CaptainSockbeard", Angle = 340, Radius = 22 },
+		},
 	},
 }
 

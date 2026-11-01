@@ -177,6 +177,23 @@ StyleConfig.Hub = {
 			LightEmission = 0.3,
 		},
 		SplashGravity = 28,
+		GarlandPole = Palette.PlumDark,
+		GarlandString = Palette.CreamLight,
+		Flags = { Palette.Mint, Palette.PlumLight, Palette.CreamLight, Palette.Plum },
+		FlagStep = 1.8, -- расстояние между флажками
+	},
+	-- Как бродят декоративные мемлинги (только клиент): шагают к случайной точке, стоят, иногда прыгают или машут
+	Wanderers = {
+		Speed = 4, -- студов в секунду
+		PauseSeconds = NumberRange.new(1, 2.5),
+		HopChance = 0.35, -- после шага: шанс подпрыгнуть
+		WaveChance = 0.35, -- после шага: шанс помахать (покачаться)
+		HopHeight = 1.8,
+		HopSeconds = 0.45, -- один прыжок
+		Hops = 2,
+		WaveDegrees = 18,
+		WaveSeconds = 1.2,
+		WaveHz = 2.5,
 	},
 	SpawnForceFieldSeconds = 0, -- без силового поля при появлении
 }

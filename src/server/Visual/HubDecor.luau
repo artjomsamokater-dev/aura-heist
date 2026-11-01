@@ -210,6 +210,46 @@ local function buildSignpost(index: number, angle: number, radius: number, paren
 	buildArrow("ToBestHaul", base, bestHaul, 4.6, TextConfig.BestHaulTitle, m)
 end
 
+-- Гирлянда над дорожкой: столбы у начала и конца по разные стороны дорожки, нить с провисом,
+-- флажки-ромбики по нити. Без столкновений
+local function buildGarland(index: number, angle: number, from: number, to: number, parent: Instance)
+	local style = StyleConfig.Hub.Decor
+	local decor = MapConfig.Hub.Decor
+	local m = model("Garland" .. index, parent)
+	local a = math.rad(angle)
+	local side = Vector3.new(-math.sin(a), 0, math.cos(a)) * (MapConfig.Hub.PathWidth / 2 + 0.6)
+	local height = decor.GarlandHeight
+	local startBase = polar(angle, from, 0) + side
+	local endBase = polar(angle, to, 0) - side
+	column("PoleA", startBase + Vector3.new(0, height / 2, 0), height, 0.35, style.GarlandPole, m)
+	column("PoleB", endBase + Vector3.new(0, height / 2, 0), height, 0.35, style.GarlandPole, m)
+
+	local topA = startBase + Vector3.new(0, height, 0)
+	local topB = endBase + Vector3.new(0, height, 0)
+	local middle = (topA + topB) / 2 - Vector3.new(0, decor.GarlandSag, 0)
+	local flagIndex = 0
+	for s, segment in ipairs({ { topA, middle }, { middle, topB } }) do
+		local p0, p1 = segment[1], segment[2]
+		local length = (p1 - p0).Magnitude
+		part("String" .. s, "Block", Vector3.new(0.12, 0.12, length), CFrame.lookAt((p0 + p1) / 2, p1), style.GarlandString, m)
+		local count = math.floor(length / style.FlagStep)
+		for f = 1, count do
+			flagIndex += 1
+			local point = p0:Lerp(p1, (f - 0.5) / count)
+			-- Ромбик висит под нитью: квадрат, повёрнутый на 45° в плоскости нити
+			local frame = CFrame.lookAt(point, point + (p1 - p0).Unit)
+			part(
+				"Flag" .. flagIndex,
+				"Block",
+				Vector3.new(0.08, 0.85, 0.85),
+				frame * CFrame.new(0, -0.6, 0) * CFrame.Angles(math.rad(45), 0, 0),
+				style.Flags[(flagIndex - 1) % #style.Flags + 1],
+				m
+			)
+		end
+	end
+end
+
 -- ── Гиганты ───────────────────────────────────────────────────────────────
 
 -- Гигантский мемный предмет kind на полу в точке base, лицом к центру площади. Вернёт false, если такого нет
@@ -295,6 +335,9 @@ function HubDecor.Build(parent: Instance)
 	end
 	for i, spot in ipairs(decor.Signposts) do
 		buildSignpost(i, spot.Angle, spot.Radius, folder)
+	end
+	for i, garland in ipairs(decor.Garlands) do
+		buildGarland(i, garland.Angle, garland.From, garland.To, folder)
 	end
 
 	-- Фонари: по одному у каждой дорожки к мостику — с той стороны, что дальше от портала

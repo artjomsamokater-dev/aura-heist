@@ -13,6 +13,7 @@ local LootController = require(script.Controllers.LootController)
 local PortalController = require(script.Controllers.PortalController)
 local ExtractFxController = require(script.Controllers.ExtractFxController)
 local HitFxController = require(script.Controllers.HitFxController)
+local WandererController = require(script.Controllers.WandererController)
 
 HudController.Start()
 HazardController.Start()
@@ -27,3 +28,4 @@ task.spawn(ActionButtonsController.Start)
 task.spawn(PortalController.Start) -- ждёт, пока хаб появится на клиенте
 task.spawn(ExtractFxController.Start)
 task.spawn(HitFxController.Start) -- ждёт RemoteEvent Knockback
+task.spawn(WandererController.Start) -- ждёт, пока хаб появится на клиенте

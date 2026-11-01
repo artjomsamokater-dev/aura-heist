@@ -757,6 +757,23 @@ local function buildProps(parent: Instance)
 	end
 end
 
+-- Декоративные мемлинги на площади: сервер только ставит их «дома» (атрибуты HomeX/HomeZ/WanderRadius),
+-- бродят они на каждом клиенте (WandererController). Кнопки подбора нет — это не добыча
+local function buildWanderers(parent: Instance)
+	local cfg = MapConfig.Hub.Wanderers
+	local folder = Instance.new("Folder")
+	folder.Name = "Wanderers"
+	folder.Parent = parent
+	local size = StyleConfig.Memeling.Size
+	for i, spec in ipairs(cfg.List) do
+		local home = hubPolar(spec.Angle, spec.Radius, size.Y / 2)
+		local core = makeMemeling("Wanderer" .. i, spec.MemelingId, CFrame.new(home), folder)
+		core:SetAttribute("HomeX", home.X)
+		core:SetAttribute("HomeZ", home.Z)
+		core:SetAttribute("WanderRadius", cfg.WanderRadius)
+	end
+end
+
 local function buildHub()
 	local folder = makeFolder("Hub")
 	local hub = MapConfig.Hub
@@ -767,6 +784,7 @@ local function buildHub()
 	buildBestHaul(folder)
 	buildProps(folder)
 	HubDecor.Build(folder)
+	buildWanderers(folder)
 
 	-- Игрок появляется лицом к порталу: персонаж смотрит туда же, куда точка появления
 	local spawnPosition = MapConfig.Spawn.Position
