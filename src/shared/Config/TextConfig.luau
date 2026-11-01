@@ -18,6 +18,7 @@ local TextConfig = {}
 -- Подписи над объектами карты
 TextConfig.FreePlot = "Empty plot"
 TextConfig.ClaimPlot = "Join to claim!" -- табличка посреди свободного участка
+TextConfig.PortalInfo = "Danger zone inside!\nBring loot back to EXTRACT" -- табличка у портала
 TextConfig.OwnedPlot = "%s's Studio" -- %s заменяется на имя игрока
 TextConfig.Portal = "MEME ZONE"
 -- Витрина в хабе: самый редкий мемлинг, вынесенный на этом сервере за сессию

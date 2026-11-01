@@ -7,6 +7,7 @@
 -- Скруглённые постаменты и кнопки: «логическая» деталь (коробка, к ней привязаны кнопки, подписи
 -- и расстояния) невидима, а видно круглую деталь Look поверх неё. Механика от этого не меняется.
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ServerStorage = game:GetService("ServerStorage")
@@ -796,6 +797,169 @@ local function buildProps(parent: Instance)
 	end
 end
 
+-- Надпись на грани детали: SurfaceGui с рамкой-каймой и крупным текстом с обводкой
+local function addBoardText(board: BasePart, face: Enum.NormalId, text: string, textColor: Color3, strokeColor: Color3, border: Color3?)
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "Label"
+	gui.Face = face
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = StyleConfig.Label.SignPixelsPerStud
+	gui.Parent = board
+	if border then
+		local frame = Instance.new("Frame")
+		frame.Name = "Border"
+		frame.BackgroundTransparency = 1
+		frame.Size = UDim2.fromScale(1, 1)
+		frame.Parent = gui
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = border
+		stroke.Thickness = 10
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Parent = frame
+	end
+	local label = Instance.new("TextLabel")
+	label.Name = "Text"
+	label.BackgroundTransparency = 1
+	label.Position = UDim2.fromScale(0.04, 0.08)
+	label.Size = UDim2.fromScale(0.92, 0.84)
+	label.TextScaled = true
+	label.Font = StyleConfig.Fonts.Label
+	label.TextColor3 = textColor
+	label.TextStrokeColor3 = strokeColor
+	label.TextStrokeTransparency = 0
+	label.Text = text
+	label.Parent = gui
+end
+
+-- Статуя у портала: копия мемлинга, уменьшенная (низ остаётся на месте), тусклая, без света, искр,
+-- контура и столкновений
+local function makeStatue(name: string, memelingId: string, stand: Vector3, parent: Instance)
+	local cfg = MapConfig.Portal.Statues
+	local style = StyleConfig.Portal
+	local size = StyleConfig.Memeling.Size
+	local core = makeMemeling(name, memelingId, CFrame.lookAt(stand + Vector3.new(0, size.Y / 2, 0), stand + Vector3.new(0, size.Y / 2, -1)), parent)
+	local height = size.Y * getMemelingScale(memelingId)
+	scaleMemeling(core, cfg.Scale, height * (cfg.Scale - 1) / 2)
+	CollectionService:RemoveTag(core, StyleConfig.Outline.Tag)
+	core.CanCollide = false
+	for _, child in ipairs(core:GetDescendants()) do
+		if child:IsA("BasePart") then
+			child.Color = child.Color:Lerp(style.StatueStone, style.StatueBlend)
+			child.Material = StyleConfig.Material
+		elseif child:IsA("Light") or child:IsA("ParticleEmitter") then
+			child:Destroy()
+		end
+	end
+end
+
+-- Оформление портала: подиум со ступенями и жёлтой каймой, колонны с кристаллами, вывеска «MEME ZONE»,
+-- статуи, светящаяся стрелка на полу, табличка-подсказка. Крутит, качает и мигает — клиент (PortalController)
+local function buildPortalDecor(parent: Instance)
+	local portalCfg = MapConfig.Portal
+	local style = StyleConfig.Portal
+	local folder = Instance.new("Folder")
+	folder.Name = "PortalDecor"
+	folder.Parent = parent
+
+	-- Подиум: ступени снизу вверх, на верхней — кайма
+	local podium = portalCfg.Podium
+	local height = 0
+	for i, tier in ipairs(podium.Tiers) do
+		local step = makePart(
+			"Step" .. i,
+			Vector3.new(tier.X, podium.TierHeight, tier.Y),
+			CFrame.new(hubPoint(podium.Center, height + podium.TierHeight / 2)),
+			style.PodiumTiers[(i - 1) % #style.PodiumTiers + 1],
+			folder
+		)
+		step.CastShadow = false
+		height += podium.TierHeight
+	end
+	local topTier = podium.Tiers[#podium.Tiers]
+	local rimY = height + 0.05
+	local w = podium.RimWidth
+	for r, rim in ipairs({
+		{ Size = Vector3.new(topTier.X, 0.1, w), Offset = Vector2.new(0, -topTier.Y / 2 + w / 2) },
+		{ Size = Vector3.new(topTier.X, 0.1, w), Offset = Vector2.new(0, topTier.Y / 2 - w / 2) },
+		{ Size = Vector3.new(w, 0.1, topTier.Y), Offset = Vector2.new(-topTier.X / 2 + w / 2, 0) },
+		{ Size = Vector3.new(w, 0.1, topTier.Y), Offset = Vector2.new(topTier.X / 2 - w / 2, 0) },
+	}) do
+		local strip = makePart("Rim" .. r, rim.Size, CFrame.new(hubPoint(podium.Center + rim.Offset, rimY)), style.PodiumRim, folder)
+		strip.CanCollide = false
+		decorate(strip, false)
+	end
+	local tierOne = podium.TierHeight -- верх нижней ступени: на ней колонны и статуи
+
+	-- Колонны с кристаллами (кристаллы крутит клиент: Crystal1, Crystal2)
+	local columns = portalCfg.Columns
+	for i, side in ipairs({ -1, 1 }) do
+		local base = hubPoint(Vector2.new(side * columns.X, columns.Z), tierOne)
+		local column = makeColumn("Column" .. i, CFrame.new(base + Vector3.new(0, columns.Height / 2, 0)), columns.Height, columns.Diameter, style.Column, folder)
+		column.CastShadow = false
+		local cap = makeColumn("ColumnCap" .. i, CFrame.new(base + Vector3.new(0, columns.Height + 0.3, 0)), 0.6, columns.Diameter + 0.8, style.ColumnCap, folder)
+		decorate(cap, false)
+		local crystal = makePart(
+			"Crystal" .. i,
+			Vector3.one * columns.CrystalSize,
+			CFrame.new(base + Vector3.new(0, columns.Height + 0.6 + columns.CrystalSize, 0)) * CFrame.Angles(math.rad(45), 0, math.rad(45)),
+			style.Crystals[(i - 1) % #style.Crystals + 1],
+			folder
+		)
+		makeGlow(crystal, 0)
+		crystal.CanCollide = false
+		decorate(crystal, false)
+		if side == -1 then
+			-- Табличка-подсказка на левой колонне, выше голов статуй
+			local info = portalCfg.InfoSign
+			local board = makePart(
+				"InfoSign",
+				info.Size,
+				CFrame.new(base + Vector3.new(0, info.Height, -columns.Diameter / 2 - info.Size.Z / 2)),
+				style.InfoBoard,
+				folder
+			)
+			board.CanCollide = false
+			decorate(board, false)
+			addBoardText(board, Enum.NormalId.Front, TextConfig.PortalInfo, style.InfoText, style.InfoBoard)
+		end
+	end
+
+	-- Вывеска «MEME ZONE» над рамкой, перед столбом света: ничем не закрыта (качает клиент)
+	local sign = portalCfg.Sign
+	local board = makePart("Sign", sign.Size, CFrame.new(hubPoint(Vector2.new(portalCfg.Position.X, sign.Z), sign.Height)), style.SignBoard, folder)
+	board.CanCollide = false
+	decorate(board, false)
+	addBoardText(board, Enum.NormalId.Front, TextConfig.Portal, style.SignText, style.SignTextStroke, style.SignBorder)
+	addBoardText(board, Enum.NormalId.Back, TextConfig.Portal, style.SignText, style.SignTextStroke, style.SignBorder)
+
+	-- Статуи
+	for i, statue in ipairs(portalCfg.Statues.List) do
+		makeStatue("Statue" .. i, statue.MemelingId, hubPoint(statue.Offset, tierOne), folder)
+	end
+
+	-- Светящаяся стрелка на полу: две «галочки» ^, остриём к порталу (+Z). Мигает клиент
+	local arrow = Instance.new("Folder")
+	arrow.Name = "Arrow"
+	arrow.Parent = folder
+	local spec = portalCfg.Arrow
+	for c, z in ipairs(spec.Z) do
+		for _, side in ipairs({ -1, 1 }) do
+			local center = hubPoint(Vector2.new(portalCfg.Position.X + side * spec.ArmLength * 0.35, z), 0.06)
+			local arm = makePart(
+				"Chevron" .. c .. "_" .. side,
+				Vector3.new(spec.ArmWidth, 0.08, spec.ArmLength),
+				-- Левое плечо (side = −1) дальним концом смотрит к середине (+X): вместе получается остриё к +Z
+				CFrame.new(center) * CFrame.Angles(0, math.rad(-side * 45), 0),
+				style.Arrow,
+				arrow
+			)
+			makeGlow(arm, 0)
+			arm.CanCollide = false
+			decorate(arm, false)
+		end
+	end
+end
+
 -- Декоративные мемлинги на площади: сервер только ставит их «дома» (атрибуты HomeX/HomeZ/WanderRadius),
 -- бродят они на каждом клиенте (WandererController). Кнопки подбора нет — это не добыча
 local function buildWanderers(parent: Instance)
@@ -847,8 +1011,7 @@ local function buildHub()
 	portal.CastShadow = false
 	portal.CanCollide = false -- сквозь портал проходят
 	portal.CanTouch = true -- на касание этой детали подписан Raid; декор поверх неё касаний не ловит
-	addLabel(portal, TextConfig.Portal)
-	portalPart = portal
+	portalPart = portal -- название «MEME ZONE» — на большой вывеске над рамкой (buildPortalDecor)
 
 	local facing = CFrame.new(portalCfg.Position) * CFrame.Angles(0, math.rad(90), 0) -- ось цилиндра — вдоль Z: диск смотрит на хаб
 	local function portalDisc(name: string, thickness: number, diameter: number, color: Color3): Part
@@ -958,6 +1121,8 @@ local function buildHub()
 	makeGlow(beacon, style.BeaconTransparency)
 	decorate(beacon, false)
 	beacon.CanCollide = false
+
+	buildPortalDecor(folder)
 end
 
 -- ── Участки ────────────────────────────────────────────────────────────────

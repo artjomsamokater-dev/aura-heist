@@ -161,6 +161,28 @@ MapConfig.Portal = {
 	FrameCapDiameter = 3.2,
 	BeaconDiameter = 3,
 	BeaconHeight = 70,
+	-- Оформление вокруг портала (задача 6.2). Смещения X/Z — от центра хаба по полу. Триггер (Position/Size)
+	-- не двигается: подиум — ступени по 0,4 студа (персонаж поднимается сам), остальное без столкновений
+	Podium = {
+		Center = Vector2.new(0, 35),
+		TierHeight = 0.4,
+		Tiers = { Vector2.new(26, 16), Vector2.new(22, 12), Vector2.new(18, 8) }, -- ширина × глубина, снизу вверх
+		RimWidth = 0.35, -- жёлтая кайма по краю верхней ступени
+	},
+	Columns = { X = 11.5, Z = 35, Height = 9, Diameter = 1.8, CrystalSize = 2 }, -- колонны по бокам, на нижней ступени
+	Sign = { Size = Vector3.new(18, 4.5, 0.6), Height = 18, Z = 32 }, -- вывеска над рамкой, перед столбом света
+	-- Мемлинги-статуи у основания: уменьшенные тусклые копии Common и Rare в первом ряду нижней ступени
+	Statues = {
+		Scale = 0.6,
+		List = {
+			{ MemelingId = "ToastPaw", Offset = Vector2.new(-10.5, 28.4) },
+			{ MemelingId = "NoodleNinja", Offset = Vector2.new(-6.5, 28.4) },
+			{ MemelingId = "CaptainSockbeard", Offset = Vector2.new(6.5, 28.4) },
+			{ MemelingId = "Grumbloaf", Offset = Vector2.new(10.5, 28.4) },
+		},
+	},
+	Arrow = { Z = { 22.6, 24.8 }, ArmLength = 2.8, ArmWidth = 0.7 }, -- две «галочки» ^ на полу перед подиумом
+	InfoSign = { Size = Vector3.new(6.4, 3.4, 0.3), Height = 7 }, -- табличка на левой колонне, выше статуй
 }
 
 -- Участки баз (студии): стоят кольцом вокруг хаба, лицом к нему.

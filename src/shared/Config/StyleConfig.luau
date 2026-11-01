@@ -236,6 +236,28 @@ StyleConfig.Portal = {
 		MinDistance = 6, -- ближе — на полную громкость
 		MaxDistance = 45, -- дальше — не слышно
 	},
+	-- Оформление вокруг: подиум со ступенями и жёлтой каймой, колонны с крутящимися кристаллами,
+	-- вывеска (покачивается), тусклые статуи, пульсирующая стрелка на полу, табличка-подсказка.
+	-- Крутит, качает и мигает клиент (PortalController)
+	PodiumTiers = { Palette.PlumLight, Palette.Plum, Palette.PlumLight },
+	PodiumRim = Palette.Sun,
+	Column = Palette.PlumLight,
+	ColumnCap = Palette.CreamLight,
+	Crystals = { Palette.MintLight, Palette.PlumLight },
+	CrystalSpinDegreesPerSecond = 90,
+	SignBoard = Palette.PlumDark,
+	SignBorder = Palette.Sun,
+	SignText = Palette.Sun,
+	SignTextStroke = Palette.Ink,
+	SignRockDegrees = 2,
+	SignRockHz = 0.35,
+	StatueStone = Color3.fromRGB(176, 170, 186), -- статуи: цвета мемлинга сильно смешаны с камнем
+	StatueBlend = 0.75,
+	Arrow = Palette.Sun, -- «иди сюда»: жёлтый = интерактивное
+	ArrowTransparency = NumberRange.new(0.05, 0.65), -- пульс между этими значениями
+	ArrowPulseHz = 1.2,
+	InfoBoard = Palette.CreamLight,
+	InfoText = Palette.Ink,
 	Particles = {
 		Color = Palette.CreamLight,
 		Rate = 6,
