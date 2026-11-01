@@ -294,6 +294,12 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
      Колесо сыра: Remotes.Knockback (сервер → игрок, направление от сервера), клиент толкает персонажа
      (EventConfig.GiantObject: KnockbackSpeed / KnockbackUp / KnockbackSeconds), урон прежний.
   7) Плиты-хлопушки: чёрные трещины и кайма (SurfaceGui на верхней грани, StyleConfig.Hazards.SlamCracks).
+- После 6.1 — портал: вход и по касанию, и по проверке позиции раз в MapConfig.Portal.CheckSeconds
+  (shared/Util/PortalRule + тест); каждое касание — строка «[Portal] ник (касание/позиция): пустили / не пустили — причина»
+  (одна причина не чаще раза в 2 с); при старте Raid проверяет триггер («[Portal] Триггер портала в порядке»).
+  init.server запускает сервисы через xpcall: упавший сервис пишет «[Server] Сервис X упал…», следующие запускаются.
+- Море: невидимые стены (MapBuilder.buildSeaWalls, MapConfig.Background.SeaWall*) по краю хаба и участков
+  с проходами к мостикам и вдоль мостиков — уйти по морю нельзя.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),

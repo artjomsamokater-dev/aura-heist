@@ -40,6 +40,10 @@ MapConfig.Background = {
 	SeaSize = 2048,
 	BridgeWidth = 8,
 	BridgeThickness = 0.6,
+	-- Невидимые стены у моря: по краю хаба и участков (с проходами к мостикам) и вдоль мостиков.
+	-- По морю уйти нельзя; прыжок персонажа ~7 студов — стена выше
+	SeaWallHeight = 10,
+	SeaWallThickness = 1,
 	-- Острова: центр верхней грани (травы), радиус, высота «земли» под травой и что растёт сверху
 	Islands = {
 		{ Position = Vector3.new(-290, 55, -160), Radius = 24, Depth = 30, Decor = "Tree" },

@@ -451,6 +451,131 @@ local function buildIsland(index: number, spec: { Position: Vector3, Radius: num
 	model.Parent = parent
 end
 
+-- Невидимая стена у моря между двумя точками на уровне пола: не видна, камеру не цепляет (CanQuery = false)
+local function seaWall(name: string, a: Vector3, b: Vector3, parent: Instance)
+	local cfg = MapConfig.Background
+	local flatA, flatB = Vector3.new(a.X, 0, a.Z), Vector3.new(b.X, 0, b.Z)
+	local length = (flatB - flatA).Magnitude
+	if length < 0.5 then
+		return
+	end
+	local hub = MapConfig.Hub
+	local y = hub.Center.Y + hub.Size.Y / 2 + cfg.SeaWallHeight / 2
+	local middle = (flatA + flatB) / 2 + Vector3.new(0, y, 0)
+	local wall = makePart(
+		name,
+		Vector3.new(cfg.SeaWallThickness, cfg.SeaWallHeight, length),
+		CFrame.lookAt(middle, Vector3.new(flatB.X, y, flatB.Z)),
+		StyleConfig.Background.Sea,
+		parent
+	)
+	wall.Transparency = 1
+	decorate(wall, false)
+end
+
+-- Стены по замкнутому контуру corners (по порядку), кроме мест, где isGap(точка) — там проходы
+local function seaWallLoop(name: string, corners: { Vector3 }, isGap: (Vector3) -> boolean, parent: Instance)
+	local step = 0.5
+	local count = 0
+	for i, a in ipairs(corners) do
+		local b = corners[i % #corners + 1]
+		local length = (b - a).Magnitude
+		local direction = (b - a).Unit
+		local runStart: Vector3? = nil
+		local last = a
+		local steps = math.ceil(length / step)
+		for s = 0, steps do
+			local p = a + direction * math.min(s * step, length)
+			if isGap(p) then
+				if runStart then
+					count += 1
+					seaWall(name .. count, runStart, last, parent)
+					runStart = nil
+				end
+			elseif runStart == nil then
+				runStart = p
+			end
+			last = p
+		end
+		if runStart then
+			count += 1
+			seaWall(name .. count, runStart, b, parent)
+		end
+	end
+end
+
+local function buildSeaWalls(parent: Instance)
+	local cfg = MapConfig.Background
+	local hub = MapConfig.Hub
+	local plotsCfg = MapConfig.Plots
+	local folder = Instance.new("Folder")
+	folder.Name = "SeaWalls"
+	folder.Parent = parent
+	local center = Vector3.new(hub.Center.X, 0, hub.Center.Z)
+	local halfGap = cfg.BridgeWidth / 2 + cfg.SeaWallThickness / 2 -- стены мостика стоят сразу за его краем
+
+	-- Направления мостиков от центра хаба (по полу)
+	local directions: { Vector3 } = {}
+	for i = 1, plotsCfg.Count do
+		local p = PlotLayout.PlotCFrame(i).Position
+		table.insert(directions, Vector3.new(p.X - center.X, 0, p.Z - center.Z).Unit)
+	end
+	local function onBridge(p: Vector3): boolean
+		local flat = Vector3.new(p.X - center.X, 0, p.Z - center.Z)
+		for _, d in ipairs(directions) do
+			local side = flat - d * flat:Dot(d)
+			if flat:Dot(d) > 0 and side.Magnitude < halfGap then
+				return true
+			end
+		end
+		return false
+	end
+
+	-- Край хаба
+	local hubHalf = hub.Size.X / 2 + cfg.SeaWallThickness / 2
+	seaWallLoop("HubWall", {
+		center + Vector3.new(-hubHalf, 0, -hubHalf),
+		center + Vector3.new(hubHalf, 0, -hubHalf),
+		center + Vector3.new(hubHalf, 0, hubHalf),
+		center + Vector3.new(-hubHalf, 0, hubHalf),
+	}, onBridge, folder)
+
+	local plotHalf = plotsCfg.Size.X / 2 + cfg.SeaWallThickness / 2
+	for i, d in ipairs(directions) do
+		-- Вдоль мостика: от края хаба до переднего края участка, с обеих сторон
+		local normal = Vector3.new(-d.Z, 0, d.X)
+		local length = (PlotLayout.PlotCFrame(i).Position - Vector3.new(center.X, PlotLayout.PlotCFrame(i).Position.Y, center.Z)).Magnitude
+		local toDistance = length - plotHalf
+		for _, sign in ipairs({ -1, 1 }) do
+			local offset = normal * sign * halfGap
+			local fromDistance = 0
+			while fromDistance < toDistance do
+				local p = d * fromDistance + offset
+				if math.max(math.abs(p.X), math.abs(p.Z)) >= hubHalf then
+					break
+				end
+				fromDistance += 0.25
+			end
+			seaWall("BridgeWall" .. i .. "_" .. sign, center + d * fromDistance + offset, center + d * toDistance + offset, folder)
+		end
+
+		-- Край участка, проход спереди (участок смотрит −Z на хаб, мостик входит в середину переднего края)
+		local plotCFrame = PlotLayout.PlotCFrame(i)
+		local function corner(x: number, z: number): Vector3
+			return plotCFrame:PointToWorldSpace(Vector3.new(x, 0, z))
+		end
+		seaWallLoop("PlotWall" .. i .. "_", {
+			corner(-plotHalf, -plotHalf),
+			corner(plotHalf, -plotHalf),
+			corner(plotHalf, plotHalf),
+			corner(-plotHalf, plotHalf),
+		}, function(p: Vector3): boolean
+			local localP = plotCFrame:PointToObjectSpace(p)
+			return localP.Z < 0 and math.abs(localP.X) < halfGap and math.abs(localP.Z + plotHalf) < 0.1
+		end, folder)
+	end
+end
+
 local function buildBackground()
 	buildSea()
 	local folder = makeFolder("Background")
@@ -458,6 +583,7 @@ local function buildBackground()
 		buildIsland(i, spec, folder)
 	end
 	buildBridges(folder)
+	buildSeaWalls(folder)
 end
 
 -- Точка на полу хаба по смещению (X, Z) от центра
