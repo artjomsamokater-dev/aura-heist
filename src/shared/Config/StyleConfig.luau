@@ -693,6 +693,8 @@ StyleConfig.Characters = {
 		Mustache = hex("3B2414"),
 	},
 	Grumblob = { Body = hex("7BD13A"), Brow = hex("2A1638") }, -- враг: зелёный желейный шар
+	-- враг Candy Chaos: розовый мармеладный громила (тело чуть просвечивает)
+	GummyBrute = { Body = hex("FF5C8A"), Belly = hex("FFA3C0"), Brow = hex("2A1638"), Teeth = hex("FFFFFF"), Sugar = hex("FFFFFF") },
 }
 
 -- Контур: Highlight только у ближних, у того, что в руках, и на своих постаментах.

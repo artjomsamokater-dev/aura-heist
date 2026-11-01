@@ -1,6 +1,6 @@
 --!strict
 -- HitFxController: предупреждения и отдача от ударов на этом клиенте (задача 6.1).
---   • Замах Grumblob: у модели врага атрибут WindupUntil (время сервера) — вокруг врага растёт красный
+--   • Замах врага (Grumblob, GummyBrute): у модели врага атрибут WindupUntil (время сервера) — вокруг врага растёт красный
 --     полупрозрачный шар («раздувается и краснеет»). Ударит ли — решает сервер.
 --   • Колесо сыра сбило игрока: сервер присылает направление (Remotes.Knockback) — персонаж отлетает.
 --     Персонажем управляет его клиент, поэтому толкаем его здесь; урон уже нанёс сервер.
@@ -41,7 +41,7 @@ end
 
 local function updateWindups()
 	local now = Workspace:GetServerTimeNow()
-	local cfg = EnemyConfig.Chaser
+	local fallback = EnemyConfig.Kinds.Grumblob
 	local active: { [Model]: boolean } = {}
 	for _, target in ipairs(CollectionService:GetTagged(StyleConfig.Outline.Tag)) do
 		local untilTime = tonumber(target:GetAttribute("WindupUntil"))
@@ -51,8 +51,11 @@ local function updateWindups()
 				active[target] = true
 				local swell = swells[target] or makeSwell()
 				swells[target] = swell
-				local progress = math.clamp(1 - (untilTime - now) / cfg.WindupSeconds, 0, 1)
-				swell.Size = Vector3.one * cfg.BodySize * (1 + style.Grow * progress)
+				-- Длительность замаха и размер — свои у каждого вида врага (атрибуты ставит сервер)
+				local seconds = tonumber(target:GetAttribute("WindupSeconds")) or fallback.WindupSeconds
+				local bodySize = tonumber(target:GetAttribute("BodySize")) or fallback.BodySize
+				local progress = math.clamp(1 - (untilTime - now) / seconds, 0, 1)
+				swell.Size = Vector3.one * bodySize * (1 + style.Grow * progress)
 				swell.CFrame = root.CFrame
 			end
 		end

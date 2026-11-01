@@ -1,6 +1,7 @@
 --!strict
--- Enemy: враги Grumblob в опасной части зоны (числа — EnemyConfig.Chaser,
--- вид — server/Visual/MemelingBuilders.BuildEnemy, цвета — StyleConfig.Characters.Grumblob).
+-- Enemy: враги в опасной части зоны — Grumblob, GummyBrute (вид по зоне — EnemyConfig.Zones[Id].Kind;
+-- скорость, урон и размер вида — EnemyConfig.Kinds, общее поведение — EnemyConfig.Chaser;
+-- модель — server/Visual/MemelingBuilders.BuildEnemy, цвета — StyleConfig.Characters[вид]).
 --
 -- • Ходят только внутри опасной части: цель за её краем — враг останавливается у границы (EnemyMath).
 --   В круг ExtractionKeepOut вокруг EXTRACT тоже не заходят: эвакуацию караулить нельзя.
@@ -41,6 +42,8 @@ local ROOT_SIZE = Vector3.new(2, 2, 1)
 
 type Chaser = {
 	ZoneId: string, -- в какой зоне живёт (Id из ZoneConfig.ZoneOrder)
+	KindId: string, -- вид врага (EnemyConfig.Kinds)
+	Stats: EnemyConfig.EnemyKind, -- скорость, урон, размер вида
 	Model: Model,
 	Root: Part,
 	Body: Part,
@@ -105,14 +108,16 @@ local function weld(part: BasePart, root: BasePart)
 	constraint.Parent = part
 end
 
-local function buildChaser(zoneId: string, index: number, floorPosition: Vector3, parent: Instance): Chaser
-	local cfg = EnemyConfig.Chaser
-	local bodyColor = StyleConfig.Characters.Grumblob.Body
+local function buildChaser(zoneId: string, kindId: string, index: number, floorPosition: Vector3, parent: Instance): Chaser
+	local cfg = EnemyConfig.Kinds[kindId]
+	local bodyColor = StyleConfig.Characters[kindId].Body
 	local center = floorPosition + Vector3.new(0, cfg.BodySize / 2, 0)
 	local cframe = CFrame.lookAt(center, center - Vector3.xAxis) -- смотрит на запад, к входу в зону
 
 	local model = Instance.new("Model")
-	model.Name = "Grumblob" .. index
+	model.Name = kindId .. index
+	model:SetAttribute("WindupSeconds", cfg.WindupSeconds) -- клиенту: сколько длится замах (HitFxController)
+	model:SetAttribute("BodySize", cfg.BodySize)
 
 	-- Невидимый корень, которым двигает Humanoid
 	local root = MapBuilder.MakePart("HumanoidRootPart", ROOT_SIZE, cframe, bodyColor, model)
@@ -128,7 +133,7 @@ local function buildChaser(zoneId: string, index: number, floorPosition: Vector3
 	weld(body, root)
 
 	-- Лицо, блик, тень и румянец — в стиле мемлингов; контур ставит клиент (тег Outlined)
-	MemelingBuilders.BuildEnemy(body, cframe, cfg.BodySize)
+	MemelingBuilders.BuildEnemy(kindId, body, cframe, cfg.BodySize)
 	MemelingKit.TagOutline(model)
 	-- Подписи у врага нет: его и так видно по цвету и сердитым бровям
 
@@ -158,6 +163,8 @@ local function buildChaser(zoneId: string, index: number, floorPosition: Vector3
 
 	local chaser: Chaser = {
 		ZoneId = zoneId,
+		KindId = kindId,
+		Stats = cfg,
 		Model = model,
 		Root = root,
 		Body = body,
@@ -353,7 +360,7 @@ local function decide(chaser: Chaser)
 	perf.ThinkSeconds += os.clock() - startedAt
 
 	if target then
-		chaser.Humanoid.WalkSpeed = cfg.WalkSpeed
+		chaser.Humanoid.WalkSpeed = chaser.Stats.WalkSpeed
 		chaser.PatrolPoint = nil
 		local p = target.Root.Position
 		local found, why = moveAlong(chaser, walkGoal(chaser, p.X, p.Z))
@@ -367,7 +374,7 @@ local function decide(chaser: Chaser)
 	end
 
 	-- Патруль: к случайной точке около дома, медленно; дошёл или застрял — пауза и новая точка
-	chaser.Humanoid.WalkSpeed = cfg.PatrolWalkSpeed
+	chaser.Humanoid.WalkSpeed = chaser.Stats.PatrolWalkSpeed
 	local now = os.clock()
 	local point = chaser.PatrolPoint
 	if point and (flat(position, point) < 2 or now > chaser.PatrolUntil) then
@@ -415,7 +422,7 @@ local function alert(chaser: Chaser)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Alert"
 	gui.Size = UDim2.fromScale(style.SizeStuds, style.SizeStuds)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, cfg.BodySize / 2 + style.SizeStuds / 2 + 0.5, 0)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, chaser.Stats.BodySize / 2 + style.SizeStuds / 2 + 0.5, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = style.MaxDistance
 	gui.Parent = chaser.Body
@@ -463,13 +470,12 @@ end
 -- Замах: атрибут WindupUntil (время сервера) на модели — клиент рисует раздувание и покраснение
 local function setWindup(chaser: Chaser, windup: { Player: Player, StrikeAt: number }?)
 	chaser.Windup = windup
-	chaser.Model:SetAttribute("WindupUntil", if windup then Workspace:GetServerTimeNow() + EnemyConfig.Chaser.WindupSeconds else nil)
+	chaser.Model:SetAttribute("WindupUntil", if windup then Workspace:GetServerTimeNow() + chaser.Stats.WindupSeconds else nil)
 end
 
 -- Удар в два шага: игрок подошёл ближе WindupRadius → замах WindupSeconds → удар, если он всё ещё в HitRadius
 local function checkHits()
 	local startedAt = os.clock()
-	local cfg = EnemyConfig.Chaser
 	local now = os.clock()
 	local targetsByZone: { [string]: { Target } } = {}
 	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
@@ -488,8 +494,8 @@ local function checkHits()
 				setWindup(chaser, nil)
 				chaser.LastHit[windup.Player] = now -- и при промахе: следующий замах не сразу
 				for _, target in ipairs(targets) do
-					if target.Player == windup.Player and (target.Root.Position - position).Magnitude <= cfg.HitRadius then
-						Damage.Apply(target.Player, cfg.Damage, "Grumblob")
+					if target.Player == windup.Player and (target.Root.Position - position).Magnitude <= chaser.Stats.HitRadius then
+						Damage.Apply(target.Player, chaser.Stats.Damage, chaser.KindId)
 					end
 				end
 			end
@@ -497,10 +503,10 @@ local function checkHits()
 			for _, target in ipairs(targets) do
 				local last = chaser.LastHit[target.Player]
 				if
-					(last == nil or now - last >= cfg.HitCooldownSeconds)
-					and (target.Root.Position - position).Magnitude <= cfg.WindupRadius
+					(last == nil or now - last >= chaser.Stats.HitCooldownSeconds)
+					and (target.Root.Position - position).Magnitude <= chaser.Stats.WindupRadius
 				then
-					setWindup(chaser, { Player = target.Player, StrikeAt = now + cfg.WindupSeconds })
+					setWindup(chaser, { Player = target.Player, StrikeAt = now + chaser.Stats.WindupSeconds })
 					break
 				end
 			end
@@ -544,8 +550,10 @@ end
 
 function Enemy.Start()
 	local cfg = EnemyConfig.Chaser
-	if cfg.Damage >= MAX_HEALTH then
-		warn("[Enemy] Урон врага убивает с одного касания — уменьши EnemyConfig.Chaser.Damage")
+	for kindId, kind in EnemyConfig.Kinds do
+		if kind.Damage >= MAX_HEALTH then
+			warn(string.format("[Enemy] Урон %s убивает с одного касания — уменьши EnemyConfig.Kinds.%s.Damage", kindId, kindId))
+		end
 	end
 
 	-- Враги каждой зоны: сколько и где дома — EnemyConfig.Zones[Id]
@@ -560,7 +568,7 @@ function Enemy.Start()
 			local count = math.min(spec.Count, #spec.SpawnPoints)
 			for i = 1, count do
 				total += 1
-				table.insert(chasers, buildChaser(zoneId, total, top + spec.SpawnPoints[i], folder))
+				table.insert(chasers, buildChaser(zoneId, spec.Kind, total, top + spec.SpawnPoints[i], folder))
 			end
 		end
 	end

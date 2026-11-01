@@ -31,7 +31,7 @@ test("несколько в руках — берётся самая медле�
 	equal(CarrySpeed.Compute(BASE, { speedOf("Common"), speedOf("Legendary"), speedOf("Epic") }), 11)
 end)
 
--- Как EnemyConfig.Chaser.WalkSpeed и ChaseRadius / HitRadius (EnemyConfig здесь не загрузить: в нём Vector3)
+-- Как EnemyConfig.Kinds.Grumblob.WalkSpeed, Chaser.ChaseRadius и Kinds.Grumblob.HitRadius (EnemyConfig здесь не загрузить: в нём Vector3)
 local ENEMY_SPEED = 10
 local CHASE_RADIUS = 45
 local HIT_RADIUS = 4.5

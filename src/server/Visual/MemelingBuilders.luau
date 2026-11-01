@@ -977,8 +977,10 @@ function MemelingBuilders.Build(memelingId: string, kit: Kit): boolean
 	return true
 end
 
+local EnemyBuilders: { [string]: (body: BasePart, cframe: CFrame, diameter: number) -> () } = {}
+
 -- Враг Grumblob: зелёный желейный шар с сердитыми бровями. body — шар-тело (уже создан), diameter — его размер
-function MemelingBuilders.BuildEnemy(body: BasePart, cframe: CFrame, diameter: number)
+function EnemyBuilders.Grumblob(body: BasePart, cframe: CFrame, diameter: number)
 	local c = Colors.Grumblob
 	body.Color = c.Body
 	local kit = MemelingKit.new(body, cframe)
@@ -995,6 +997,51 @@ function MemelingBuilders.BuildEnemy(body: BasePart, cframe: CFrame, diameter: n
 	mouth(kit, v3(1.3, 0.3, 0.3), v3(0, -0.6, front(Vector3.zero, size, 0, -0.6)))
 	blush(kit, v3(0.8, 0.4, 0.2), v3(1.45, -0.15, front(Vector3.zero, size, 1.45, -0.15)))
 	blush(kit, v3(0.8, 0.4, 0.2), v3(-1.45, -0.15, front(Vector3.zero, size, -1.45, -0.15) - 0.15))
+end
+
+-- Враг GummyBrute (Candy Chaos, задача 7.7): мармеладный громила — полупрозрачное розовое тело-шар,
+-- круглые ушки, маленькие злые глазки под тяжёлыми бровями, оскал, кулаки и крупинки сахара.
+-- Все места — доли радиуса: тело любого размера (EnemyConfig.Kinds.GummyBrute.BodySize)
+function EnemyBuilders.GummyBrute(body: BasePart, cframe: CFrame, diameter: number)
+	local c = Colors.GummyBrute
+	body.Color = c.Body
+	body.Transparency = 0.12 -- мармелад чуть просвечивает
+	local kit = MemelingKit.new(body, cframe)
+	local size = Vector3.one * diameter
+	local r = diameter / 2
+	local function at(x: number, y: number): Vector3
+		return v3(x * r, y * r, front(Vector3.zero, size, x * r, y * r))
+	end
+	shade(kit, "Oval", size * v3(0.98, 0.98, 0.97), v3(-r * 0.08, 0, 0.02), c.Body)
+	gloss(kit, v3(r * 0.5, r * 0.22, 0.25), at(0.42, 0.55) + v3(0, 0, -0.02), v3(0, 0, -40))
+	add(kit, "Oval", v3(r * 1.1, r * 0.9, 0.4), at(0, -0.45) + v3(0, 0, 0.1), c.Belly) -- светлое пузо
+
+	-- Ушки мишки сверху
+	for _, x in ipairs({ 0.55, -0.55 }) do
+		add(kit, "Ball", Vector3.one * r * 0.6, v3(x * r, r * 0.82, 0), c.Body)
+	end
+	-- Маленькие злые глазки под тяжёлыми бровями, оскал с зубами
+	eye(kit, at(0.32, 0.22), r * 0.38, v2(0, -0.3))
+	eye(kit, at(-0.32, 0.22), r * 0.32, v2(0, -0.3))
+	add(kit, "Block", v3(r * 0.55, r * 0.14, 0.4), at(0.32, 0.45) + v3(0, 0, -0.05), c.Brow, v3(0, 0, 18))
+	add(kit, "Block", v3(r * 0.55, r * 0.14, 0.4), at(-0.32, 0.45) + v3(0, 0, -0.05), c.Brow, v3(0, 0, -18))
+	mouth(kit, v3(r * 0.7, r * 0.22, 0.3), at(0, -0.15))
+	for _, x in ipairs({ -0.15, 0.15 }) do
+		add(kit, "Block", v3(r * 0.12, r * 0.12, 0.12), at(x, -0.09) + v3(0, 0, -0.12), c.Teeth)
+	end
+	-- Кулаки по бокам и крупинки сахара
+	for _, x in ipairs({ 1, -1 }) do
+		add(kit, "Ball", Vector3.one * r * 0.5, v3(x * r * 0.98, -r * 0.2, -r * 0.2), c.Body)
+	end
+	for _, p in ipairs({ v2(0.6, -0.25), v2(-0.62, -0.1), v2(0.25, 0.75), v2(-0.3, -0.7), v2(0.7, 0.3) }) do
+		add(kit, "Block", Vector3.one * r * 0.09, at(p.X, p.Y), c.Sugar, v3(30, 45, 0))
+	end
+end
+
+-- Модель врага вида kindId (EnemyConfig.Kinds) на готовом шаре-теле. Нет строителя — остаётся Grumblob
+function MemelingBuilders.BuildEnemy(kindId: string, body: BasePart, cframe: CFrame, diameter: number)
+	local build = EnemyBuilders[kindId] or EnemyBuilders.Grumblob
+	build(body, cframe, diameter)
 end
 
 return MemelingBuilders
