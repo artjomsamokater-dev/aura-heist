@@ -17,6 +17,7 @@ local ZoneConfig = {}
 export type Zone = {
 	-- Шанс редкости при появлении мемлинга, в процентах (сумма в каждой части = 100).
 	-- Safe — от входа до MapConfig.Zones[Id].DangerFromX, Danger — восточнее (там же ловушки и враги).
+	-- Правило всех зон: Legendary — только в опасной части (в Safe шанс 0; проверяет тест RarityRoll)
 	-- Какие мемлинги появляются — те, у кого MemelingConfig.Memelings[].Zone = Id этой зоны
 	SpawnChances: { [string]: { [string]: number } },
 	AccessCost: number?, -- nil — вход свободный; число — доступ покупается навсегда за столько Aura
@@ -44,12 +45,12 @@ ZoneConfig.Zones = {
 		AccessCost = 25000, -- доступ навсегда, покупка через Economy (сервис ZoneAccess)
 		Tutorial = false,
 	},
-	-- Candy Chaos (задача 7.7): свои 5 мемлингов (доход ×20 — MemelingConfig), Common нет, Legendary 12%
-	-- в обеих частях; враги — мармеладные GummyBrute (EnemyConfig.Zones.Candy)
+	-- Candy Chaos (задача 7.7): свои 5 мемлингов (доход ×20 — MemelingConfig), Common нет; как в других зонах,
+	-- Legendary — только в опасной части; враги — мармеладные GummyBrute (EnemyConfig.Zones.Candy)
 	Candy = {
 		SpawnChances = {
-			Safe = { Common = 0, Rare = 50, Epic = 38, Legendary = 12 },
-			Danger = { Common = 0, Rare = 50, Epic = 38, Legendary = 12 },
+			Safe = { Common = 0, Rare = 60, Epic = 40, Legendary = 0 },
+			Danger = { Common = 0, Rare = 35, Epic = 45, Legendary = 20 },
 		},
 		AccessCost = 250000,
 		Tutorial = false,

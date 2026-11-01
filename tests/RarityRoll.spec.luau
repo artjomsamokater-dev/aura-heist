@@ -115,7 +115,7 @@ test("Golden Zone: свои 8 мемлингов (3 Rare, 3 Epic, 2 Legendary), 
 	equal(ZoneRule.IncomeMultiplier(MemelingConfig.Memelings.ToastPaw), 1, "у мемлингов Meme Zone доход как раньше")
 end)
 
-test("Candy Chaos: свои 5 мемлингов (2 Rare, 2 Epic, 1 Legendary), доход ×20, шансы 50 / 38 / 12, вход 250 000", function()
+test("Candy Chaos: свои 5 мемлингов (2 Rare, 2 Epic, 1 Legendary), доход ×20, вход 250 000", function()
 	local counts = { Common = 0, Rare = 2, Epic = 2, Legendary = 1 }
 	for rarity, count in counts do
 		local ids = ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Candy", rarity)
@@ -126,16 +126,33 @@ test("Candy Chaos: свои 5 мемлингов (2 Rare, 2 Epic, 1 Legendary), 
 	end
 	equal(ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Candy", "Legendary")[1], "ChocoKing")
 	local candy = ZoneConfig.Zones.Candy
-	for _, part in ipairs({ "Safe", "Danger" }) do
-		local chances = candy.SpawnChances[part]
-		equal(chances.Common, 0, part)
-		equal(chances.Rare, 50, part)
-		equal(chances.Epic, 38, part)
-		equal(chances.Legendary, 12, part)
-	end
+	local safe, danger = candy.SpawnChances.Safe, candy.SpawnChances.Danger
+	equal(safe.Common, 0)
+	equal(safe.Rare, 60)
+	equal(safe.Epic, 40)
+	equal(safe.Legendary, 0)
+	equal(danger.Common, 0)
+	equal(danger.Rare, 35)
+	equal(danger.Epic, 45)
+	equal(danger.Legendary, 20)
 	equal(candy.AccessCost, 250000)
 	equal(candy.Tutorial, false)
 	equal(ZoneConfig.ZoneOrder[3], "Candy")
+end)
+
+test("во всех зонах Legendary — только в опасной части, шансы каждой части в сумме 100", function()
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		local chances = ZoneConfig.Zones[zoneId].SpawnChances
+		equal(chances.Safe.Legendary or 0, 0, zoneId .. ": Legendary в безопасной части")
+		equal((chances.Danger.Legendary or 0) > 0, true, zoneId .. ": Legendary в опасной части")
+		for part, byRarity in chances do
+			local sum = 0
+			for _, chance in byRarity do
+				sum += chance
+			end
+			equal(sum, 100, zoneId .. " " .. part)
+		end
+	end
 end)
 
 test("доступ: бесплатная зона открыта всем, платная — только купившим", function()

@@ -84,7 +84,7 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
 латиницей (как `Meme`, `Golden`, `Candy`), один и тот же во всех файлах.
 
 1. `src/shared/Config/ZoneConfig.luau`: добавить `<Id>` в конец `ZoneOrder` и запись в `Zones` —
-   `SpawnChances` (Safe и Danger, сумма в каждой = 100), `AccessCost` (nil — бесплатно; число — ворота у портала),
+   `SpawnChances` (Safe и Danger, сумма в каждой = 100; Legendary только в Danger — проверяет тест), `AccessCost` (nil — бесплатно; число — ворота у портала),
    `Tutorial = false`.
 2. `src/shared/Config/MemelingConfig.luau`: мемлинги с `Zone = "<Id>"` и `IncomeMultiplier` (константа зоны, как
    `CANDY_INCOME`). Обязательно хотя бы один Legendary (тест и предупреждение при старте); на каждую редкость с шансом
@@ -441,7 +441,8 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
      Enemy хранит статы вида у каждого врага, MemelingBuilders.BuildEnemy(kindId, …); клиент берёт длительность замаха
      и размер из атрибутов врага (WindupSeconds, BodySize). Новый враг GummyBrute — мармеладный громила: скорость 7
      (патруль 4), урон 40, замах 0,8 с, тело 7.
-  2) Зона Candy (Z = 500): вход 250 000 Aura (ворота у портала), шансы Rare 50 / Epic 38 / Legendary 12 в обеих частях,
+  2) Зона Candy (Z = 500): вход 250 000 Aura (ворота у портала), шансы Safe Rare 60 / Epic 40, Danger Rare 35 / Epic 45 / Legendary 20
+     (правило всех зон: Legendary только в опасной части — тест RarityRoll),
      6 GummyBrute, ловушки как в Golden, но быстрее; тема розово-голубая (ZoneThemes.Candy), по краю гигантские
      леденцы (IslandEdges, zoneLayout(top, edgeKinds)). 5 мемлингов, доход ×20 (MemelingConfig.CandyIncomeMultiplier):
      CottonCandyCloud, LollipopLlama (Rare), GummyWormGang, MarshmallowMage (Epic), ChocoKing (Legendary).
