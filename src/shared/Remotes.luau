@@ -11,7 +11,9 @@
 --   Эти четыре сервер не слушает: что бы клиент туда ни прислал, ничего не произойдёт.
 --   TutorialSkip — клиент → сервер, без аргументов: «пропустить туториал».
 --   DropCarried  — клиент → сервер, без аргументов: «отпустить последнего мемлинга из рук».
--- События клиент → сервер подключать только через RemoteGuard.ConnectRemote (правило 2.5).
+--   ShopBuy      — клиент → сервер, один аргумент: Id вещи из ShopConfig («купить»). Цену знает только сервер.
+--   ShopEquip    — клиент → сервер, один аргумент: Id вещи («надеть / снять»).
+-- События клиент → сервер подключать только через RemoteGuard.ConnectRemote / ConnectRemoteId (правило 2.5).
 
 local Remotes = table.freeze({
 	Folder = "Remotes",
@@ -21,6 +23,8 @@ local Remotes = table.freeze({
 	TutorialSkip = "TutorialSkip",
 	DropCarried = "DropCarried",
 	Knockback = "Knockback",
+	ShopBuy = "ShopBuy",
+	ShopEquip = "ShopEquip",
 })
 
 return Remotes

@@ -23,8 +23,9 @@ local PlayerData = {}
 local STORE_NAME = "PlayerProfiles" -- имя DataStore; сменишь — все начнут с нуля
 -- 1 — первая схема; 2 — запас стал списком записей (с флагом бонуса отряда), а не просто Id;
 -- 3 — появилось поле rebirths; 4 — zoneAccess (купленный доступ в платные зоны);
--- 5 — secret (секретный паркур: найден ли, когда была последняя ежедневная награда)
-local SCHEMA_VERSION = 5
+-- 5 — secret (секретный паркур: найден ли, когда была последняя ежедневная награда);
+-- 6 — cosmetics (магазин: что куплено навсегда и что надето)
+local SCHEMA_VERSION = 6
 
 -- Мемлинг на постаменте
 export type ShowcaseEntry = {
@@ -60,6 +61,10 @@ export type Data = {
 		found: boolean, -- Secret-мемлинг уже выдан (второй раз не выдаётся)
 		lastDailyAt: number, -- время сервера (секунды Unix) последней награды за проход
 	},
+	cosmetics: { -- магазин косметики (ShopConfig): Rebirth это не трогает
+		owned: { [string]: boolean }, -- [Id вещи] = true — куплена навсегда
+		equipped: { [string]: { string } }, -- [категория] = Id надетых вещей
+	},
 	stats: {
 		raids: number,
 		extractions: number,
@@ -81,6 +86,7 @@ local TEMPLATE: Data = {
 	rebirths = 0,
 	zoneAccess = {},
 	secret = { found = false, lastDailyAt = 0 },
+	cosmetics = { owned = {}, equipped = {} },
 	stats = {
 		raids = 0,
 		extractions = 0,
@@ -140,6 +146,13 @@ local function migrate(data: Data): boolean
 	-- 4 → 5: secret. Обычно его дописывает Reconcile; испорченное значение — «не найден»
 	if type(data.secret) ~= "table" then
 		data.secret = { found = false, lastDailyAt = 0 }
+	end
+
+	-- 5 → 6: cosmetics. Обычно его дописывает Reconcile; испорченное значение — ничего не куплено
+	if type(data.cosmetics) ~= "table" or type(data.cosmetics.owned) ~= "table" then
+		data.cosmetics = { owned = {}, equipped = {} }
+	elseif type(data.cosmetics.equipped) ~= "table" then
+		data.cosmetics.equipped = {}
 	end
 
 	data.schemaVersion = SCHEMA_VERSION

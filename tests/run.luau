@@ -19,6 +19,7 @@ require("./MemelingSize.spec")
 require("./ExtractionRule.spec")
 require("./PortalRule.spec")
 require("./SecretRule.spec")
+require("./ShopRule.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

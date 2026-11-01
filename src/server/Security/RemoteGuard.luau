@@ -96,6 +96,24 @@ function RemoteGuard.ConnectRemote(event: RemoteEvent, action: string, handler: 
 	end)
 end
 
+-- Как ConnectRemote, но клиент присылает один аргумент — Id (вещи, действия). Всё, что не похоже на Id
+-- (не строка, пустая, слишком длинная), отбрасывается до обработчика. Цены и суммы клиент не присылает никогда
+function RemoteGuard.ConnectRemoteId(event: RemoteEvent, action: string, handler: (player: Player, id: string) -> ())
+	event.OnServerEvent:Connect(function(player: Player, id: unknown)
+		if typeof(player) ~= "Instance" or not player:IsA("Player") or player.Parent ~= Players then
+			return
+		end
+		if not anyActionLimiter.Allow(player) then
+			warnSpam(player, action)
+			return
+		end
+		if not RemoteGuard.IsId(id) then
+			return
+		end
+		handler(player, id :: string)
+	end)
+end
+
 -- Подключает обработчик кнопки через общие проверки. action — имя для Output.
 -- Обработчик вызывается, только если игрок прошёл общий лимит, жив и стоит рядом с кнопкой.
 function RemoteGuard.ConnectPrompt(prompt: ProximityPrompt, action: string, handler: (player: Player) -> ())

@@ -1340,6 +1340,7 @@ local function buildPlots()
 		for p, offset in ipairs(cfg.PedestalOffsets) do
 			local pedestal = makePart("Pedestal" .. p, cfg.PedestalSize, plotCFrame * CFrame.new(offset), accent, pedestals)
 			pedestal:SetAttribute("PedestalIndex", p)
+			pedestal:SetAttribute("AccentColor", accent) -- скин из магазина снимается обратно к этому цвету
 			makeRoundLook(pedestal, accent, StyleConfig.PlotParts.PedestalRim)
 		end
 

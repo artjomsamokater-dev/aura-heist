@@ -351,6 +351,15 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   secret.found до выдачи), потом EconomyConfig.SecretObby.DailyAura раз в сутки; жёлтая площадка возврата в хаб.
   Новая редкость Secret (MemelingConfig: доход Legendary ×2; в зонах не появляется — Zone = nil), кольцо
   переливается (StyleConfig.Rainbow, тег — client/Controllers/RainbowController). Профиль — схема 5, поле secret.
+- 7.4 (магазин косметики за Aura, только внешний вид): ShopConfig — 6 категорий (CategoryOrder, MaxEquipped)
+  и 35 вещей с ценами 5 000 – 2 000 000: 12 баннеров (до 3 флагштоков выше арки), декор студии (дорожка,
+  фонтанчик, неон-вывеска с ником, статуя самого редкого мемлинга витрины, фейерверк раз в минуту),
+  4 скина постаментов, 4 следа, 4 ауры, 6 титулов. Названия — TextConfig.ShopItemNames, вид —
+  StyleConfig.Cosmetics / CosmeticsLayout / ShopUi, места на участке — MapConfig.Plots.Cosmetics.
+  Сервис Shop: Remotes.ShopBuy / ShopEquip (клиент шлёт только Id — RemoteGuard.ConnectRemoteId), ShopRule
+  (+ тест) — CanBuy / ToggleEquip, списание только Economy.TrySpend, профиль — схема 6, cosmetics {owned,
+  equipped}; Rebirth не трогает. Картинка — server/Visual/CosmeticsBuilder; салют — client FireworksController.
+  Клиент: ShopController (кнопка SHOP слева, киоск «Open shop» на площади на месте пончика, вкладки, карточки).
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
@@ -360,5 +369,5 @@ luau-lsp analyze с типами Roblox, проверка кодировки (.l
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
 Фазы 1–5 закрыты (в 5.4 сделаны модели; звуков мемлингов пока нет), правки 6.0 и визуальный проход 6.1 перед тестом сделаны,
-7.1 (агрессия врагов), 7.2 (Golden Zone) и 7.3 (секретный паркур) готовы.
+7.1 (агрессия врагов), 7.2 (Golden Zone), 7.3 (секретный паркур) и 7.4 (магазин косметики) готовы.
 Дальше по документации — «Ворота B»: закрытый тест (раздел 7, шаг 3).

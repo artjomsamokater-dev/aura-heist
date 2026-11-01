@@ -15,6 +15,8 @@ local ExtractFxController = require(script.Controllers.ExtractFxController)
 local HitFxController = require(script.Controllers.HitFxController)
 local WandererController = require(script.Controllers.WandererController)
 local RainbowController = require(script.Controllers.RainbowController)
+local ShopController = require(script.Controllers.ShopController)
+local FireworksController = require(script.Controllers.FireworksController)
 
 HudController.Start()
 HazardController.Start()
@@ -31,3 +33,5 @@ task.spawn(PortalController.Start) -- ждёт, пока хаб появится
 task.spawn(ExtractFxController.Start)
 task.spawn(HitFxController.Start) -- ждёт RemoteEvent Knockback
 task.spawn(WandererController.Start) -- ждёт, пока хаб появится на клиенте
+task.spawn(ShopController.Start) -- ждёт RemoteEvent магазина
+task.spawn(FireworksController.Start) -- свой бесконечный цикл салюта

@@ -178,6 +178,10 @@ StyleConfig.Hub = {
 			LightEmission = 0.3,
 		},
 		SplashGravity = 28,
+		KioskCounter = Palette.PlumLight,
+		KioskAwning = { Palette.Sun, Palette.CreamLight }, -- полосатый навес: жёлтый = здесь можно что-то сделать
+		KioskSign = Palette.PlumDark,
+		KioskSignText = Palette.Sun,
 		GarlandPole = Palette.PlumDark,
 		GarlandString = Palette.CreamLight,
 		Flags = { Palette.Mint, Palette.PlumLight, Palette.CreamLight, Palette.Plum },
@@ -654,6 +658,102 @@ StyleConfig.PortalThemes = {
 StyleConfig.ZoneGate = {
 	Bars = Palette.Sun,
 	Lock = Palette.SunDark,
+}
+
+-- ── Магазин косметики (задача 7.4) ─────────────────────────────────────────
+-- Как выглядит каждая вещь ShopConfig. Исключение из правил палитры: косметика — свои цвета предмета
+-- (как у мемлингов), у мраморного скина — материал Marble. Preview — цвет плитки в окне магазина.
+--   Pattern у баннеров: Stripes (полосы Colors по очереди), Checker, Dots, Star, Heart, Face (рожица мемлинга),
+--   Solid (одним цветом); Glow — неон, Rainbow — переливается (StyleConfig.Rainbow), Particles — искры у флага
+export type CosmeticStyle = {
+	Preview: Color3,
+	Colors: { Color3 }?,
+	Pattern: string?,
+	Glow: boolean?,
+	Rainbow: boolean?,
+	Particles: boolean?,
+	Material: Enum.Material?,
+	Reflectance: number?,
+}
+
+StyleConfig.Cosmetics = {
+	BannerMintStripes = { Preview = Palette.Mint, Pattern = "Stripes", Colors = { Palette.Mint, Palette.CreamLight } },
+	BannerPlumStripes = { Preview = Palette.Plum, Pattern = "Stripes", Colors = { Palette.Plum, Palette.PlumLight } },
+	BannerChecker = { Preview = Palette.Ink, Pattern = "Checker", Colors = { Palette.Ink, Palette.CreamLight } },
+	BannerDots = { Preview = Palette.PlumLight, Pattern = "Dots", Colors = { Palette.PlumLight, Palette.CreamLight } },
+	BannerStar = { Preview = hex("3D9BFF"), Pattern = "Star", Colors = { hex("3D9BFF"), Palette.CreamLight } },
+	BannerToast = { Preview = hex("D07C33"), Pattern = "Face", Colors = { hex("F2B25C"), hex("2A1638") } },
+	BannerHeart = { Preview = hex("FF8FB1"), Pattern = "Heart", Colors = { Palette.CreamLight, hex("FF5F8F") } },
+	BannerSnooze = { Preview = hex("FFC83D"), Pattern = "Face", Colors = { hex("FFC83D"), hex("2A1638") } },
+	BannerFire = { Preview = hex("FF7A2E"), Pattern = "Stripes", Colors = { hex("FF4A1C"), hex("FF9A2E"), hex("FFD24A") }, Glow = true, Particles = true },
+	BannerGalaxy = { Preview = hex("3A2A6A"), Pattern = "Dots", Colors = { hex("2A1A4A"), hex("FFFFFF") }, Particles = true },
+	BannerRainbow = { Preview = hex("FF5FD2"), Pattern = "Solid", Colors = { hex("FF5FD2") }, Glow = true, Rainbow = true },
+	BannerGolden = { Preview = hex("FFD24A"), Pattern = "Star", Colors = { hex("FFD24A"), hex("FFF3C9") }, Glow = true, Particles = true },
+	DecorCarpet = { Preview = Palette.PlumDark, Colors = { Palette.PlumDark, Palette.CreamLight } },
+	DecorFountain = { Preview = Palette.Mint, Colors = { Palette.PlumLight, Palette.Mint, Palette.CreamLight } },
+	DecorNeonSign = { Preview = hex("39E6FF"), Colors = { Palette.PlumDark, hex("39E6FF") } },
+	DecorStatue = { Preview = hex("D9C9A8"), Colors = { hex("D9C9A8"), Palette.CreamLight } },
+	DecorFireworks = { Preview = hex("FF5FD2"), Colors = { hex("FF5FD2"), hex("39E6FF"), hex("FFD24A"), Palette.Mint } },
+	SkinMarble = { Preview = hex("F2EEF5"), Colors = { hex("F2EEF5") }, Material = Enum.Material.Marble },
+	SkinCloud = { Preview = hex("FFFFFF"), Colors = { hex("FFFFFF"), hex("DDE8FF") } },
+	SkinNeon = { Preview = hex("39E6FF"), Colors = { hex("39E6FF") }, Glow = true },
+	SkinGold = { Preview = hex("FFD24A"), Colors = { hex("E8B83A") }, Reflectance = 0.25 },
+	TrailMint = { Preview = Palette.Mint, Colors = { Palette.Mint, Palette.MintLight } },
+	TrailSparkle = { Preview = hex("FFFFFF"), Colors = { hex("FFFFFF"), Palette.PlumLight }, Particles = true },
+	TrailFire = { Preview = hex("FF7A2E"), Colors = { hex("FFD24A"), hex("FF4A1C") } },
+	TrailRainbow = { Preview = hex("FF5FD2"), Colors = { hex("FF5F5F"), hex("FFD24A"), hex("5FE07A"), hex("3D9BFF"), hex("D63CFF") } },
+	AuraBubbles = { Preview = hex("BFE6FF"), Colors = { hex("BFE6FF") } },
+	AuraStars = { Preview = hex("FFF3C9"), Colors = { hex("FFF3C9"), Palette.PlumLight } },
+	AuraGlitch = { Preview = hex("39E6FF"), Colors = { hex("39E6FF"), hex("FF4FD8") } },
+	AuraGolden = { Preview = hex("FFD24A"), Colors = { hex("FFD24A"), hex("FFF3C9") }, Glow = true },
+	TitleLooter = { Preview = Palette.MintLight, Colors = { Palette.MintLight } },
+	TitleCollector = { Preview = Palette.PlumLight, Colors = { Palette.PlumLight } },
+	TitleWaffleKing = { Preview = hex("D9A04E"), Colors = { hex("F2C66B") } },
+	TitleLegendHunter = { Preview = hex("FF8A1F"), Colors = { hex("FF8A1F") } },
+	TitleNotFound = { Preview = hex("39E6FF"), Colors = { hex("39E6FF") }, Rainbow = true },
+	TitleMemeLord = { Preview = hex("FFD24A"), Colors = { hex("FFD24A") }, Rainbow = true },
+} :: { [string]: CosmeticStyle }
+
+-- Размеры косметики (места на участке — MapConfig.Plots.Cosmetics)
+StyleConfig.CosmeticsLayout = {
+	Pole = Palette.CreamDark,
+	PoleCap = Palette.CreamLight,
+	PoleHeight = 17, -- выше арки участка (10): флаги видно издалека
+	PoleDiameter = 0.5,
+	FlagSize = v3(5.5, 3.4, 0.2),
+	FlagPixelsPerStud = 20,
+	TrailLifetime = 0.6,
+	TrailWidth = 1.6, -- расстояние между точками следа (по высоте персонажа)
+	AuraRate = 8,
+	AuraLifetime = NumberRange.new(1, 1.6),
+	AuraSize = 0.45,
+	TitleHeight = 4.6, -- над головой, выше счётчика Rebirth
+	TitleWidth = 8,
+	TitleTextHeight = 1.3,
+	FireworksSeconds = 60, -- раз в минуту над студией
+	FireworksHeight = 34,
+	FireworksBursts = 3,
+	FireworksParticles = 70,
+}
+
+-- Окно магазина (client/Controllers/ShopController)
+StyleConfig.ShopUi = {
+	Panel = Palette.CreamLight,
+	Header = Palette.PlumDark,
+	HeaderText = Palette.CreamLight,
+	Tab = Palette.PlumLight,
+	TabActive = Palette.Sun,
+	Card = Palette.CreamLight,
+	CardStroke = Palette.PlumLight,
+	BuyButton = Palette.Sun, -- жёлтый = нажать
+	EquipButton = Palette.Mint,
+	UnequipButton = Palette.PlumLight,
+	DisabledButton = Palette.CreamDark,
+	Width = 620,
+	Height = 420,
+	CardSize = Vector2.new(170, 132),
+	HudButtonSize = 64,
+	HudButtonColor = Palette.Sun,
 }
 
 -- Свой выпавший лут (после смерти): золотая подсветка сквозь стены и подпись «YOUR LOOT» с таймером.

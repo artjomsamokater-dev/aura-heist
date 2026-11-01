@@ -45,7 +45,6 @@ MapConfig.Hub = {
 	Props = {
 		{ Kind = "Mug", Offset = polar(180, 36) },
 		{ Kind = "Cheese", Offset = polar(315, 37) },
-		{ Kind = "Donut", Offset = polar(180, 21) },
 		{ Kind = "Phone", Offset = polar(45, 38) },
 		{ Kind = "Banana", Offset = polar(135, 38) },
 		{ Kind = "Duck", Offset = polar(225, 37) },
@@ -88,6 +87,7 @@ MapConfig.Hub = {
 		LampRadius = 32,
 		LampSide = 4.5,
 		PortalLamps = { Radius = 23, Side = 7 }, -- пара фонарей у дорожки к порталу (снаружи точки появления)
+		Kiosk = { Angle = 180, Radius = 21 }, -- киоск магазина косметики (на месте пончика, ближе к центру)
 		Signposts = { -- указатели со стрелками к порталу и витрине
 			{ Angle = 45, Radius = 12.5 },
 			{ Angle = 225, Radius = 12.5 },
@@ -314,6 +314,15 @@ MapConfig.Plots = {
 	ReserveOffset = Vector3.new(18, 0.8, -9),
 	-- Площадка Rebirth: на коврике ближе к арке — между столбцами подписей ряда, не под ними
 	RebirthOffset = Vector3.new(0, 0.8, -15),
+	-- Косметика из магазина на участке (смещения от центра участка по полу): 3 флагштока баннеров,
+	-- места декора. В стороне от постаментов, кнопок, коврика и арки
+	Cosmetics = {
+		BannerPoles = { Vector3.new(-20, 0, -19), Vector3.new(20, 0, -19), Vector3.new(-20, 0, 20) },
+		Fountain = Vector3.new(-14.5, 0, 18.5),
+		Statue = Vector3.new(14.5, 0, 18.5),
+		NeonSign = Vector3.new(0, 5.5, 21.2), -- на задней ограде, лицом к хабу
+		Fireworks = Vector3.new(20, 0, 20), -- пусковая установка в углу
+	},
 	-- Свободный участок: вместо кнопок — табличка «Join to claim!» и цветы (на занятом их не видно)
 	ClaimSignOffset = Vector3.new(0, 0, -9), -- на полу участка, в середине ряда кнопок
 	ClaimFlowerOffsets = { Vector3.new(-9, 0, -9), Vector3.new(9, 0, -9), Vector3.new(-18, 0, -9), Vector3.new(18, 0, -9) },

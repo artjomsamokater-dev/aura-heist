@@ -10,6 +10,7 @@ local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
+local ShopConfig = require(ReplicatedStorage.Shared.Config.ShopConfig)
 
 local HubDecor = {}
 
@@ -349,6 +350,36 @@ function HubDecor.BuildGiant(kind: string, base: Vector3, parent: Instance): boo
 	return false
 end
 
+-- Киоск магазина косметики: прилавок, полосатый навес на столбиках, вывеска «SHOP», товары на прилавке.
+-- Кнопка «Open shop» только открывает окно на клиенте (ShopController ловит её сам); покупки — через сервис Shop
+local function buildKiosk(angle: number, radius: number, parent: Instance)
+	local style = StyleConfig.Hub.Decor
+	local m = model("ShopKiosk", parent)
+	local base = facingCenter(polar(angle, radius, 0))
+	local counter = part("Counter", "Block", Vector3.new(7, 2.6, 2.4), base * CFrame.new(0, 1.3, 0), style.KioskCounter, m, true)
+	for i, x in ipairs({ -3.2, 3.2 }) do
+		part("AwningPost" .. i, "Cylinder", Vector3.new(5.8, 0.4, 0.4), base * CFrame.new(x, 2.9, 1.2) * UPRIGHT, style.KioskCounter, m)
+	end
+	for s = 1, 6 do
+		part("Awning" .. s, "Block", Vector3.new(1.4, 0.3, 3.6), base * CFrame.new(-3.5 + (s - 0.5) * 7 / 6, 5.9, 0.3) * CFrame.Angles(math.rad(-15), 0, 0), style.KioskAwning[(s - 1) % #style.KioskAwning + 1], m)
+	end
+	local sign = part("Sign", "Block", Vector3.new(5, 1.4, 0.3), base * CFrame.new(0, 6.9, -1.2), style.KioskSign, m)
+	signText(sign, Enum.NormalId.Front, TextConfig.ShopTitle, style.KioskSignText)
+	signText(sign, Enum.NormalId.Back, TextConfig.ShopTitle, style.KioskSignText)
+	-- Товары на прилавке: флажок, шарик, звёздочка
+	part("GoodsFlag", "Block", Vector3.new(1.2, 0.8, 0.1), base * CFrame.new(-2, 3.3, 0), StyleConfig.Palette.Mint, m)
+	part("GoodsOrb", "Ball", Vector3.one * 0.9, base * CFrame.new(0, 3.05, 0), StyleConfig.Palette.PlumLight, m)
+	part("GoodsStar", "Block", Vector3.new(0.8, 0.8, 0.2), base * CFrame.new(2, 3.1, 0) * CFrame.Angles(0, 0, math.rad(45)), StyleConfig.Palette.CreamLight, m)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "ShopPrompt"
+	prompt.ActionText = TextConfig.ShopOpenAction
+	prompt.ObjectText = TextConfig.ShopTitle
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = ShopConfig.KioskDistance
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = counter
+end
+
 -- ── Вся площадь ──────────────────────────────────────────────────────────
 
 function HubDecor.Build(parent: Instance)
@@ -358,6 +389,7 @@ function HubDecor.Build(parent: Instance)
 	folder.Parent = parent
 
 	buildFountain(folder)
+	buildKiosk(decor.Kiosk.Angle, decor.Kiosk.Radius, folder)
 	for i, spot in ipairs(decor.Trees) do
 		buildTree(i, spot.Angle, spot.Radius, folder)
 	end
