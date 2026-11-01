@@ -42,6 +42,7 @@ local Event = require(Services.Event)
 local Tutorial = require(Services.Tutorial)
 local Analytics = require(Services.Analytics)
 local ZoneAccess = require(Services.ZoneAccess)
+local SecretObby = require(Services.SecretObby)
 local DebugCommands = require(Services.DebugCommands)
 
 -- Ошибка при запуске одного сервиса не должна молча выключать все следующие (например, портал в Raid):
@@ -62,6 +63,7 @@ start("Announcer", Announcer.Start) -- раньше Spawn: первый спав
 start("Economy", Economy.Start)
 start("Studio", Studio.Start)
 start("ZoneAccess", ZoneAccess.Start)
+start("SecretObby", SecretObby.Start)
 start("Raid", Raid.Start)
 start("Spawn", Spawn.Start)
 start("Extraction", Extraction.Start)

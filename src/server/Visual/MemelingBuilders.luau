@@ -566,6 +566,71 @@ function Builders.KingWaffleton(kit: Kit)
 	add(kit, "Oval", v3(1.2, 0.4, 0.6), v3(0.8, 1.95, -0.55), c.Syrup) -- капля сиропа на макушке спереди
 end
 
+-- ── Секретный паркур ───────────────────────────────────────────────────────
+
+-- 14. Error 404 Kitten (Secret): котик-кубик — глаза-пиксели разного размера с бликом, уши-квадратики,
+-- «глитч»-полосы, торчащие вбок (переливаются), ротик из пикселей, хвост-лесенка, сзади надпись «404»
+function Builders.Error404Kitten(kit: Kit)
+	local c = Colors.Error404Kitten
+	local bodySize = v3(4, 3.6, 3.6)
+	local body = add(kit, "Block", bodySize, v3(0, -0.8, 0), c.Body)
+	shade(kit, "Block", v3(0.4, 3.6, 3.56), v3(-1.82, -0.8, 0), c.Body)
+	gloss(kit, v3(1.2, 0.3, 0.15), v3(1, 0.7, -1.82), v3(0, 0, -20))
+	local face = -bodySize.Z / 2 - 0.05
+
+	-- Уши-квадратики, повёрнутые на 45°
+	for _, x in ipairs({ 1.2, -1.2 }) do
+		add(kit, "Block", v3(1.1, 1.1, 0.8), v3(x, 1.05, -0.3), c.Ears, v3(0, 0, 45))
+	end
+
+	-- Глаза-пиксели: белый квадрат, тёмный квадрат-зрачок, белый пиксель-блик
+	for _, e in ipairs({ { X = 0.85, Size = 1.05 }, { X = -0.85, Size = 0.8 } }) do
+		add(kit, "Block", v3(e.Size, e.Size, 0.15), v3(e.X, -0.1, face), StyleConfig.Memeling.Face.EyeWhite)
+		local pupil = e.Size * 0.5
+		add(kit, "Block", v3(pupil, pupil, 0.15), v3(e.X - e.Size * 0.12, -0.15, face - 0.06), c.Pixel)
+		add(kit, "Block", v3(pupil * 0.35, pupil * 0.35, 0.1), v3(e.X - e.Size * 0.02, -0.02, face - 0.12), StyleConfig.Memeling.Face.Glint)
+	end
+	-- Ротик «:3» из трёх пикселей
+	for _, p in ipairs({ v2(0.22, -1.05), v2(-0.22, -1.05), v2(0, -1.3) }) do
+		add(kit, "Block", v3(0.25, 0.25, 0.12), v3(p.X, p.Y, face), c.Pixel)
+	end
+	for _, x in ipairs({ 1.45, -1.45 }) do
+		add(kit, "Block", v3(0.6, 0.35, 0.1), v3(x, -0.85, face), c.Blush)
+	end
+
+	-- «Глитч»-полосы: сдвинутые вбок тонкие светящиеся полоски, переливаются
+	for _, g in ipairs({ { Y = 0.5, X = 0.5, Z = face - 0.02 }, { Y = -1.75, X = -0.6, Z = face - 0.02 }, { Y = -0.4, X = 0.3, Z = 1.85 } }) do
+		local stripe = add(kit, "Block", v3(4.6, 0.18, 0.1), v3(g.X, g.Y, g.Z), c.Glitch)
+		stripe.Material = StyleConfig.GlowMaterial
+		MemelingKit.TagRainbow(stripe)
+	end
+
+	-- Лапки и хвост-лесенка из кубиков
+	for _, x in ipairs({ 1.2, -1.2 }) do
+		add(kit, "Block", v3(0.9, 0.5, 0.9), v3(x, -2.45, -0.9), c.Ears)
+	end
+	add(kit, "Block", v3(0.7, 0.7, 1.2), v3(0.8, -1.9, 2.3), c.Body)
+	add(kit, "Block", v3(0.7, 1.4, 0.7), v3(0.8, -1.2, 2.75), c.Body)
+	add(kit, "Block", v3(0.7, 0.7, 0.7), v3(0.8, -0.2, 3.1), c.Ears)
+
+	-- Сзади — «404» на спине
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "Error404"
+	gui.Face = Enum.NormalId.Back
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = StyleConfig.Label.SignPixelsPerStud
+	gui.Parent = body
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 0.5)
+	label.Position = UDim2.fromScale(0, 0.25)
+	label.TextScaled = true
+	label.Font = StyleConfig.Fonts.Label
+	label.TextColor3 = c.Text
+	label.Text = TextConfig.Error404Text
+	label.Parent = gui
+end
+
 local MemelingBuilders = {}
 
 -- Строит мемлинга по Id. Вернёт false, если строителя для такого Id нет

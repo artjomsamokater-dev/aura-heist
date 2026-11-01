@@ -24,6 +24,8 @@ TextConfig.PortalInfos = {
 	Golden = "Golden memelings: x5 income!\nUnlock once, keep forever",
 } :: { [string]: string }
 TextConfig.UnlockAction = "Unlock" -- кнопка у золотых ворот (цена — PriceTag)
+TextConfig.SecretHint = "?" -- маленький знак у входа в секретный паркур (других подсказок нет)
+TextConfig.Error404Text = "404" -- надпись на спине Error404Kitten
 TextConfig.OwnedPlot = "%s's Studio" -- %s заменяется на имя игрока
 TextConfig.Portal = "MEME ZONE"
 -- Витрина в хабе: самый редкий мемлинг, вынесенный на этом сервере за сессию
@@ -81,7 +83,7 @@ TextConfig.SquadTag = "\nSQUAD +%d%% income"
 
 -- Объявление о редком спавне всем игрокам: «A LEGENDARY appeared in the DANGER zone!»
 TextConfig.AnnounceSpawn = "A %s appeared in the %s · %s!" -- редкость, название зоны, часть зоны
-TextConfig.RarityNames = { Common = "COMMON", Rare = "RARE", Epic = "EPIC", Legendary = "LEGENDARY" } :: { [string]: string }
+TextConfig.RarityNames = { Common = "COMMON", Rare = "RARE", Epic = "EPIC", Legendary = "LEGENDARY", Secret = "SECRET" } :: { [string]: string }
 TextConfig.ZonePartNames = { Safe = "SAFE", Danger = "DANGER" } :: { [string]: string }
 TextConfig.ExtractMarker = "▼ EXTRACT ▼"
 TextConfig.SideExtractMarker = "▼ SLOW EXIT ▼" -- маркер, когда ближе доступна вторая точка
@@ -145,6 +147,7 @@ TextConfig.MemelingNames = {
 	PizzaPigeon = "Pizza Pigeon",
 	RoboDuck = "Robo Duck",
 	KingWaffleton = "King Waffleton",
+	Error404Kitten = "Error 404 Kitten",
 } :: { [string]: string }
 
 return deepFreeze(TextConfig)

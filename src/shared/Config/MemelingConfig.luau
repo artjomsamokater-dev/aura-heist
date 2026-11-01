@@ -14,7 +14,7 @@ end
 
 export type Memeling = {
 	Rarity: string,
-	Zone: string, -- в какой зоне появляется (Id из ZoneConfig.ZoneOrder)
+	Zone: string?, -- в какой зоне появляется (Id из ZoneConfig.ZoneOrder); nil — в зонах не появляется
 	IncomeMultiplier: number?, -- доход на постаменте × это число от базы редкости (нет — ×1)
 }
 
@@ -27,7 +27,8 @@ export type Rarity = {
 local MemelingConfig = {}
 
 -- Порядок редкостей от слабой к сильной (у словаря порядка нет, поэтому отдельный список)
-MemelingConfig.RarityOrder = { "Common", "Rare", "Epic", "Legendary" }
+-- Secret — самая редкая: не появляется в зонах, её получают один раз за секретный паркур в хабе
+MemelingConfig.RarityOrder = { "Common", "Rare", "Epic", "Legendary", "Secret" }
 
 -- AuraPerSecond — сколько Aura в секунду даёт мемлинг на постаменте
 -- SellPrice     — сколько Aura получаешь за продажу
@@ -37,6 +38,7 @@ MemelingConfig.Rarities = {
 	Rare = { AuraPerSecond = 4, SellPrice = 80, CarrySpeed = 16 },
 	Epic = { AuraPerSecond = 15, SellPrice = 300, CarrySpeed = 14 },
 	Legendary = { AuraPerSecond = 60, SellPrice = 1200, CarrySpeed = 11 },
+	Secret = { AuraPerSecond = 60 * 2, SellPrice = 1200 * 2, CarrySpeed = 11 }, -- как Legendary ×2
 } :: { [string]: Rarity }
 
 -- Мемлинги Golden Zone приносят на постаменте в столько раз больше Aura, чем база их редкости
@@ -65,6 +67,9 @@ MemelingConfig.Memelings = {
 	PizzaPigeon = { Rarity = "Epic", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
 	RoboDuck = { Rarity = "Epic", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
 	KingWaffleton = { Rarity = "Legendary", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
+
+	-- Награда за секретный паркур в хабе (в зонах не появляется)
+	Error404Kitten = { Rarity = "Secret" },
 } :: { [string]: Memeling }
 
 return deepFreeze(MemelingConfig)

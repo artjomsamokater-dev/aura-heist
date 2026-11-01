@@ -73,6 +73,7 @@ export type Particles = {
 export type RarityStyle = {
 	Color: Color3, -- цвет кольца; им же красятся плашки объявлений и строки экрана результата
 	Glow: boolean?, -- кольцо светится (Neon)
+	Rainbow: boolean?, -- кольцо переливается всеми цветами (крутит клиент, StyleConfig.Rainbow)
 	-- Мягкое сияние: вокруг кольца полупрозрачный неоновый ореол шире кольца на Grow студов
 	Halo: { Grow: number, Transparency: number }?,
 	Light: { Brightness: number, Range: number }?, -- свет вокруг мемлинга (только Epic и Legendary)
@@ -558,6 +559,14 @@ StyleConfig.Characters = {
 		Syrup = hex("8B4A1C"),
 		Butter = hex("FFF3C9"),
 	},
+	Error404Kitten = {
+		Body = hex("B8B0D9"),
+		Ears = hex("9C93C4"),
+		Pixel = hex("2A1638"),
+		Glitch = hex("39E6FF"), -- полосы ещё и переливаются (тег Rainbow)
+		Blush = hex("FF9DB5"),
+		Text = hex("2A1638"),
+	},
 	Grumblob = { Body = hex("7BD13A"), Brow = hex("2A1638") }, -- враг: зелёный желейный шар
 }
 
@@ -665,7 +674,7 @@ StyleConfig.Memeling = {
 	LabelHeight = 5.5, -- подпись с именем — на столько выше центра (над шляпами и хохолками)
 	-- Размер по редкости: весь мемлинг (габарит, детали, подписи, дальность подбора) × множитель.
 	-- Низ остаётся на полу — мемлинг растёт вверх
-	RarityScale = { Common = 1, Rare = 1.1, Epic = 1.2, Legendary = 1.4 } :: { [string]: number },
+	RarityScale = { Common = 1, Rare = 1.1, Epic = 1.2, Legendary = 1.4, Secret = 1.3 } :: { [string]: number },
 	-- В руках мемлинг уменьшается (весь, с деталями), подпись над ним скрыта — не закрывает обзор
 	CarryScale = 0.6,
 	-- Где мемлинги висят, когда их несут: относительно HumanoidRootPart (-Z = перед персонажем).
@@ -741,7 +750,47 @@ StyleConfig.Memeling = {
 				LightEmission = 0.4,
 			},
 		},
+		-- Secret: радужное переливающееся кольцо (цвет крутит клиент — RainbowController), Color — для плашек
+		Secret = {
+			Color = hex("FF5FD2"),
+			Rainbow = true,
+			Light = { Brightness = 1, Range = 10 },
+			Particles = {
+				Color = hex("FFFFFF"),
+				Rate = 3,
+				Lifetime = NumberRange.new(0.8, 1.4),
+				Speed = NumberRange.new(1, 2),
+				Size = 0.7,
+				SpreadAngle = 180,
+				LightEmission = 0.6,
+			},
+		},
 	} :: { [string]: RarityStyle },
+}
+
+-- Радужное переливание (редкость Secret и «глитч»-полосы Error404Kitten): клиент меняет цвет деталей
+-- с этим тегом по кругу оттенков
+StyleConfig.Rainbow = {
+	Tag = "Rainbow",
+	CycleSeconds = 3, -- полный круг цветов
+	Saturation = 0.65,
+	Value = 1,
+	Spread = 0.15, -- соседние детали сдвинуты по оттенку — переливается, а не мигает одним цветом
+}
+
+-- Секретный паркур над морем (MapConfig.Obby): платформы — фоновые цвета, чекпоинты — мята (неон),
+-- площадка возврата на острове — жёлтая (на неё встают), знак «?» у входа маленький
+StyleConfig.Obby = {
+	Platform = Palette.PlumLight,
+	PlatformRim = Palette.CreamLight,
+	Checkpoint = Palette.Mint,
+	CheckpointActive = Palette.MintLight,
+	ReturnPad = Palette.Sun,
+	HintBoard = Palette.PlumDark,
+	HintText = Palette.CreamLight,
+	IslandGrass = Palette.MintLight,
+	IslandEarth = Palette.Plum,
+	IslandEarthDark = Palette.PlumDark,
 }
 
 -- ── Свет ───────────────────────────────────────────────────────────────────

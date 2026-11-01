@@ -174,6 +174,10 @@ function MemelingKit.RarityRing(kit: Kit, rarityId: string)
 	if style.Glow then
 		ring.Material = StyleConfig.GlowMaterial
 	end
+	if style.Rainbow then
+		ring.Material = StyleConfig.GlowMaterial
+		MemelingKit.TagRainbow(ring) -- переливается: цвет меняет клиент (RainbowController)
+	end
 	if style.Halo then
 		-- Мягкое сияние: чуть шире и тоньше кольца, полупрозрачный неон
 		local halo = MemelingKit.Add(
@@ -199,6 +203,11 @@ function MemelingKit.RarityRing(kit: Kit, rarityId: string)
 	if style.Particles then
 		addParticles(kit.Core, style.Particles)
 	end
+end
+
+-- Отметка «переливается всеми цветами» (StyleConfig.Rainbow): цвет меняет клиент, сервер его не трогает
+function MemelingKit.TagRainbow(part: BasePart)
+	CollectionService:AddTag(part, StyleConfig.Rainbow.Tag)
 end
 
 -- Отметка «нужен контур»: Highlight ставит клиент (OutlineController), только ближним и своим

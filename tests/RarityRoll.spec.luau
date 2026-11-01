@@ -75,12 +75,13 @@ test("Meme Zone как раньше: те же 8 мемлингов (3 Common, 2
 	equal(ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Meme", "Legendary")[1], "MegaSnoozeasaurus")
 end)
 
-test("каждая зона из ZoneOrder описана, у каждого мемлинга — существующая зона", function()
+test("каждая зона из ZoneOrder описана, у мемлинга — существующая зона или никакой (в зонах не появляется)", function()
 	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
 		equal(ZoneConfig.Zones[zoneId] ~= nil, true, zoneId)
 	end
 	for id, memeling in MemelingConfig.Memelings do
-		equal(ZoneConfig.Zones[memeling.Zone] ~= nil, true, id)
+		local zone = memeling.Zone
+		equal(zone == nil or ZoneConfig.Zones[zone] ~= nil, true, id)
 	end
 end)
 

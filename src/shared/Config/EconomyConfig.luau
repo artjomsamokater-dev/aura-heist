@@ -34,6 +34,14 @@ EconomyConfig.Rebirth = {
 	IncomeBonusPercent = 25,
 }
 
+-- Секретный паркур в хабе: первый раз — мемлинг Secret на витрину (один раз навсегда),
+-- потом — DailyAura за проход, не чаще раза в CooldownSeconds
+EconomyConfig.SecretObby = {
+	MemelingId = "Error404Kitten",
+	DailyAura = 500,
+	CooldownSeconds = 24 * 60 * 60,
+}
+
 EconomyConfig.CollectDistance = 10 -- максимум студов до постамента, чтобы собрать с него Aura
 EconomyConfig.ButtonDistance = 8 -- максимум студов до кнопки улучшения на участке
 EconomyConfig.PedestalLabelUpdateSeconds = 0.5 -- как часто обновляем подпись «накоплено» над постаментами

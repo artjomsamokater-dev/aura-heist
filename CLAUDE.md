@@ -343,6 +343,14 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
      Сервис ZoneAccess: «Unlock» удержание 1 с → проверки на сервере → Economy.TrySpend(25 000) → zoneAccess[Id]
      в профиль навсегда, атрибут ZoneAccess_<Id>; клиент (PortalController) прячет ворота у купивших.
      На указателях хаба — стрелки к обоим порталам; фонари и кусты отодвинуты от обоих подиумов.
+- 7.3 (секретный паркур): узкий проход в невидимой стене у моря за гигантской кружкой (MapConfig.Obby.EntryAngle 180,
+  GapHalfWidth), рядом знак «?» (единственная подсказка). 16 платформ (MapConfig.Obby.Platforms): спираль вверх
+  между участками выше их стен, потом над морем к тайному острову; 2 чекпоинта. Детали — server/Visual/ObbyBuilder,
+  логика — сервис SecretObby: корень ниже SeaCatchY (3,5) = упал в море → на последний чекпоинт (не смерть);
+  остров → SecretRule (+ тест): первый раз Error404Kitten сразу на витрину (Studio.AddToShowcase, флаг
+  secret.found до выдачи), потом EconomyConfig.SecretObby.DailyAura раз в сутки; жёлтая площадка возврата в хаб.
+  Новая редкость Secret (MemelingConfig: доход Legendary ×2; в зонах не появляется — Zone = nil), кольцо
+  переливается (StyleConfig.Rainbow, тег — client/Controllers/RainbowController). Профиль — схема 5, поле secret.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
@@ -352,5 +360,5 @@ luau-lsp analyze с типами Roblox, проверка кодировки (.l
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
 Фазы 1–5 закрыты (в 5.4 сделаны модели; звуков мемлингов пока нет), правки 6.0 и визуальный проход 6.1 перед тестом сделаны,
-7.1 (агрессия врагов) и 7.2 (Golden Zone) готовы.
+7.1 (агрессия врагов), 7.2 (Golden Zone) и 7.3 (секретный паркур) готовы.
 Дальше по документации — «Ворота B»: закрытый тест (раздел 7, шаг 3).

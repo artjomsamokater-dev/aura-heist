@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
+local EconomyConfig = require(ReplicatedStorage.Shared.Config.EconomyConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
@@ -24,6 +25,7 @@ local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
 local MemelingKit = require(ServerScriptService.Server.Visual.MemelingKit)
 local MemelingBuilders = require(ServerScriptService.Server.Visual.MemelingBuilders)
 local HubDecor = require(ServerScriptService.Server.Visual.HubDecor)
+local ObbyBuilder = require(ServerScriptService.Server.Visual.ObbyBuilder)
 local Icons = require(ReplicatedStorage.Shared.Ui.Icons)
 
 local MapBuilder = {}
@@ -35,6 +37,7 @@ local built = false
 local plots: { Model } = {} -- [номер участка] = Model участка
 local portalParts: { [string]: Part } = {} -- триггеры порталов по Id зоны
 local gateLocks: { [string]: Part } = {} -- замки золотых ворот платных зон (на них кнопка покупки)
+local obbyBuilt: ObbyBuilder.Built? = nil -- секретный паркур (остров, площадка возврата)
 -- Детали зон вылазок по Id зоны (ZoneConfig.ZoneOrder)
 local zoneFolders: { [string]: Folder } = {}
 local zoneEntryParts: { [string]: Part } = {}
@@ -590,7 +593,17 @@ local function buildSeaWalls(parent: Instance)
 		local a = k * 2 * math.pi / 64
 		table.insert(hubCorners, center + Vector3.new(math.cos(a), 0, math.sin(a)) * hubWallRadius)
 	end
-	seaWallLoop("HubWall", hubCorners, onBridge, folder)
+	-- Узкий проход в секретный паркур (MapConfig.Obby): за гигантской кружкой, ширина 2 × GapHalfWidth
+	local obby = MapConfig.Obby
+	local obbyDirection = Vector3.new(math.cos(math.rad(obby.EntryAngle)), 0, math.sin(math.rad(obby.EntryAngle)))
+	local function onObbyGap(p: Vector3): boolean
+		local flat = Vector3.new(p.X - center.X, 0, p.Z - center.Z)
+		local along = flat:Dot(obbyDirection)
+		return along > 0 and (flat - obbyDirection * along).Magnitude < obby.GapHalfWidth
+	end
+	seaWallLoop("HubWall", hubCorners, function(p: Vector3): boolean
+		return onBridge(p) or onObbyGap(p)
+	end, folder)
 
 	local plotHalf = plotsCfg.Size.X / 2 + cfg.SeaWallThickness / 2
 	for i, d in ipairs(directions) do
@@ -1196,6 +1209,13 @@ local function buildHub()
 	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
 		buildPortal(zoneId, folder)
 	end
+
+	-- Секретный паркур и тайный остров; на острове для красоты стоит Secret-мемлинг (подобрать нельзя)
+	local built = ObbyBuilder.Build(folder)
+	obbyBuilt = built
+	local size = StyleConfig.Memeling.Size
+	local stand = built.IslandTop + Vector3.new(0, size.Y / 2, 0)
+	makeMemeling("SecretKitten", EconomyConfig.SecretObby.MemelingId, CFrame.lookAt(stand, stand + Vector3.xAxis), built.ReturnPad.Parent or folder)
 end
 
 -- ── Участки ────────────────────────────────────────────────────────────────
@@ -1777,6 +1797,11 @@ end
 -- Триггер портала в зону zoneId (касание = вход)
 function MapBuilder.GetPortal(zoneId: string): Part
 	return assert(portalParts[zoneId], "MapBuilder.Build() ещё не вызван или нет портала " .. zoneId)
+end
+
+-- Секретный паркур: центр верха острова и площадка возврата в хаб
+function MapBuilder.GetObby(): ObbyBuilder.Built
+	return (assert(obbyBuilt, "MapBuilder.Build() ещё не вызван"))
 end
 
 -- Замок золотых ворот платной зоны (nil — зона бесплатная): на него ZoneAccess вешает кнопку покупки

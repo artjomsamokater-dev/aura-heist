@@ -197,6 +197,48 @@ MapConfig.Portal = {
 	},
 }
 
+-- Секретный паркур над морем (задача 7.3). Вход — узкий проход в невидимой стене у моря на угле EntryAngle
+-- (за гигантской кружкой). Сначала спираль из платформ поднимается между двумя участками выше их стен
+-- (стены участков — до Y = 11), потом платформы ведут наружу над морем к тайному острову.
+-- Платформы: центр верхней грани (X, верх Y, Z) и диаметр. Шаг ~6–7,5 студа, подъём ≤ 1,8 — по силам ребёнку
+-- (персонаж прыгает примерно на 7 вверх и на 12 вперёд). Чекпоинты — номера платформ из списка
+MapConfig.Obby = {
+	EntryAngle = 180,
+	GapHalfWidth = 2, -- проход в стене шириной 4 студа
+	HintOffset = Vector3.new(-48.5, 1, 4), -- маленький знак «?» внутри хаба, рядом с проходом
+	PlatformThickness = 1,
+	Platforms = {
+		-- Подъём спиралью в «кармане» между хабом и участками
+		{ Position = Vector3.new(-53.5, 1.6, 0), Diameter = 6 },
+		{ Position = Vector3.new(-56.5, 3.4, -5.5), Diameter = 5 },
+		{ Position = Vector3.new(-59.5, 5.2, -1), Diameter = 5 },
+		{ Position = Vector3.new(-56.5, 7, 4.5), Diameter = 5 },
+		{ Position = Vector3.new(-53.8, 8.8, -0.5), Diameter = 5 },
+		{ Position = Vector3.new(-56.5, 10.6, -5.5), Diameter = 5 },
+		{ Position = Vector3.new(-59.5, 12.4, -1), Diameter = 6 }, -- чекпоинт 1
+		-- Над участками и морем — к острову
+		{ Position = Vector3.new(-66, 13, 1), Diameter = 5 },
+		{ Position = Vector3.new(-73.5, 13.6, -1.5), Diameter = 5 },
+		{ Position = Vector3.new(-81, 14.2, 1.5), Diameter = 5 },
+		{ Position = Vector3.new(-88.5, 14.8, -1), Diameter = 6 }, -- чекпоинт 2
+		{ Position = Vector3.new(-96, 15.4, 1), Diameter = 5 },
+		{ Position = Vector3.new(-103.5, 16, -1.5), Diameter = 5 },
+		{ Position = Vector3.new(-111, 16.6, 1), Diameter = 5 },
+		{ Position = Vector3.new(-118.5, 17.2, -1), Diameter = 5 },
+		{ Position = Vector3.new(-126, 17.8, 1), Diameter = 5 },
+	},
+	Checkpoints = { 7, 11 }, -- номера платформ
+	CheckpointRadius = 3, -- стоит на платформе-чекпоинте: ближе этого к центру по полу
+	-- Тайный остров: центр верхней грани, радиус, «земля» под ним; площадка возврата в хаб — с краю
+	Island = { Position = Vector3.new(-139, 18.4, 0), Radius = 10, Depth = 12 },
+	ReturnPadOffset = Vector3.new(-5, 0, 5), -- от центра острова
+	ReturnPadRadius = 2.5,
+	-- Упал в море: игрок в хабе, а его корень ниже этой высоты (на полу хаба, мостика и участка корень ≈ 4,
+	-- на море ≈ 3 — к морю обычным путём не попасть, только из паркура) → на последний чекпоинт
+	SeaCatchY = 3.5,
+	CheckSeconds = 0.2,
+}
+
 -- Порталы зон в хабе: один и тот же портал (всё выше — для стартовой зоны на 90°), повёрнутый вокруг
 -- центра площади на столько градусов. Golden — напротив, на 270°
 MapConfig.PortalRotations = { Meme = 0, Golden = 180 } :: { [string]: number }
