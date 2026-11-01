@@ -13,6 +13,7 @@ local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
 local CarrySpeed = require(ReplicatedStorage.Shared.Util.CarrySpeed)
 local MemelingSize = require(ReplicatedStorage.Shared.Util.MemelingSize)
+local ExtractionRule = require(ReplicatedStorage.Shared.Util.ExtractionRule)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
@@ -82,9 +83,29 @@ local function getHumanoid(player: Player): Humanoid?
 	return character and character:FindFirstChildOfClass("Humanoid") or nil
 end
 
+-- Редкости того, что сейчас в руках
+local function getCarriedRarities(player: Player): { string }
+	local rarities: { string } = {}
+	for _, instanceId in ipairs(carried[player] or {}) do
+		local record = Spawn.Get(instanceId)
+		local memeling = record and MemelingConfig.Memelings[record.MemelingId]
+		if memeling then
+			table.insert(rarities, memeling.Rarity)
+		end
+	end
+	return rarities
+end
+
+-- Можно ли эвакуироваться через вторую точку у входа (без Epic/Legendary в руках — ExtractionRule)
+function Raid.CanUseSideExtraction(player: Player): boolean
+	return ExtractionRule.SideAllowed(ZoneConfig.SideEvacuation.BlockedRarities, getCarriedRarities(player))
+end
+
 -- Скорость шага по тому, что в руках (CarrySpeed): самая медленная редкость, пустые руки — обычная.
 -- Обычная скорость запоминается на Humanoid при появлении персонажа (атрибут BaseWalkSpeed).
+-- Здесь же — атрибут SideExtractionBlocked для HUD (вызывается при любом изменении рук)
 local function updateCarrySpeed(player: Player)
+	player:SetAttribute("SideExtractionBlocked", not Raid.CanUseSideExtraction(player))
 	local humanoid = getHumanoid(player)
 	if humanoid == nil then
 		return

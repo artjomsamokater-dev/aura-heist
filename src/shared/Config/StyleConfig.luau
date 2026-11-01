@@ -225,6 +225,7 @@ StyleConfig.Event = {
 -- Площадка EXTRACT: неон, искры вверх и столб света — видно из любого места зоны
 StyleConfig.Extraction = {
 	Color = Palette.Mint,
+	SideColor = Palette.Sun, -- вторая, медленная точка у входа — солнце, чтобы не спутать с главной
 	Transparency = 0.1,
 	BeaconTransparency = 0.6,
 	Particles = {

@@ -34,6 +34,7 @@ local portalPart: Part? = nil
 local zoneFolder: Folder? = nil
 local zoneEntryPart: Part? = nil
 local extractionPad: Part? = nil
+local sideExtractionPad: Part? = nil
 
 -- ── Детали ─────────────────────────────────────────────────────────────────
 
@@ -767,34 +768,54 @@ local function buildZone()
 
 	-- Круглая площадка эвакуации: её радиус совпадает с дистанцией из ZoneConfig.
 	-- Цилиндр в Roblox лежит вдоль оси X, поэтому поворачиваем его на 90°, чтобы он стал «блином».
-	local diameter = ZoneConfig.EvacuationDistance * 2
-	local pad = makePart(
-		"ExtractionPoint",
-		Vector3.new(zone.ExtractionPadThickness, diameter, diameter),
-		CFrame.new(zone.ExtractionPosition + Vector3.new(0, zone.ExtractionPadThickness / 2, 0)) * UPRIGHT,
-		StyleConfig.Extraction.Color,
-		folder
-	)
-	pad.Shape = Enum.PartType.Cylinder
-	pad.CanCollide = false
-	makeGlow(pad, StyleConfig.Extraction.Transparency)
-	local sparks = addParticles(pad, StyleConfig.Extraction.Particles)
-	sparks.EmissionDirection = Enum.NormalId.Right -- после поворота «право» цилиндра смотрит вверх
-	addLabel(pad, TextConfig.Extraction, { Height = StyleConfig.Label.HeightStuds })
-	extractionPad = pad
+	-- Над площадкой — столб света: видно из любого места зоны, куда идти
+	local function buildExtractionPad(name: string, position: Vector3, radius: number, color: Color3, beaconHeight: number, text: string): Part
+		local diameter = radius * 2
+		local pad = makePart(
+			name,
+			Vector3.new(zone.ExtractionPadThickness, diameter, diameter),
+			CFrame.new(position + Vector3.new(0, zone.ExtractionPadThickness / 2, 0)) * UPRIGHT,
+			color,
+			folder
+		)
+		pad.Shape = Enum.PartType.Cylinder
+		pad.CanCollide = false
+		makeGlow(pad, StyleConfig.Extraction.Transparency)
+		local sparks = addParticles(pad, StyleConfig.Extraction.Particles)
+		sparks.Color = ColorSequence.new(color)
+		sparks.EmissionDirection = Enum.NormalId.Right -- после поворота «право» цилиндра смотрит вверх
+		addLabel(pad, text, { Height = StyleConfig.Label.HeightStuds })
 
-	-- Столб света над EXTRACT: видно из любого места зоны, куда идти
-	local beacon = makeColumn(
-		"ExtractBeacon",
-		CFrame.new(zone.ExtractionPosition + Vector3.new(0, decor.ExtractBeaconHeight / 2, 0)),
-		decor.ExtractBeaconHeight,
-		decor.ExtractBeaconDiameter,
+		local beacon = makeColumn(
+			name .. "Beacon",
+			CFrame.new(position + Vector3.new(0, beaconHeight / 2, 0)),
+			beaconHeight,
+			decor.ExtractBeaconDiameter,
+			color,
+			decorFolder
+		)
+		makeGlow(beacon, StyleConfig.Extraction.BeaconTransparency)
+		decorate(beacon, false)
+		beacon.CanCollide = false
+		return pad
+	end
+	extractionPad = buildExtractionPad(
+		"ExtractionPoint",
+		zone.ExtractionPosition,
+		ZoneConfig.EvacuationDistance,
 		StyleConfig.Extraction.Color,
-		decorFolder
+		decor.ExtractBeaconHeight,
+		TextConfig.Extraction
 	)
-	makeGlow(beacon, StyleConfig.Extraction.BeaconTransparency)
-	decorate(beacon, false)
-	beacon.CanCollide = false
+	-- Вторая, медленная точка у входа: другой цвет и столб пониже — не спутать с главной
+	sideExtractionPad = buildExtractionPad(
+		"SideExtractionPoint",
+		zone.SideExtractionPosition,
+		ZoneConfig.SideEvacuation.Distance,
+		StyleConfig.Extraction.SideColor,
+		decor.SideBeaconHeight,
+		TextConfig.SideExtraction
+	)
 
 	-- Невидимые стены по четырём краям пола, чтобы из зоны нельзя было выпасть
 	local walls = Instance.new("Folder")
@@ -894,6 +915,10 @@ function MapBuilder.GetHubArrivalCFrame(): CFrame
 end
 
 -- Площадка эвакуации в зоне (на ней же подпись с прогрессом)
+function MapBuilder.GetSideExtractionPad(): Part
+	return (assert(sideExtractionPad, "MapBuilder.Build() ещё не вызван"))
+end
+
 function MapBuilder.GetExtractionPad(): Part
 	return (assert(extractionPad, "MapBuilder.Build() ещё не вызван"))
 end

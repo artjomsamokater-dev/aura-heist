@@ -15,6 +15,7 @@ local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
 local Icons = require(script.Parent.Parent.Ui.Icons)
+local ExtractTarget = require(script.Parent.Parent.Util.ExtractTarget)
 
 local HudController = {}
 
@@ -221,8 +222,9 @@ local function buildRestockTimer(playerGui: Instance)
 	end)
 end
 
--- Указатель на EXTRACT: маркер высоко над площадкой (виден сквозь стены, единственный «поверх всего»)
+-- Указатель на точку эвакуации: маркер высоко над площадкой (виден сквозь стены, единственный «поверх всего»)
 -- и стрелка у края экрана, когда площадка за кадром. Только в состоянии InRaid.
+-- Ведёт к ближайшей доступной точке (ExtractTarget): основной EXTRACT или медленная точка у входа.
 -- Вблизи маркер прячется, чтобы не закрывать имена мемлингов: площадку и так видно.
 local function buildExtractPointer(playerGui: Instance)
 	local target = MapConfig.Zone.ExtractionPosition + Vector3.new(0, HUD.MarkerHeight, 0)
@@ -294,7 +296,11 @@ local function buildExtractPointer(playerGui: Instance)
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		local far = true
 		if root and root:IsA("BasePart") then
-			local flatOffset = root.Position - MapConfig.Zone.ExtractionPosition
+			local nearest = ExtractTarget.Get(root.Position)
+			target = nearest.Position + Vector3.new(0, HUD.MarkerHeight, 0)
+			anchor.Position = target
+			title.Text = nearest.Marker
+			local flatOffset = root.Position - nearest.Position
 			local flatDistance = Vector3.new(flatOffset.X, 0, flatOffset.Z).Magnitude
 			far = flatDistance > HUD.MarkerHideDistance
 			distance.Text = string.format(TextConfig.ExtractMarkerDistance, formatNumber(flatDistance))

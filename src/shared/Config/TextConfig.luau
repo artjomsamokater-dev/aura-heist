@@ -24,6 +24,7 @@ TextConfig.ZoneDanger = "DANGER"
 TextConfig.Entry = "Entry"
 TextConfig.Extraction = "EXTRACT"
 TextConfig.ExtractionProgress = "EXTRACTING... %d" -- %d — сколько секунд осталось
+TextConfig.SideExtraction = "SLOW EXIT\nno Epic / Legendary" -- вторая точка эвакуации у входа
 TextConfig.PedestalMemeling = "%s\n+%d/s" -- имя мемлинга и доход в секунду
 TextConfig.PedestalStored = "%s Aura" -- сколько накоплено на постаменте
 TextConfig.PedestalFull = "%s Aura (FULL)" -- накоплено до предела хранилища
@@ -73,6 +74,7 @@ TextConfig.AnnounceSpawn = "A %s appeared in the %s zone!" -- %s — редко�
 TextConfig.RarityNames = { Common = "COMMON", Rare = "RARE", Epic = "EPIC", Legendary = "LEGENDARY" } :: { [string]: string }
 TextConfig.ZonePartNames = { Safe = "SAFE", Danger = "DANGER" } :: { [string]: string }
 TextConfig.ExtractMarker = "▼ EXTRACT ▼"
+TextConfig.SideExtractMarker = "▼ SLOW EXIT ▼" -- маркер, когда ближе доступна вторая точка
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
 

@@ -3,7 +3,7 @@
 -- поэтому не перекрывают ни джойстик (слева), ни прыжок. Появляются только когда нужны:
 --   Drop    — в зоне, если в руках есть мемлинги: отпустить последнего (клавиша G на компьютере).
 --             Решает сервер (Remotes.DropCarried через RemoteGuard), мемлинг вернётся на свою точку.
---   Extract — в зоне, когда площадка EXTRACT рядом: персонаж сам идёт на неё.
+--   Extract — в зоне, когда рядом ближайшая доступная точка эвакуации: персонаж сам идёт на неё.
 --             Эвакуацию по-прежнему засчитывает сервер по позиции; на площадке кнопка показывает «Hold...».
 
 local Players = game:GetService("Players")
@@ -11,11 +11,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
-local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
-local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local ExtractTarget = require(script.Parent.Parent.Util.ExtractTarget)
 
 local ActionButtonsController = {}
 
@@ -107,8 +106,9 @@ function ActionButtonsController.Start()
 	extract.Activated:Connect(function()
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			humanoid:MoveTo(MapConfig.Zone.ExtractionPosition) -- персонаж сам идёт на площадку
+		local root = getRoot()
+		if humanoid and root then
+			humanoid:MoveTo(ExtractTarget.Get(root.Position).Position) -- персонаж сам идёт на ближайшую доступную площадку
 		end
 	end)
 
@@ -144,10 +144,11 @@ function ActionButtonsController.Start()
 		local nearPad = false
 		local onPad = false
 		if inRaid and root then
-			local offset = root.Position - MapConfig.Zone.ExtractionPosition
+			local target = ExtractTarget.Get(root.Position)
+			local offset = root.Position - target.Position
 			local flat = Vector3.new(offset.X, 0, offset.Z).Magnitude
 			nearPad = flat <= HUD.ExtractButtonRange
-			onPad = flat <= ZoneConfig.EvacuationDistance
+			onPad = flat <= target.Radius
 		end
 		extract.Visible = nearPad
 		extract.Text = if onPad then TextConfig.ActionExtracting else TextConfig.ActionExtract

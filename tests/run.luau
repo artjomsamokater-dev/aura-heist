@@ -16,6 +16,7 @@ require("./GiantRoute.spec")
 require("./TutorialSteps.spec")
 require("./RebirthMath.spec")
 require("./MemelingSize.spec")
+require("./ExtractionRule.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

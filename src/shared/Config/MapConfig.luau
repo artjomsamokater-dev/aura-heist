@@ -132,6 +132,8 @@ MapConfig.Zone = {
 	ExtractionPosition = ZONE_TOP + Vector3.new(90, 0, 0),
 	ExtractionPadThickness = 0.2,
 	ExtractionMaxHeight = 10, -- выше этого над площадкой (прыжок не в счёт) игрок уже не «на точке»
+	-- Вторая, медленная точка эвакуации — рядом со входом, в безопасной части (правила — ZoneConfig.SideEvacuation)
+	SideExtractionPosition = ZONE_TOP + Vector3.new(-95, 0, -28),
 
 	-- Граница зоны: невидимые стены по краям пола
 	WallHeight = 40,
@@ -156,6 +158,7 @@ MapConfig.Zone = {
 		DangerBorderWidth = 1.2, -- полоса на полу по границе опасной части
 		ExtractBeaconDiameter = 4,
 		ExtractBeaconHeight = 60,
+		SideBeaconHeight = 25, -- столб над второй (медленной) точкой — ниже главного
 		-- Ориентиры: грибы-великаны в углах безопасной части, кристаллы — в углах опасной
 		Mushrooms = {
 			{ Position = Vector2.new(-100, -100), StemHeight = 12, StemDiameter = 3.5, CapDiameter = 14 },

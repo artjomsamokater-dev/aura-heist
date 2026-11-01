@@ -1,9 +1,10 @@
 --!strict
--- Extraction: точка эвакуации в зоне.
--- Игрок InRaid стоит на точке ZoneConfig.EvacuationSeconds секунд подряд —
--- он возвращается в хаб, а всё, что было в руках, переходит на витрину.
--- Ушёл с точки или умер — отсчёт сбрасывается. Награда — ровно один раз (флаг в Raid).
--- Бонус отряда: эвакуировались рядом и почти одновременно — принесённые обоими дороже при продаже.
+-- Extraction: точки эвакуации в зоне.
+-- • Основной EXTRACT (восток): стоять ZoneConfig.EvacuationSeconds секунд, можно с чем угодно.
+-- • Медленная точка у входа (ZoneConfig.SideEvacuation): дольше и только без Epic/Legendary в руках.
+-- Игрок InRaid простоял нужное время — он возвращается в хаб, всё из рук переходит на витрину.
+-- Ушёл с точки, умер или поднял запрещённую редкость — отсчёт сбрасывается. Награда — ровно один раз (флаг в Raid).
+-- Бонус отряда: эвакуировались рядом и почти одновременно — принесённые обоими навсегда дают больше дохода.
 -- Всё решает сервер по позиции персонажа; клиент ничего не присылает.
 
 local Players = game:GetService("Players")
@@ -27,16 +28,63 @@ local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
 local Extraction = {}
 
-local holdStartedAt: { [Player]: number } = {} -- когда игрок встал на точку (os.clock)
-local lastLabelText = ""
+-- Точка эвакуации: где, какого радиуса, сколько стоять, кому можно
+type Point = {
+	Name: string,
+	Position: Vector3,
+	Distance: number,
+	Seconds: number,
+	Allowed: (player: Player) -> boolean,
+	GetPad: () -> Part,
+	IdleText: string,
+	LastLabelText: string,
+}
+
+local points: { Point } = {
+	{
+		Name = "EXTRACT",
+		Position = MapConfig.Zone.ExtractionPosition,
+		Distance = ZoneConfig.EvacuationDistance,
+		Seconds = ZoneConfig.EvacuationSeconds,
+		Allowed = function(_player: Player): boolean
+			return true
+		end,
+		GetPad = MapBuilder.GetExtractionPad,
+		IdleText = TextConfig.Extraction,
+		LastLabelText = "",
+	},
+	{
+		Name = "медленная точка у входа",
+		Position = MapConfig.Zone.SideExtractionPosition,
+		Distance = ZoneConfig.SideEvacuation.Distance,
+		Seconds = ZoneConfig.SideEvacuation.Seconds,
+		Allowed = Raid.CanUseSideExtraction,
+		GetPad = MapBuilder.GetSideExtractionPad,
+		IdleText = TextConfig.SideExtraction,
+		LastLabelText = "",
+	},
+}
+
+-- Кто на какой точке и с какого момента (os.clock)
+type Hold = { Point: Point, StartedAt: number }
+local holds: { [Player]: Hold } = {}
+local warnedBlocked: { [Player]: boolean } = {} -- чтобы «нельзя с Epic/Legendary» в Output было один раз
 
 -- Стоит ли персонаж на площадке: по горизонтали в радиусе, по высоте — не выше прыжка
-local function isOnPoint(root: BasePart): boolean
-	local offset = root.Position - MapConfig.Zone.ExtractionPosition
+local function isOnPoint(root: BasePart, point: Point): boolean
+	local offset = root.Position - point.Position
 	local flatDistance = Vector3.new(offset.X, 0, offset.Z).Magnitude
-	return flatDistance <= ZoneConfig.EvacuationDistance
-		and offset.Y >= 0
-		and offset.Y <= MapConfig.Zone.ExtractionMaxHeight
+	return flatDistance <= point.Distance and offset.Y >= 0 and offset.Y <= MapConfig.Zone.ExtractionMaxHeight
+end
+
+-- На какой площадке стоит персонаж (nil — ни на какой)
+local function findPoint(root: BasePart): Point?
+	for _, point in ipairs(points) do
+		if isOnPoint(root, point) then
+			return point
+		end
+	end
+	return nil
 end
 
 type Brought = {
@@ -48,7 +96,7 @@ type Brought = {
 local recent: { SquadRule.Extraction } = {}
 local broughtBy: { [SquadRule.Extraction]: Brought } = setmetatable({}, { __mode = "k" }) :: any
 
--- Бонус отряда: эвакуировались рядом и почти одновременно — оба получают +% к цене продажи
+-- Бонус отряда: эвакуировались рядом и почти одновременно — оба получают +% к доходу
 -- принесённых мемлингов. Каждая эвакуация — не больше одного раза (флаг Bonus до выдачи)
 -- Вернёт true, если эта эвакуация уже получила бонус (игрок эвакуировался вторым в отряде)
 local function applySquadBonus(player: Player, position: Vector3, entries: { Studio.BroughtEntry }): boolean
@@ -110,7 +158,7 @@ end
 local function complete(player: Player)
 	-- Где игрок эвакуировался — запоминаем до переноса в хаб (для бонуса отряда)
 	local _, root = RemoteGuard.GetAliveCharacter(player)
-	local position = if root then root.Position else MapConfig.Zone.ExtractionPosition
+	local position = if root then root.Position else MapConfig.Zone.ExtractionPosition -- запасной вариант, если персонажа нет
 
 	local memelingIds, raidSeconds = Raid.ClaimExtraction(player)
 	if memelingIds == nil then
@@ -137,23 +185,26 @@ local function complete(player: Player)
 	)
 end
 
--- Подпись над точкой: сколько секунд осталось у того, кто ближе всех к успеху
-local function updateLabel(now: number)
-	local bestRemaining: number? = nil
-	for _, startedAt in holdStartedAt do
-		local remaining = ZoneConfig.EvacuationSeconds - (now - startedAt)
-		if bestRemaining == nil or remaining < bestRemaining then
-			bestRemaining = remaining
+-- Подпись над каждой точкой: сколько секунд осталось у того, кто на ней ближе всех к успеху
+local function updateLabels(now: number)
+	for _, point in ipairs(points) do
+		local bestRemaining: number? = nil
+		for _, hold in holds do
+			if hold.Point == point then
+				local remaining = point.Seconds - (now - hold.StartedAt)
+				if bestRemaining == nil or remaining < bestRemaining then
+					bestRemaining = remaining
+				end
+			end
 		end
-	end
-
-	local text = TextConfig.Extraction
-	if bestRemaining ~= nil then
-		text = string.format(TextConfig.ExtractionProgress, math.max(1, math.ceil(bestRemaining)))
-	end
-	if text ~= lastLabelText then
-		lastLabelText = text
-		MapBuilder.SetLabelText(MapBuilder.GetExtractionPad(), text)
+		local text = point.IdleText
+		if bestRemaining ~= nil then
+			text = string.format(TextConfig.ExtractionProgress, math.max(1, math.ceil(bestRemaining)))
+		end
+		if text ~= point.LastLabelText then
+			point.LastLabelText = text
+			MapBuilder.SetLabelText(point.GetPad(), text)
+		end
 	end
 end
 
@@ -161,29 +212,39 @@ local function check()
 	local now = os.clock()
 	for _, player in ipairs(Players:GetPlayers()) do
 		local _, root = RemoteGuard.GetAliveCharacter(player)
-		local onPoint = root ~= nil and Raid.GetState(player) == Raid.State.InRaid and isOnPoint(root)
-		local startedAt = holdStartedAt[player]
+		local point = if root ~= nil and Raid.GetState(player) == Raid.State.InRaid then findPoint(root) else nil
+		if point and not point.Allowed(player) then
+			if not warnedBlocked[player] then
+				warnedBlocked[player] = true
+				print(string.format("[Extraction] %s: на точке «%s» нельзя с Epic/Legendary в руках", player.Name, point.Name))
+			end
+			point = nil
+		elseif point == nil then
+			warnedBlocked[player] = nil
+		end
+		local hold = holds[player]
 
-		if onPoint then
-			if startedAt == nil then
-				holdStartedAt[player] = now
-				print(string.format("[Extraction] %s встал на точку эвакуации", player.Name))
-			elseif now - startedAt >= ZoneConfig.EvacuationSeconds then
-				holdStartedAt[player] = nil
+		if point then
+			if hold == nil or hold.Point ~= point then
+				holds[player] = { Point = point, StartedAt = now }
+				print(string.format("[Extraction] %s встал на точку «%s»", player.Name, point.Name))
+			elseif now - hold.StartedAt >= point.Seconds then
+				holds[player] = nil
 				complete(player)
 			end
-		elseif startedAt ~= nil then
-			-- Ушёл с точки, умер или уже не в вылазке — отмена
-			holdStartedAt[player] = nil
+		elseif hold ~= nil then
+			-- Ушёл с точки, умер, поднял запрещённую редкость или уже не в вылазке — отмена
+			holds[player] = nil
 			print(string.format("[Extraction] %s: эвакуация отменена", player.Name))
 		end
 	end
-	updateLabel(now)
+	updateLabels(now)
 end
 
 function Extraction.Start()
 	Players.PlayerRemoving:Connect(function(player)
-		holdStartedAt[player] = nil
+		holds[player] = nil
+		warnedBlocked[player] = nil
 	end)
 
 	task.spawn(function()

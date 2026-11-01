@@ -26,7 +26,15 @@ ZoneConfig.RestockSeconds = 90
 
 -- О каких редкостях объявлять всем игрокам, когда они появляются (одно объявление на спавн)
 ZoneConfig.AnnounceRarities = { "Epic", "Legendary" }
-ZoneConfig.EvacuationSeconds = 3 -- сколько секунд длится эвакуация
+ZoneConfig.EvacuationSeconds = 3 -- сколько секунд длится эвакуация на основном EXTRACT
+
+-- Вторая точка эвакуации — у входа, в безопасной части (MapConfig.Zone.SideExtractionPosition):
+-- стоять дольше, и только если в руках нет мемлингов из BlockedRarities
+ZoneConfig.SideEvacuation = {
+	Seconds = 8,
+	Distance = 7, -- радиус площадки, студов
+	BlockedRarities = { "Epic", "Legendary" },
+}
 ZoneConfig.PickupDistance = 10 -- максимум студов до мемлинга, чтобы его подобрать
 ZoneConfig.EvacuationDistance = 12 -- максимум студов до точки эвакуации
 ZoneConfig.EvacuationCheckSeconds = 0.1 -- как часто сервер проверяет, кто стоит на точке эвакуации
