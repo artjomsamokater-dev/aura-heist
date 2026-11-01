@@ -84,6 +84,27 @@ test("каждая зона из ZoneOrder описана, у каждого м�
 	end
 end)
 
+test("Golden Zone: без Common, вход 25 000 Aura, туториала нет", function()
+	local golden = ZoneConfig.Zones.Golden
+	equal(golden.SpawnChances.Safe.Common, 0)
+	equal(golden.SpawnChances.Danger.Common, 0)
+	equal(golden.AccessCost, 25000)
+	equal(golden.Tutorial, false)
+end)
+
+test("Golden Zone: свои 5 мемлингов (2 Rare, 2 Epic, 1 Legendary), доход ×5, в Meme Zone их нет", function()
+	local counts = { Common = 0, Rare = 2, Epic = 2, Legendary = 1 }
+	for rarity, count in counts do
+		local ids = ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Golden", rarity)
+		equal(#ids, count, rarity)
+		for _, id in ipairs(ids) do
+			equal(ZoneRule.IncomeMultiplier(MemelingConfig.Memelings[id]), 5, id)
+			equal(table.find(ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Meme", rarity), id), nil, id)
+		end
+	end
+	equal(ZoneRule.IncomeMultiplier(MemelingConfig.Memelings.ToastPaw), 1, "у мемлингов Meme Zone доход как раньше")
+end)
+
 test("доступ: бесплатная зона открыта всем, платная — только купившим", function()
 	equal(ZoneRule.HasAccess(nil, nil, "Meme"), true)
 	equal(ZoneRule.HasAccess(25000, nil, "Golden"), false)

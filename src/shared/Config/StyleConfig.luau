@@ -514,6 +514,50 @@ StyleConfig.Characters = {
 		Jewel = hex("FF4FA3"),
 		Bubble = hex("BFE6FF"),
 	},
+	-- Golden Zone
+	BubbleTeaBandit = {
+		Tea = hex("D9B38C"),
+		Lid = hex("FFF3E0"),
+		Straw = hex("FF8FB1"),
+		Pearls = hex("3B2414"),
+		Mask = hex("2A1638"),
+	},
+	CactusCrooner = {
+		Body = hex("5FB85A"),
+		Spines = hex("FFF3C9"),
+		Pot = hex("C8714A"),
+		Hat = hex("3A2A4A"),
+		HatBand = hex("FF8FB1"),
+		Mic = hex("2A1638"),
+		MicHead = hex("C9CED8"),
+		Flower = hex("FF8FB1"),
+	},
+	PizzaPigeon = {
+		Dough = hex("F2C66B"),
+		Cheese = hex("FFE08A"),
+		Pepperoni = hex("C8452E"),
+		Crust = hex("C98A4B"),
+		Feathers = hex("9AA3B5"),
+		Neck = hex("7FD3C3"),
+		Beak = hex("5A5F6B"),
+		Feet = hex("FF9DB5"),
+	},
+	RoboDuck = {
+		Body = hex("FFE59A"),
+		Beak = hex("FF9F45"),
+		Visor = hex("2A1638"),
+		VisorGlow = hex("5CE1FF"),
+		Metal = hex("C9CED8"),
+		AntennaTip = hex("7FE0B0"),
+	},
+	KingWaffleton = {
+		Waffle = hex("D9A04E"),
+		Grid = hex("B97A2E"),
+		Crown = hex("FFD24A"),
+		Jewel = hex("FF4FA3"),
+		Syrup = hex("8B4A1C"),
+		Butter = hex("FFF3C9"),
+	},
 	Grumblob = { Body = hex("7BD13A"), Brow = hex("2A1638") }, -- враг: зелёный желейный шар
 }
 

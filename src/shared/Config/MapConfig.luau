@@ -376,9 +376,10 @@ local function zoneLayout(ZONE_TOP: Vector3)
 	}
 end
 
--- Геометрия зон по Id (Id и порядок — ZoneConfig.ZoneOrder). Meme — восточнее хаба
+-- Геометрия зон по Id (Id и порядок — ZoneConfig.ZoneOrder). Meme — восточнее хаба, Golden — западнее
 MapConfig.Zones = {
 	Meme = zoneLayout(Vector3.new(500, ZONE_FLOOR_Y + 1, 0)),
+	Golden = zoneLayout(Vector3.new(-500, ZONE_FLOOR_Y + 1, 0)),
 }
 
 return deepFreeze(MapConfig)

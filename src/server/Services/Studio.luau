@@ -23,6 +23,7 @@ local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
 local PedestalMath = require(ReplicatedStorage.Shared.Util.PedestalMath)
 local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
 local SquadRule = require(ReplicatedStorage.Shared.Util.SquadRule)
+local ZoneRule = require(ReplicatedStorage.Shared.Util.ZoneRule)
 local RebirthMath = require(ReplicatedStorage.Shared.Util.RebirthMath)
 local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerData = require(script.Parent.PlayerData)
@@ -94,12 +95,12 @@ local function getStorageSeconds(data: PlayerData.Data): number
 	return UpgradeValues.StorageSeconds(data.upgrades.storage)
 end
 
--- Доход мемлинга в секунду: по редкости, × бонус за rebirth игрока (RebirthMath),
--- × бонус отряда, если мемлинг принесён в отряде (SquadRule)
+-- Доход мемлинга в секунду: по редкости × множитель самого мемлинга (Golden Zone — ×5, ZoneRule),
+-- × бонус за rebirth игрока (RebirthMath), × бонус отряда, если мемлинг принесён в отряде (SquadRule)
 local function getRate(memelingId: string, data: PlayerData.Data?, squadBonus: boolean?): number
 	local memeling = MemelingConfig.Memelings[memelingId]
 	local rarity = memeling and MemelingConfig.Rarities[memeling.Rarity]
-	local base = if rarity then rarity.AuraPerSecond else 0
+	local base = (if rarity then rarity.AuraPerSecond else 0) * ZoneRule.IncomeMultiplier(memeling)
 	local rebirths = if data then data.rebirths else 0
 	return base
 		* RebirthMath.IncomeMultiplier(rebirths, EconomyConfig.Rebirth.IncomeBonusPercent)

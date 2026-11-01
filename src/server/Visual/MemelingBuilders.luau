@@ -372,6 +372,200 @@ function Builders.MegaSnoozeasaurus(kit: Kit)
 	text.Parent = gui
 end
 
+-- ── Golden Zone ────────────────────────────────────────────────────────────
+
+-- 9. Bubble Tea Bandit (Rare): стакан бабл-ти в маске грабителя, на дне шарики тапиоки, толстая трубочка,
+-- сзади хвосты маски
+function Builders.BubbleTeaBandit(kit: Kit)
+	local c = Colors.BubbleTeaBandit
+	local cup = v3(0, -0.5, 0)
+	local radius = 1.8
+	add(kit, "Cylinder", v3(4.2, radius * 2, radius * 2), cup, c.Tea, UP)
+	shade(kit, "Cylinder", v3(4.1, 3.5, 3.5), v3(-0.2, -0.52, 0.02), c.Tea, UP)
+	gloss(kit, v3(0.45, 1.8, 0.25), v3(1.1, -0.6, frontRound(cup, radius, 1.1) - 0.05), v3(0, -38, 0))
+	add(kit, "Cylinder", v3(0.3, 3.9, 3.9), v3(0, 1.6, 0), c.Lid, UP)
+	add(kit, "Oval", v3(3.7, 1.3, 3.7), v3(0, 1.75, 0), c.Lid)
+	add(kit, "Cylinder", v3(3.2, 0.55, 0.55), v3(0.55, 3.1, 0.3), c.Straw, v3(0, 0, 78))
+
+	-- Шарики тапиоки на дне (видны спереди)
+	for _, p in ipairs({ v2(-0.8, -2.15), v2(0.1, -2.25), v2(0.95, -2.1), v2(-0.35, -1.65), v2(0.55, -1.6) }) do
+		add(kit, "Ball", v3(0.62, 0.62, 0.62), v3(p.X, p.Y, frontRound(cup, radius, p.X) + 0.1), c.Pearls)
+	end
+
+	-- Маска грабителя: тёмная повязка на уровне глаз, глаза — поверх неё
+	local maskRadius = 1.86
+	add(kit, "Cylinder", v3(1, maskRadius * 2, maskRadius * 2), v3(0, 0.45, 0), c.Mask, UP)
+	add(kit, "Block", v3(0.2, 0.45, 1.5), v3(-0.35, 0.4, 2.4), c.Mask, v3(15, -20, 0))
+	add(kit, "Block", v3(0.2, 0.45, 1.5), v3(0.35, 0.3, 2.35), c.Mask, v3(-10, 20, 0))
+	eye(kit, v3(0.65, 0.5, frontRound(cup, maskRadius, 0.65)), 1.05, v2(-0.3, 0))
+	eye(kit, v3(-0.7, 0.45, frontRound(cup, maskRadius, -0.7)), 0.85, v2(-0.3, 0))
+	-- Ухмылка: рот наискосок
+	mouth(kit, v3(0.9, 0.25, 0.25), v3(0.1, -0.55, frontRound(cup, radius, 0.1)), v3(0, 0, -12))
+	blush(kit, v3(0.7, 0.38, 0.2), v3(1.05, -0.35, frontRound(cup, radius, 1.05) - 0.05))
+	blush(kit, v3(0.7, 0.38, 0.2), v3(-1.05, -0.35, frontRound(cup, radius, -1.05) - 0.2))
+end
+
+-- 10. Cactus Crooner (Rare): кактус в горшке и шляпе, одна рука поднята, второй держит микрофон у рта,
+-- рот открыт — поёт; сзади цветок
+function Builders.CactusCrooner(kit: Kit)
+	local c = Colors.CactusCrooner
+	add(kit, "Cylinder", v3(1.4, 3.2, 3.2), v3(0, -2, 0), c.Pot, UP)
+	add(kit, "Cylinder", v3(0.35, 3.5, 3.5), v3(0, -1.35, 0), c.Pot, UP)
+	local center, size = v3(0, -0.2, 0), v3(2.8, 4.4, 2.8)
+	add(kit, "Oval", size, center, c.Body)
+	shade(kit, "Oval", v3(2.74, 4.3, 2.7), v3(-0.18, -0.22, 0.02), c.Body)
+	gloss(kit, v3(0.3, 1.2, 0.2), v3(0.85, 0.6, front(center, size, 0.85, 0.6) - 0.02), v3(0, -40, 0))
+	for _, p in ipairs({ v2(1.05, -0.9), v2(-1.0, -1.2), v2(1.15, 0.2), v2(-1.15, 0.5) }) do
+		add(kit, "Ball", v3(0.25, 0.25, 0.25), v3(p.X, p.Y, front(center, size, p.X, p.Y)), c.Spines)
+	end
+
+	-- Шляпа: поля, тулья и лента
+	add(kit, "Cylinder", v3(0.25, 3.6, 3.6), v3(0, 2.0, 0), c.Hat, UP)
+	add(kit, "Cylinder", v3(1.1, 2.2, 2.2), v3(0, 2.6, 0), c.Hat, UP)
+	add(kit, "Cylinder", v3(0.3, 2.25, 2.25), v3(0, 2.25, 0), c.HatBand, UP)
+
+	-- Поёт: глаза прищурены от удовольствия (один меньше), рот открыт «О»
+	eye(kit, v3(0.55, 0.85, front(center, size, 0.55, 0.85)), 0.9, v2(0.2, 0.4))
+	eye(kit, v3(-0.5, 0.9, front(center, size, -0.5, 0.9)), 0.7, v2(0.2, 0.4))
+	mouth(kit, v3(0.7, 0.8, 0.3), v3(0, -0.2, front(center, size, 0, -0.2)))
+	blush(kit, v3(0.55, 0.3, 0.2), v3(0.95, 0.3, front(center, size, 0.95, 0.3)))
+	blush(kit, v3(0.55, 0.3, 0.2), v3(-0.95, 0.3, front(center, size, -0.95, 0.3) - 0.1))
+
+	-- Правая рука вверх (как на сцене), левая — с микрофоном у рта
+	add(kit, "Oval", v3(0.8, 1.9, 0.8), v3(-1.75, 0.9, 0), c.Body, v3(0, 0, 30))
+	add(kit, "Oval", v3(0.8, 1.6, 0.8), v3(1.3, -0.8, -0.9), c.Body, v3(-50, 0, -20))
+	add(kit, "Cylinder", v3(1.1, 0.35, 0.35), v3(0.75, -0.55, -1.75), c.Mic, UP)
+	add(kit, "Ball", v3(0.75, 0.75, 0.75), v3(0.75, 0.05, -1.8), c.MicHead)
+
+	-- Сзади — розовый цветок на макушке-боку
+	add(kit, "Ball", v3(0.8, 0.8, 0.8), v3(0.5, 1.3, back(center, size, 0.5, 1.3)), c.Flower)
+	add(kit, "Ball", v3(0.35, 0.35, 0.35), v3(0.5, 1.3, back(center, size, 0.5, 1.3) + 0.35), c.Spines)
+end
+
+-- 11. Pizza Pigeon (Epic): голубь, у которого тело — кусок пиццы (тесто, сыр, пепперони, корочка-хвост),
+-- серая голова с бирюзовой шеей, крылья по бокам, розовые лапки
+function Builders.PizzaPigeon(kit: Kit)
+	local c = Colors.PizzaPigeon
+	local body, bodySize = v3(0, -1.2, 0.4), v3(3.2, 2.4, 4.4)
+	add(kit, "Oval", bodySize, body, c.Dough)
+	shade(kit, "Oval", v3(3.1, 2.3, 4.3), v3(-0.2, -1.22, 0.42), c.Dough)
+	add(kit, "Oval", v3(2.9, 0.7, 4), v3(0, -0.15, 0.4), c.Cheese)
+	for _, p in ipairs({ v3(0.7, 0.18, 0), v3(-0.6, 0.15, 0.9), v3(0.2, 0.12, 1.7) }) do
+		add(kit, "Cylinder", v3(0.15, 0.85, 0.85), p, c.Pepperoni, UP)
+	end
+	-- Корочка — толстый валик сзади, за ней хвостовые перья
+	add(kit, "Cylinder", v3(3, 1.1, 1.1), v3(0, -0.8, 2.5), c.Crust)
+	add(kit, "Oval", v3(2, 0.3, 1.4), v3(0, -0.5, 3.4), c.Feathers, v3(-15, 0, 0))
+
+	-- Голова и шея
+	add(kit, "Cylinder", v3(0.8, 1.6, 1.6), v3(0, 0.25, -1.6), c.Neck, UP)
+	local head, headSize = v3(0, 1.3, -1.9), v3(2.2, 2.1, 2.2)
+	add(kit, "Oval", headSize, head, c.Feathers)
+	gloss(kit, v3(0.6, 0.25, 0.2), v3(0.6, 2.0, front(head, headSize, 0.6, 2.0) - 0.02), v3(40, 0, -30))
+	add(kit, "Oval", v3(0.6, 0.4, 1), v3(0, 1.0, front(head, headSize, 0, 1.0) - 0.3), c.Beak)
+	eye(kit, v3(0.5, 1.5, front(head, headSize, 0.5, 1.5)), 0.75, v2(0.3, 0))
+	eye(kit, v3(-0.5, 1.55, front(head, headSize, -0.5, 1.55)), 0.6, v2(-0.3, 0.2))
+	blush(kit, v3(0.45, 0.25, 0.15), v3(0.85, 1.1, front(head, headSize, 0.85, 1.1)))
+	blush(kit, v3(0.45, 0.25, 0.15), v3(-0.85, 1.1, front(head, headSize, -0.85, 1.1) - 0.05))
+
+	-- Крылья и лапки
+	for _, x in ipairs({ 1.7, -1.7 }) do
+		add(kit, "Oval", v3(0.6, 1.6, 2.6), v3(x, -0.9, 0.4), c.Feathers, v3(0, 0, if x > 0 then -15 else 15))
+		add(kit, "Oval", v3(0.6, 0.4, 1), v3(x * 0.4, -2.45, -0.5), c.Feet)
+	end
+end
+
+-- 12. Robo Duck (Epic): резиновая уточка-робот — визор с горящими глазами, антенна с огоньком,
+-- заклёпки на щеках, сзади панель с болтами
+function Builders.RoboDuck(kit: Kit)
+	local c = Colors.RoboDuck
+	local body, bodySize = v3(0, -1.2, 0.4), v3(4.2, 3.2, 4.8)
+	add(kit, "Oval", bodySize, body, c.Body)
+	shade(kit, "Oval", v3(4.1, 3.1, 4.7), v3(-0.22, -1.22, 0.42), c.Body)
+	add(kit, "Oval", v3(1.6, 1.6, 1.6), v3(0, 0.2, 2.6), c.Body, v3(-30, 0, 0)) -- хвостик
+	for _, x in ipairs({ 1.9, -1.9 }) do
+		add(kit, "Oval", v3(0.6, 1.6, 2.6), v3(x, -1.0, 0.5), c.Body, v3(0, 0, if x > 0 then -15 else 15))
+	end
+
+	local head, headSize = v3(0, 1, -0.9), v3(3, 2.8, 2.8)
+	add(kit, "Oval", headSize, head, c.Body)
+	gloss(kit, v3(0.8, 0.3, 0.22), v3(0.8, 2.0, front(head, headSize, 0.8, 2.0) - 0.02), v3(40, 0, -30))
+	add(kit, "Oval", v3(1.7, 0.7, 1.5), v3(0, 0.45, front(head, headSize, 0, 0.45) - 0.4), c.Beak)
+
+	-- Визор: тёмная полоса, на ней два светящихся глаза разного размера с бликом
+	local visorY = 1.35
+	local visorZ = front(head, headSize, 0, visorY) - 0.05
+	add(kit, "Oval", v3(2.6, 0.95, 0.5), v3(0, visorY, visorZ), c.Visor)
+	for _, e in ipairs({ { X = 0.55, Size = 0.55 }, { X = -0.55, Size = 0.45 } }) do
+		local glow = add(kit, "Ball", Vector3.one * e.Size, v3(e.X, visorY, visorZ - 0.2), c.VisorGlow)
+		glow.Material = StyleConfig.GlowMaterial
+		add(kit, "Ball", Vector3.one * e.Size * 0.3, v3(e.X + e.Size * 0.15, visorY + e.Size * 0.15, visorZ - 0.2 - e.Size * 0.4), StyleConfig.Memeling.Face.Glint)
+	end
+	for _, x in ipairs({ 1.2, -1.2 }) do
+		add(kit, "Ball", v3(0.3, 0.3, 0.3), v3(x, 0.7, front(head, headSize, x, 0.7)), c.Metal) -- заклёпки
+	end
+
+	-- Антенна с огоньком
+	add(kit, "Cylinder", v3(1.4, 0.16, 0.16), v3(0.4, 3.0, -0.8), c.Metal, UP)
+	local tip = add(kit, "Ball", v3(0.5, 0.5, 0.5), v3(0.4, 3.8, -0.8), c.AntennaTip)
+	tip.Material = StyleConfig.GlowMaterial
+
+	-- Сзади — панель с болтами
+	local panelY = -0.9
+	add(kit, "Block", v3(1.6, 1.2, 0.2), v3(0, panelY, back(body, bodySize, 0, panelY) - 0.05), c.Metal)
+	for _, p in ipairs({ v2(0.6, 0.4), v2(-0.6, 0.4), v2(0.6, -0.4), v2(-0.6, -0.4) }) do
+		add(kit, "Ball", v3(0.2, 0.2, 0.2), v3(p.X, panelY + p.Y, back(body, bodySize, 0, panelY) + 0.08), c.Visor)
+	end
+end
+
+-- 13. King Waffleton (Legendary): вафля-король — квадратная вафля с решёткой, корона с камнем,
+-- кусочек масла, скипетр, за спиной плащ из сиропа с каплями
+function Builders.KingWaffleton(kit: Kit)
+	local c = Colors.KingWaffleton
+	add(kit, "Block", v3(4.2, 4.4, 1.4), v3(0, -0.3, 0), c.Waffle)
+	shade(kit, "Block", v3(0.4, 4.4, 1.36), v3(-1.95, -0.3, 0), c.Waffle)
+	gloss(kit, v3(1.2, 0.3, 0.15), v3(1.1, 1.6, -0.75), v3(0, 0, -25))
+	-- Решётка вафли спереди: два ряда и две колонны выпуклых брусков
+	for _, x in ipairs({ -0.75, 0.75 }) do
+		add(kit, "Block", v3(0.3, 4.2, 0.2), v3(x, -0.3, -0.75), c.Grid)
+	end
+	for _, y in ipairs({ -1.5, 0.1 }) do
+		add(kit, "Block", v3(4, 0.3, 0.2), v3(0, y, -0.75), c.Grid)
+	end
+
+	-- Лицо поверх решётки
+	eye(kit, v3(0.75, 0.9, -0.95), 1.1, v2(0.2, 0.3))
+	eye(kit, v3(-0.75, 0.95, -0.95), 0.9, v2(0.2, 0.3))
+	mouth(kit, v3(1.2, 0.35, 0.25), v3(0, -0.7, -0.95))
+	blush(kit, v3(0.7, 0.38, 0.15), v3(1.4, -0.2, -0.88))
+	blush(kit, v3(0.7, 0.38, 0.15), v3(-1.4, -0.2, -0.88))
+
+	-- Корона: обруч, четыре зубца, камень спереди; рядом кусочек масла
+	add(kit, "Cylinder", v3(0.6, 2.2, 2.2), v3(0, 2.2, 0), c.Crown, UP)
+	for _, p in ipairs({ v3(0.75, 2.65, -0.75), v3(-0.75, 2.65, -0.75), v3(0.75, 2.65, 0.75), v3(-0.75, 2.65, 0.75) }) do
+		add(kit, "Ball", v3(0.45, 0.45, 0.45), p, c.Crown)
+	end
+	add(kit, "Ball", v3(0.5, 0.5, 0.5), v3(0, 2.2, -1.12), c.Jewel)
+	add(kit, "Block", v3(1, 0.45, 0.9), v3(-1.5, 2.1, 0), c.Butter)
+
+	-- Ручки и скипетр в левой
+	add(kit, "Oval", v3(0.7, 1.5, 0.7), v3(2.3, -0.6, -0.2), c.Waffle, v3(0, 0, -20))
+	add(kit, "Oval", v3(0.7, 1.5, 0.7), v3(-2.3, -0.6, -0.2), c.Waffle, v3(0, 0, 20))
+	add(kit, "Cylinder", v3(3.2, 0.25, 0.25), v3(2.6, 0.4, -0.5), c.Crown, UP)
+	add(kit, "Ball", v3(0.6, 0.6, 0.6), v3(2.6, 2.05, -0.5), c.Jewel)
+	for _, x in ipairs({ 0.9, -0.9 }) do
+		add(kit, "Oval", v3(1.1, 0.6, 1.3), v3(x, -2.3, -0.2), c.Waffle)
+	end
+
+	-- Плащ из сиропа за спиной, с каплями внизу
+	local cape = add(kit, "Oval", v3(4.4, 4.6, 0.8), v3(0, -0.5, 0.95), c.Syrup)
+	cape.Transparency = 0.1
+	for _, x in ipairs({ -1.3, 0, 1.2 }) do
+		add(kit, "Oval", v3(0.5, 0.9, 0.5), v3(x, -2.7, 1.05), c.Syrup)
+	end
+	add(kit, "Oval", v3(1.2, 0.4, 0.6), v3(0.8, 1.95, -0.55), c.Syrup) -- капля сиропа на макушке спереди
+end
+
 local MemelingBuilders = {}
 
 -- Строит мемлинга по Id. Вернёт false, если строителя для такого Id нет

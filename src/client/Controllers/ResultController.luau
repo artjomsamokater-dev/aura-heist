@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
+local ZoneRule = require(ReplicatedStorage.Shared.Util.ZoneRule)
 local EconomyConfig = require(ReplicatedStorage.Shared.Config.EconomyConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -83,7 +84,7 @@ local function makeRow(parent: Instance, memelingId: string, order: number)
 			TextConfig.ResultRow,
 			TextConfig.MemelingNames[memelingId] or memelingId,
 			TextConfig.RarityNames[memeling.Rarity] or memeling.Rarity,
-			if rarity then rarity.AuraPerSecond else 0
+			(if rarity then rarity.AuraPerSecond else 0) * ZoneRule.IncomeMultiplier(memeling)
 		),
 		HUD.ResultRowSize,
 		HUD.TextDark,

@@ -24,7 +24,7 @@ export type Zone = {
 }
 
 -- Порядок зон (у словаря порядка нет): первая — стартовая
-ZoneConfig.ZoneOrder = { "Meme" }
+ZoneConfig.ZoneOrder = { "Meme", "Golden" }
 
 ZoneConfig.Zones = {
 	Meme = {
@@ -35,7 +35,18 @@ ZoneConfig.Zones = {
 		AccessCost = nil,
 		Tutorial = true,
 	},
+	-- Golden Zone: свои 5 мемлингов (доход ×5 — MemelingConfig), Common нет; вход — золотые ворота в хабе
+	Golden = {
+		SpawnChances = {
+			Safe = { Common = 0, Rare = 70, Epic = 30, Legendary = 0 },
+			Danger = { Common = 0, Rare = 40, Epic = 45, Legendary = 15 },
+		},
+		AccessCost = 25000, -- доступ навсегда, покупка через Economy (сервис ZoneAccess)
+		Tutorial = false,
+	},
 } :: { [string]: Zone }
+
+ZoneConfig.UnlockHoldSeconds = 1 -- сколько держать кнопку покупки доступа у золотых ворот
 
 ZoneConfig.FirstZone = "Meme" -- стартовая зона: в неё ведёт туториал, по ней считаются подсказки клиента по умолчанию
 

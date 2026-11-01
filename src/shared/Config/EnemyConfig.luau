@@ -30,6 +30,20 @@ EnemyConfig.Zones = {
 			Vector3.new(105, 0, 60),
 		},
 	},
+	-- Golden Zone: врагов чуть больше (7)
+	Golden = {
+		Count = 7,
+		SpawnPoints = {
+			Vector3.new(30, 0, -100),
+			Vector3.new(30, 0, 100),
+			Vector3.new(70, 0, -100),
+			Vector3.new(70, 0, 100),
+			Vector3.new(105, 0, -60),
+			Vector3.new(105, 0, 60),
+			Vector3.new(45, 0, -35),
+			Vector3.new(45, 0, 35),
+		},
+	},
 } :: { [string]: { Count: number, SpawnPoints: { Vector3 } } }
 
 -- Поведение одинаковое во всех зонах

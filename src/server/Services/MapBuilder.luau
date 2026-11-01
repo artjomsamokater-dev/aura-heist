@@ -1715,6 +1715,11 @@ function MapBuilder.GetPortal(zoneId: string): Part
 	return assert(portalParts[zoneId], "MapBuilder.Build() ещё не вызван или нет портала " .. zoneId)
 end
 
+-- То же, но без ошибки: nil, если у зоны портала нет
+function MapBuilder.FindPortal(zoneId: string): Part?
+	return portalParts[zoneId]
+end
+
 -- Папка зоны Workspace.RaidZone_<Id>
 function MapBuilder.GetZoneFolder(zoneId: string): Folder
 	return assert(zoneFolders[zoneId], "MapBuilder.Build() ещё не вызван или нет зоны " .. zoneId)

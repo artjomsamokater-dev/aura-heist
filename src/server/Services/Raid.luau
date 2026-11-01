@@ -376,7 +376,10 @@ end
 -- Работает, даже если Touched не пришёл (тонкий триггер, быстрый бег, лаг)
 local function checkPortalOverlap()
 	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
-		local portal = MapBuilder.GetPortal(zoneId)
+		local portal = MapBuilder.FindPortal(zoneId)
+		if portal == nil then
+			continue
+		end
 		local half = portal.Size / 2
 		for player, state in states do
 			if state == Raid.State.InHub and not portalBusy[player] then
@@ -394,7 +397,11 @@ end
 
 -- Проверка при старте: триггер портала зоны существует, в мире, касаем и стоит на полу хаба
 local function validatePortal(zoneId: string)
-	local portal = MapBuilder.GetPortal(zoneId)
+	local portal = MapBuilder.FindPortal(zoneId)
+	if portal == nil then
+		warn(string.format("[Portal] У зоны %s нет портала в хабе — в неё не войти", zoneId))
+		return
+	end
 	local problems: { string } = {}
 	if not portal:IsDescendantOf(Workspace) then
 		table.insert(problems, "деталь не в Workspace")
@@ -560,9 +567,12 @@ end
 function Raid.Start()
 	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
 		validatePortal(zoneId)
-		MapBuilder.GetPortal(zoneId).Touched:Connect(function(hit: BasePart)
-			onPortalTouched(zoneId, hit)
-		end)
+		local portal = MapBuilder.FindPortal(zoneId)
+		if portal then
+			portal.Touched:Connect(function(hit: BasePart)
+				onPortalTouched(zoneId, hit)
+			end)
+		end
 	end
 	task.spawn(function()
 		while true do

@@ -25,7 +25,7 @@ TextConfig.Portal = "MEME ZONE"
 TextConfig.BestHaulTitle = "BEST HAUL"
 TextConfig.BestHaulEmpty = "BEST HAUL\nBring back something rare!"
 TextConfig.BestHaulOwner = "%s\nby %s" -- имя мемлинга, ник игрока
-TextConfig.ZoneNames = { Meme = "MEME ZONE" } :: { [string]: string } -- название зоны по Id (пол, объявления)
+TextConfig.ZoneNames = { Meme = "MEME ZONE", Golden = "GOLDEN ZONE" } :: { [string]: string } -- название зоны по Id
 TextConfig.ZoneDanger = "DANGER"
 TextConfig.Entry = "Entry"
 TextConfig.Extraction = "EXTRACT"
@@ -135,6 +135,11 @@ TextConfig.MemelingNames = {
 	DiscoPickle = "Disco Pickle",
 	ProfessorBonk = "Professor Bonk",
 	MegaSnoozeasaurus = "Mega Snoozeasaurus",
+	BubbleTeaBandit = "Bubble Tea Bandit",
+	CactusCrooner = "Cactus Crooner",
+	PizzaPigeon = "Pizza Pigeon",
+	RoboDuck = "Robo Duck",
+	KingWaffleton = "King Waffleton",
 } :: { [string]: string }
 
 return deepFreeze(TextConfig)
