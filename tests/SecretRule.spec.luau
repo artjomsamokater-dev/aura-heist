@@ -39,9 +39,7 @@ test("Secret: доход как у Legendary ×2, в зонах не появл�
 	equal(DAY, 86400)
 end)
 
-test("море и чекпоинты", function()
-	equal(SecretRule.InSea(3.0, 3.5), true, "стоит на море")
-	equal(SecretRule.InSea(4.0, 3.5), false, "стоит на полу хаба или участка")
+test("чекпоинты", function()
 	equal(SecretRule.NextCheckpoint(0, 1), 1)
 	equal(SecretRule.NextCheckpoint(2, 1), 2, "назад не откатывает")
 end)

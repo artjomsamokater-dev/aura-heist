@@ -26,6 +26,7 @@ local MemelingKit = require(ServerScriptService.Server.Visual.MemelingKit)
 local MemelingBuilders = require(ServerScriptService.Server.Visual.MemelingBuilders)
 local HubDecor = require(ServerScriptService.Server.Visual.HubDecor)
 local ObbyBuilder = require(ServerScriptService.Server.Visual.ObbyBuilder)
+local IslandEdges = require(ServerScriptService.Server.Visual.IslandEdges)
 local Icons = require(ReplicatedStorage.Shared.Ui.Icons)
 
 local MapBuilder = {}
@@ -414,31 +415,19 @@ end
 
 -- ── Хаб ────────────────────────────────────────────────────────────────────
 
--- Фон: Baseplate из default.project.json становится «морем» (растягиваем до SeaSize, верх остаётся на Y = 0).
--- Стилизованное море из одной детали, а не Terrain Water: дешевле для телефонов, по нему можно ходить
+-- Фон: Baseplate из default.project.json становится «морем» (растягиваем до SeaSize, верх — на SeaLevel,
+-- ниже хаба: хаб и участки стоят на скалах). Стилизованное море из одной детали, а не Terrain Water:
+-- дешевле для телефонов. Упавшего в море возвращает сервис FallRescue
 local function buildSea()
 	local baseplate = Workspace:FindFirstChild("Baseplate")
 	if baseplate and baseplate:IsA("BasePart") then
 		local size = MapConfig.Background.SeaSize
-		local top = baseplate.Position.Y + baseplate.Size.Y / 2
+		local top = MapConfig.Background.SeaLevel
 		baseplate.Size = Vector3.new(size, baseplate.Size.Y, size)
 		baseplate.Position = Vector3.new(0, top - baseplate.Size.Y / 2, 0)
 		baseplate.Color = StyleConfig.Background.Sea
 		baseplate.Material = StyleConfig.Material
 	end
-end
-
--- Светлая кайма-«пена» под краем площадки (хаба или участка): тонкая плита чуть шире площадки
-local function addFoam(name: string, floor: BasePart, parent: Instance)
-	local grow = StyleConfig.Background.FoamWidth * 2
-	local foam = makePart(
-		name,
-		Vector3.new(floor.Size.X + grow, 0.2, floor.Size.Z + grow),
-		floor.CFrame * CFrame.new(0, -floor.Size.Y / 2 + 0.1, 0),
-		StyleConfig.Background.Foam,
-		parent
-	)
-	decorate(foam, false)
 end
 
 -- Мостики от хаба к участкам: лежат «под» полами (там их не видно), видна только часть над морем.
@@ -677,6 +666,7 @@ local function buildBackground()
 	end
 	buildBridges(folder)
 	buildSeaWalls(folder)
+	IslandEdges.BuildHub(folder) -- скалы, камни и стена деревьев: невидимые стены за ними не видно
 end
 
 -- Точка на полу хаба по смещению (X, Z) от центра
@@ -707,15 +697,6 @@ local function buildPlazaFloor(parent: Instance)
 	local style = StyleConfig.Hub
 	local floorTop = hub.Center.Y + hub.Size.Y / 2
 	makeColumn("Floor", CFrame.new(hub.Center), hub.Size.Y, hub.Radius * 2, style.Floor, parent)
-	local foam = makeColumn(
-		"Foam",
-		CFrame.new(hub.Center - Vector3.new(0, hub.Size.Y / 2 - 0.1, 0)),
-		0.2,
-		hub.Radius * 2 + StyleConfig.Background.FoamWidth * 2,
-		StyleConfig.Background.Foam,
-		parent
-	)
-	decorate(foam, false)
 
 	local tiles = Instance.new("Folder")
 	tiles.Name = "Tiles"
@@ -1349,7 +1330,7 @@ local function buildPlots()
 
 		local floor = makePart("Floor", cfg.Size, plotCFrame, StyleConfig.Plot.Floor, model)
 		model.PrimaryPart = floor
-		addFoam("Foam", floor, model)
+		IslandEdges.BuildPlot(plotCFrame, cfg.Size, model) -- скала под участком до моря
 
 		local decor = Instance.new("Folder")
 		decor.Name = "Decor"
@@ -1747,7 +1728,10 @@ local function buildZone(zoneId: string)
 		TextConfig.SideExtraction
 	)
 
-	-- Невидимые стены по четырём краям пола, чтобы из зоны нельзя было выпасть
+	-- Видимый край парящего острова: забор, камни, великаны, дно и облака (server/Visual/IslandEdges)
+	IslandEdges.BuildZone(zone, style, decorFolder)
+
+	-- Невидимые стены по четырём краям пола, чтобы из зоны нельзя было выпасть (их не видно за забором)
 	local walls = Instance.new("Folder")
 	walls.Name = "Walls"
 	walls.Parent = folder

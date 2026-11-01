@@ -21,6 +21,7 @@ require("./PortalRule.spec")
 require("./SecretRule.spec")
 require("./ShopRule.spec")
 require("./ShowcaseRule.spec")
+require("./FallRule.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

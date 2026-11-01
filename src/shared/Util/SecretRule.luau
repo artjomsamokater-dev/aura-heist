@@ -18,11 +18,6 @@ function SecretRule.Decide(found: boolean, lastDailyAt: number, now: number, coo
 	return "none"
 end
 
--- Упал в море: корень персонажа ниже высоты «ловушки»
-function SecretRule.InSea(rootY: number, catchY: number): boolean
-	return rootY < catchY
-end
-
 -- Какой чекпоинт теперь последний: дальний из пройденных (назад по паркуру не откатывает)
 function SecretRule.NextCheckpoint(current: number, reached: number): number
 	return math.max(current, reached)

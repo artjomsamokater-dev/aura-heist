@@ -17,6 +17,7 @@ local MemelingSize = require(ReplicatedStorage.Shared.Util.MemelingSize)
 local ExtractionRule = require(ReplicatedStorage.Shared.Util.ExtractionRule)
 local PortalRule = require(ReplicatedStorage.Shared.Util.PortalRule)
 local ZoneRule = require(ReplicatedStorage.Shared.Util.ZoneRule)
+local FallRule = require(ReplicatedStorage.Shared.Util.FallRule)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
@@ -482,9 +483,9 @@ local function dropCarriedAsLoot(player: Player, position: Vector3)
 	print(string.format("[Raid] %s: выпало мемлингов: %d, поднять можно %d с", player.Name, #list, ZoneConfig.LootSeconds))
 end
 
--- Смерть (ловушка, враг, Reset или падение из зоны): вылазка закрыта — награду за неё уже не выдать.
--- В зоне всё из рук выпадает лутом на месте смерти (deathPosition); падение из зоны (позиции нет) —
--- всё теряется, как раньше. Витрину и Aura смерть не трогает. Считаем в stats.deaths.
+-- Смерть (ловушка, враг, Reset): вылазка закрыта — награду за неё уже не выдать.
+-- В зоне всё из рук выпадает лутом на месте смерти (deathPosition); без позиции — всё теряется.
+-- Падение из зоны — не смерть (checkFallenPlayers). Витрину и Aura смерть не трогает. Считаем в stats.deaths.
 local function onDeath(player: Player, cause: string, deathPosition: Vector3?)
 	Analytics.PlayerDied(player, #(carried[player] or {}), cause) -- до потери: сколько было в руках
 	if deathPosition and states[player] == Raid.State.InRaid then
@@ -500,22 +501,39 @@ local function onDeath(player: Player, cause: string, deathPosition: Vector3?)
 	print(string.format("[Raid] %s погиб (%s), смертей всего %d", player.Name, cause, if data then data.stats.deaths else 0))
 end
 
--- Страховка: игрок InRaid провалился ниже пола зоны — как после смерти:
--- всё из рук теряется, новый персонаж появляется в хабе
+-- Куда возвращать упавшего из зоны: вход и точки спавна (на полу, без ловушек у входа)
+local function rescuePoints(zone: typeof(MapConfig.Zones.Meme)): { Vector3 }
+	local points = { zone.EntryPosition }
+	for _, point in ipairs(zone.SpawnPoints) do
+		table.insert(points, point)
+	end
+	return points
+end
+
+-- Страховка: игрок InRaid провалился ниже пола зоны — мягкий возврат (задача 7.5): на ближайшую точку
+-- спавна или вход своей зоны (FallRule). Это не смерть и вылазка продолжается, но всё из рук
+-- теряется (вернётся на свои точки через ZoneConfig.LostRespawnSeconds)
 local function checkFallenPlayers()
 	for player, state in states do
 		local zoneId = zones[player]
 		if state == Raid.State.InRaid and zoneId then
 			local zone = MapConfig.Zones[zoneId]
 			local limitY = zone.Center.Y + zone.Size.Y / 2 - zone.FallLimitStuds
-			local _, root = RemoteGuard.GetAliveCharacter(player)
-			if root and root.Position.Y < limitY then
-				print(string.format("[Raid] %s выпал из зоны, возвращаем в хаб", player.Name))
-				onDeath(player, "выпал из зоны")
-				setState(player, Raid.State.InHub)
-				task.spawn(function()
-					player:LoadCharacterAsync()
-				end)
+			local character, root = RemoteGuard.GetAliveCharacter(player)
+			if character and root and FallRule.Fallen(root.Position.Y, limitY) then
+				local lost = #(carried[player] or {})
+				loseCarried(player, "упал из зоны")
+				local points = rescuePoints(zone)
+				local list: { FallRule.Point } = {}
+				for _, point in ipairs(points) do
+					table.insert(list, { X = point.X, Z = point.Z })
+				end
+				local target = points[FallRule.NearestIndex(root.Position.X, root.Position.Z, list) or 1]
+				local position = target + Vector3.new(0, MapConfig.FallRescue.Lift, 0)
+				local look = zone.ExtractionPosition
+				root.AssemblyLinearVelocity = Vector3.zero
+				character:PivotTo(CFrame.lookAt(position, Vector3.new(look.X, position.Y, look.Z)))
+				print(string.format("[Raid] %s упал из зоны — вернули на ближайшую точку, из рук потеряно: %d", player.Name, lost))
 			end
 		end
 	end

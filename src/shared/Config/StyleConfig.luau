@@ -121,8 +121,8 @@ StyleConfig.Label = {
 -- Фон: лавандовое «море» вместо земли, светлая пена по краю хаба и участков, мостики, парящие острова
 StyleConfig.Background = {
 	Sea = Color3.fromRGB(150, 140, 214), -- голубовато-лавандовое море
-	Foam = Palette.CreamLight, -- кайма по краю хаба и участков
-	FoamWidth = 3, -- на сколько студов пена шире площадки с каждой стороны
+	Foam = Palette.CreamLight, -- пена у подножия скал хаба и участков (на уровне моря)
+	FoamWidth = 3, -- на сколько студов пена шире скалы с каждой стороны
 	Bridge = Palette.PlumLight,
 	BridgeRail = Palette.Plum, -- бортики мостика
 	IslandGrass = Palette.MintLight,
@@ -133,6 +133,13 @@ StyleConfig.Background = {
 	MushroomStem = Palette.CreamLight,
 	MushroomCap = Palette.PlumLight,
 	Crystal = Palette.MintLight,
+	-- Край хаба-острова (задача 7.5): скалы, уступ с травой, стена деревьев и кустов. Крупные формы, без теней
+	Cliff = Palette.Plum,
+	CliffDark = Palette.PlumDark,
+	Ledge = Palette.MintGrass,
+	EdgeTrunk = Palette.CreamDark,
+	EdgeCrowns = { Palette.Mint, Palette.MintDark, Palette.MintGrass }, -- по очереди: стена не одноцветная
+	EdgeBush = Palette.MintGrass,
 }
 
 -- Хаб: светлый мятный пол (фон); портал — самое яркое в хабе
@@ -368,6 +375,19 @@ StyleConfig.Zone = {
 	FloorTextureStuds = 8, -- размер одной плитки
 	FloorTextureTransparency = 0.8,
 	FloorTextureColor = Palette.CreamLight,
+	-- Край парящего острова (задача 7.5): дно, уступ, забор, камни, кристаллы, мемные великаны, облака
+	EdgeRim = Palette.MintGrass, -- уступ вокруг пола
+	EdgeRock = Palette.Plum,
+	EdgeRockDark = Palette.PlumDark,
+	EdgeFence = Palette.CreamLight,
+	EdgeFencePost = Palette.PlumLight,
+	EdgeCrystal = Palette.PlumLight, -- кристаллы светятся (Neon)
+	Cloud = Palette.CreamLight,
+	CloudTransparency = 0.15,
+	-- Мемные великаны на уступе: свои цвета предмета, без жёлтого и красного
+	GiantCan = { Body = Palette.Mint, Band = Palette.CreamLight, Top = Palette.CreamDark },
+	GiantPopsicle = { Ice = Palette.PlumLight, Bite = Palette.CreamLight, Stick = Palette.CreamDark },
+	GiantDonut = { Dough = Color3.fromHex("D9A866"), Frosting = Palette.Mint, Hole = Palette.PlumDark },
 }
 
 -- Оформление по зонам (Id — ZoneConfig.ZoneOrder): своя тема на основе StyleConfig.Zone (поменяны только цвета).
@@ -391,6 +411,11 @@ StyleConfig.ZoneThemes = {
 		GateCaps = Palette.CreamLight,
 		MushroomCap = Color3.fromRGB(196, 150, 84),
 		Crystal = Palette.CreamLight,
+		EdgeRim = Color3.fromRGB(176, 140, 84),
+		EdgeRock = Color3.fromRGB(120, 86, 60),
+		EdgeRockDark = Color3.fromRGB(80, 54, 40),
+		EdgeCrystal = Palette.CreamLight,
+		GiantCan = { Body = Color3.fromRGB(196, 150, 84), Band = Palette.CreamLight, Top = Palette.CreamDark },
 		DangerTile = Color3.fromRGB(150, 100, 60),
 		DangerFog = {
 			Texture = "rbxasset://textures/particles/smoke_main.dds",
