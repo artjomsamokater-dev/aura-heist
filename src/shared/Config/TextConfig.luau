@@ -130,6 +130,7 @@ TextConfig.UpgradeLabels = {
 -- Без эмодзи: на разных устройствах они выглядят по-разному
 TextConfig.HudBaseValue = "%s" -- %s — число Aura на базе
 TextConfig.HudBaseCaption = "SAFE AT BASE"
+TextConfig.HudIncome = "+%s Aura/s" -- общий доход базы под числом банка (задача 7.8)
 TextConfig.HudAuraBadge = "AURA" -- подпись под иконкой Aura
 TextConfig.HudHandsValue = "%d / %d" -- сколько несёшь / сколько можно
 TextConfig.HudHandsCaption = "LOST IF YOU DIE"

@@ -1,7 +1,8 @@
 --!strict
 -- HudController: HUD слева сверху и указатель на точку эвакуации.
 -- Клиент только ЧИТАЕТ атрибуты игрока, которые выставляет сервер:
--- BankedAura (Economy), CarriedCount / CarrySlots / RaidState (Raid). Никаких RemoteEvent.
+-- BankedAura (Economy), CarriedCount / CarrySlots / RaidState (Raid), BaseIncome / BaseStored / BaseStorageCap
+-- (Studio: доход базы и заполнение хранилищ). Никаких RemoteEvent.
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -173,18 +174,55 @@ local function buildHud(playerGui: Instance)
 	layout.Padding = UDim.new(0, 6)
 	layout.Parent = column
 
-	local baseValue = makeCard(column, 1, HUD.BaseCard, "Aura", TextConfig.HudBaseCaption, TextConfig.HudAuraBadge)
+	local baseValue, baseCard = makeCard(column, 1, HUD.BaseCard, "Aura", TextConfig.HudBaseCaption, TextConfig.HudAuraBadge)
+	-- Карточка Aura выше остальных: под числом банка — «+N Aura/s» (подпись карточки) и полоска хранилищ
+	local extra = HUD.StorageBarHeight + HUD.StorageBarGap
+	baseCard.Size += UDim2.fromOffset(0, extra)
+	for _, name in ipairs({ "Shadow", "Panel" }) do
+		local frame = baseCard:FindFirstChild(name)
+		if frame and frame:IsA("Frame") then
+			frame.Size += UDim2.fromOffset(0, extra)
+		end
+	end
+	local basePanel = baseCard:FindFirstChild("Panel") :: Frame
+	local incomeLabel = basePanel:FindFirstChild("Caption") :: TextLabel
+	local textLeft = PADDING * 2 + HUD.IconSize
+	local bar = Instance.new("Frame")
+	bar.Name = "StorageBar"
+	bar.BackgroundColor3 = HUD.StorageBarBack
+	bar.BorderSizePixel = 0
+	bar.Position = UDim2.fromOffset(textLeft, PADDING + VALUE_SIZE + CAPTION_SIZE + 8)
+	bar.Size = UDim2.new(1, -textLeft - PADDING, 0, HUD.StorageBarHeight)
+	bar.Parent = basePanel
+	addCorner(bar, UDim.new(1, 0))
+	local barStroke = Instance.new("UIStroke")
+	barStroke.Color = HUD.Stroke
+	barStroke.Thickness = 2
+	barStroke.Parent = bar
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.BackgroundColor3 = HUD.StorageBarFill
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.Parent = bar
+	addCorner(fill, UDim.new(1, 0))
 	-- Рюкзак нужен только в зоне: в хабе карточка скрыта
 	local handsValue, handsCard = makeCard(column, 2, HUD.HandsCard, "Bag", TextConfig.HudHandsCaption)
 
 	local function refresh()
 		baseValue.Text = string.format(TextConfig.HudBaseValue, formatNumber(readNumber("BankedAura")))
+		incomeLabel.Text = string.format(TextConfig.HudIncome, formatNumber(readNumber("BaseIncome")))
+		local capacity = readNumber("BaseStorageCap")
+		local share = if capacity > 0 then math.clamp(readNumber("BaseStored") / capacity, 0, 1) else 0
+		fill.Size = UDim2.fromScale(share, 1)
+		fill.BackgroundColor3 = if share >= 1 then HUD.StorageBarFull else HUD.StorageBarFill
+		fill.Visible = share > 0
 		handsValue.Text =
 			string.format(TextConfig.HudHandsValue, readNumber("CarriedCount"), readNumber("CarrySlots"))
 		handsCard.Visible = isInRaid()
 	end
 
-	for _, name in ipairs({ "BankedAura", "CarriedCount", "CarrySlots", "RaidState" }) do
+	for _, name in ipairs({ "BankedAura", "CarriedCount", "CarrySlots", "RaidState", "BaseIncome", "BaseStored", "BaseStorageCap" }) do
 		player:GetAttributeChangedSignal(name):Connect(refresh)
 	end
 	refresh()

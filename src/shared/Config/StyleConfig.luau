@@ -1142,6 +1142,12 @@ StyleConfig.Lighting = {
 -- ── HUD (клиент) ───────────────────────────────────────────────────────────
 StyleConfig.Hud = {
 	BaseCard = Palette.Sun, -- «на базе»: золото, в безопасности
+	-- Полоска заполнения хранилищ на карточке Aura (сумма накопленного / сумма лимитов постаментов)
+	StorageBarHeight = 10,
+	StorageBarGap = 6,
+	StorageBarBack = Palette.CreamLight,
+	StorageBarFill = Palette.Mint,
+	StorageBarFull = Palette.Plum, -- всё заполнено: пора собирать
 	HandsCard = Palette.Mint, -- «в руках»: мята, можно потерять
 	Stroke = Palette.PlumDark, -- обводка панелей
 	StrokeThickness = 3,

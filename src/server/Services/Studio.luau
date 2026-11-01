@@ -246,6 +246,22 @@ local function publishCounts(player: Player)
 	end
 end
 
+-- Сводка базы для HUD (задача 7.8): общий доход в секунду, сколько накоплено на всех постаментах и
+-- сколько они вмещают. Клиент только рисует эти числа (атрибуты BaseIncome, BaseStored, BaseStorageCap)
+local function publishBaseStats(player: Player, data: PlayerData.Data, at: number)
+	local income, stored, capacity = 0, 0, 0
+	local storageSeconds = getStorageSeconds(data)
+	for _, entry in ipairs(data.showcase) do
+		local rate = getRate(entry.memelingId, data, entry.squadBonus, entry.bounty)
+		income += rate
+		stored += PedestalMath.GetStored(rate, entry.lastCollect, at, storageSeconds)
+		capacity += rate * storageSeconds
+	end
+	player:SetAttribute("BaseIncome", math.floor(income))
+	player:SetAttribute("BaseStored", math.floor(stored))
+	player:SetAttribute("BaseStorageCap", math.floor(capacity))
+end
+
 local function updatePedestalLabel(pedestal: Part, entry: ShowcaseEntry, data: PlayerData.Data, at: number)
 	local rate = getRate(entry.memelingId, data, entry.squadBonus, entry.bounty)
 	local storageSeconds = getStorageSeconds(data)
@@ -948,6 +964,12 @@ local function updateAllLabels()
 	for plotIndex = 1, #MapBuilder.GetPlots() do
 		local owner = plotOwners[plotIndex]
 		refreshRebirth(plotIndex, if owner then PlayerData.GetData(owner) else nil)
+	end
+	for _, player in ipairs(Players:GetPlayers()) do
+		local data = PlayerData.GetData(player)
+		if data then
+			publishBaseStats(player, data, at)
+		end
 	end
 	for player, playerSlots in rendered do
 		local plotIndex = playerPlots[player]
