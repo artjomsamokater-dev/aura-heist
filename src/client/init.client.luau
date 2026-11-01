@@ -10,6 +10,7 @@ local PromptController = require(script.Controllers.PromptController)
 local ActionButtonsController = require(script.Controllers.ActionButtonsController)
 local OutlineController = require(script.Controllers.OutlineController)
 local LootController = require(script.Controllers.LootController)
+local PortalController = require(script.Controllers.PortalController)
 
 HudController.Start()
 HazardController.Start()
@@ -21,3 +22,4 @@ task.spawn(AnnouncementController.Start)
 task.spawn(TutorialController.Start)
 task.spawn(ResultController.Start)
 task.spawn(ActionButtonsController.Start)
+task.spawn(PortalController.Start) -- ждёт, пока хаб появится на клиенте

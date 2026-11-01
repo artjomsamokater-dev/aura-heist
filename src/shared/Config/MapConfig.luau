@@ -19,9 +19,6 @@ local MapConfig = {}
 MapConfig.Hub = {
 	Center = Vector3.new(0, 0.5, 0),
 	Size = Vector3.new(80, 1, 80),
-	-- Дорожка от точки появления к порталу (лежит на полу хаба)
-	PathCenter = Vector3.new(0, 1.05, 19),
-	PathSize = Vector3.new(8, 0.1, 26),
 }
 
 -- Точка появления в центре хаба
@@ -36,8 +33,11 @@ MapConfig.Portal = {
 	Position = Vector3.new(0, 7, 34),
 	Size = Vector3.new(10, 12, 2),
 	CooldownSeconds = 2, -- защита от повторного срабатывания для одного игрока
+	-- Видимая воронка поверх невидимой детали-«входа» (Size): диск и тёмная середина
+	DiscDiameter = 10,
+	CoreDiameter = 5.5,
 	-- Рамка вокруг портала и столб света над ним (видно от любого участка)
-	FramePillarX = 6.5, -- столбы рамки по бокам портала
+	FramePillarX = 7, -- столбы рамки по бокам портала (снаружи вращающегося кольца)
 	FramePillarDiameter = 2.4,
 	FrameHeight = 14,
 	FrameCapDiameter = 3.2,

@@ -346,8 +346,6 @@ local function buildHub()
 	local style = StyleConfig.Portal
 
 	makePart("Floor", hub.Size, CFrame.new(hub.Center), StyleConfig.Hub.Floor, folder)
-	local path = makePart("Path", hub.PathSize, CFrame.new(hub.PathCenter), StyleConfig.Hub.Path, folder)
-	decorate(path, false)
 
 	-- Игрок появляется лицом к порталу: персонаж смотрит туда же, куда точка появления
 	local spawnPosition = MapConfig.Spawn.Position
@@ -364,14 +362,79 @@ local function buildHub()
 	spawn.Duration = StyleConfig.Hub.SpawnForceFieldSeconds -- 0 = без силового поля
 	spawn.Parent = folder
 
-	-- Портал — самое яркое в хабе: неон, свет, искры, рамка и столб света
+	-- Портал — самое яркое в хабе. Логическая деталь (её касание = вход в зону) невидима,
+	-- поверх неё — круглая неоновая воронка с тёмной серединой, вихрь искр, кольцо, рамка, столб света и гул
 	local portal = makePart("Portal", portalCfg.Size, CFrame.new(portalCfg.Position), style.Color, folder)
-	makeGlow(portal, style.Transparency)
+	portal.Transparency = 1
+	portal.CastShadow = false
 	portal.CanCollide = false -- сквозь портал проходят
-	addParticles(portal, style.Particles)
-	addLight(portal, style.Color, style.Light.Brightness, style.Light.Range)
 	addLabel(portal, TextConfig.Portal)
 	portalPart = portal
+
+	local facing = CFrame.new(portalCfg.Position) * CFrame.Angles(0, math.rad(90), 0) -- ось цилиндра — вдоль Z: диск смотрит на хаб
+	local function portalDisc(name: string, thickness: number, diameter: number, color: Color3): Part
+		local disc = makePart(name, Vector3.new(thickness, diameter, diameter), facing, color, portal)
+		disc.Shape = Enum.PartType.Cylinder
+		disc.CanCollide = false
+		decorate(disc, false)
+		return disc
+	end
+	local disc = portalDisc("PortalDisc", 0.4, portalCfg.DiscDiameter, style.Color)
+	makeGlow(disc, style.Transparency)
+	addParticles(disc, style.Particles)
+	addLight(disc, style.Color, style.Light.Brightness, style.Light.Range)
+	portalDisc("PortalCore", 0.6, portalCfg.CoreDiameter, style.Core)
+
+	-- Вихрь: искры с края воронки летят к центру; невидимую плоскую деталь вращает клиент
+	local vortex = makePart(
+		"PortalVortex",
+		Vector3.new(portalCfg.DiscDiameter, portalCfg.DiscDiameter, 0.2),
+		CFrame.new(portalCfg.Position),
+		style.Color,
+		portal
+	)
+	vortex.Transparency = 1
+	vortex.CanCollide = false
+	decorate(vortex, false)
+	local swirl = addParticles(vortex, style.Vortex)
+	swirl.Shape = Enum.ParticleEmitterShape.Disc
+	swirl.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	swirl.ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward
+	swirl.EmissionDirection = Enum.NormalId.Front
+	swirl.RotSpeed = NumberRange.new(180, 360)
+
+	-- Кольцо из бусин вокруг воронки (вращает клиент, PivotTo вокруг центра портала)
+	local ringStyle = style.Ring
+	local ring = Instance.new("Model")
+	ring.Name = "PortalRing"
+	for i = 1, ringStyle.Segments do
+		local angle = (i - 1) * 2 * math.pi / ringStyle.Segments
+		local bead = makePart(
+			"Bead" .. i,
+			ringStyle.SegmentSize,
+			CFrame.new(portalCfg.Position) * CFrame.Angles(0, 0, angle) * CFrame.new(ringStyle.Radius, 0, 0),
+			ringStyle.Colors[(i - 1) % #ringStyle.Colors + 1],
+			ring
+		)
+		makeGlow(bead, 0)
+		bead.CanCollide = false
+		decorate(bead, false)
+	end
+	ring.WorldPivot = CFrame.new(portalCfg.Position)
+	ring.Parent = folder
+
+	-- Гул рядом с порталом: звук в мире, громче вблизи
+	local hum = Instance.new("Sound")
+	hum.Name = "Hum"
+	hum.SoundId = style.Hum.SoundId
+	hum.Volume = style.Hum.Volume
+	hum.PlaybackSpeed = style.Hum.PlaybackSpeed
+	hum.RollOffMinDistance = style.Hum.MinDistance
+	hum.RollOffMaxDistance = style.Hum.MaxDistance
+	hum.RollOffMode = Enum.RollOffMode.InverseTapered
+	hum.Looped = true
+	hum.Parent = portal
+	hum:Play()
 
 	local floorTop = hub.Center.Y + hub.Size.Y / 2
 	local frameCenterY = floorTop + portalCfg.FrameHeight / 2

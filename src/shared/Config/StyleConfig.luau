@@ -109,19 +109,48 @@ StyleConfig.Ground = Palette.MintGrass
 StyleConfig.Hub = {
 	Floor = Palette.SunDark,
 	Spawn = Palette.SunLight,
-	Path = Palette.Cream, -- дорожка от точки появления к порталу
 	SpawnForceFieldSeconds = 0, -- без силового поля при появлении
 }
 
+-- Портал — круглая воронка цвета сливы: контраст с солнечно-оранжевым полом хаба.
+-- Вокруг крутится кольцо из бусин, в середину затягивает вихрь искр, рядом слышен гул.
+-- Кольцо и вихрь вращает клиент (client/Controllers/PortalController) — по сети вращение не идёт
 StyleConfig.Portal = {
-	Color = Palette.Coral,
-	Transparency = 0.1,
-	Frame = Palette.Plum, -- рамка портала
+	Color = Palette.Plum,
+	Core = Palette.PlumDark, -- тёмная середина воронки: кажется глубокой
+	Transparency = 0.15,
+	Frame = Palette.PlumDark, -- рамка портала
 	FrameCaps = Palette.Sun,
 	BeaconTransparency = 0.55, -- столб света над порталом: видно от любого участка
 	Light = { Brightness = 3, Range = 26 },
+	Ring = {
+		Segments = 12,
+		Radius = 5.4, -- от центра портала до бусин
+		SegmentSize = v3(0.6, 2, 0.6), -- бусина вытянута вдоль кольца
+		Colors = { Palette.Sun, Palette.PlumLight }, -- чередуются: видно, что кольцо крутится
+		SpinDegreesPerSecond = 50,
+	},
+	Vortex = { -- искры с края воронки летят к центру и крутятся
+		Color = Palette.PlumLight,
+		Rate = 30,
+		Lifetime = NumberRange.new(0.9, 1.3),
+		Speed = NumberRange.new(3, 5),
+		Size = 0.7,
+		SpreadAngle = 0,
+		LightEmission = 1,
+		SpinDegreesPerSecond = -140, -- в другую сторону, чем кольцо
+	},
+	-- Гул рядом с порталом: встроенный звук Roblox (ветер), замедленный до низкого гула.
+	-- Можно заменить на любой SoundId из Toolbox
+	Hum = {
+		SoundId = "rbxasset://sounds/action_falling.mp3",
+		Volume = 0.5,
+		PlaybackSpeed = 0.45,
+		MinDistance = 6, -- ближе — на полную громкость
+		MaxDistance = 45, -- дальше — не слышно
+	},
 	Particles = {
-		Color = Palette.CoralLight,
+		Color = Palette.CreamLight,
 		Rate = 6,
 		Lifetime = NumberRange.new(1, 1.6),
 		Speed = NumberRange.new(2, 4),
