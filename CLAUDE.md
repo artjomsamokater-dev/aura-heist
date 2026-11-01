@@ -465,6 +465,9 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
      от Studio.publishBaseStats).
   5) Эвакуация: крупная полоска «EXTRACTING... 2.1s» вверху по центру (ExtractFxController, StyleConfig.ExtractFx.Bar*).
   6) Портал: две висящие хоругви по бокам — цвет воронки зоны, золотая корона, название зоны (MapConfig.Portal.Banners).
+  Баг после 7.8: подписи постамента (имя / +N/s / N Aura) оказались внутри колпака и прятались за стеклом. Теперь
+  высота плашки — от верха постамента над колпаком (MapBuilder.GetDomeHeight, учитывает размер редкости), подписи
+  AlwaysOnTop с MaxDistance 30; при перестройке постамента старые подписи удаляются все.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
