@@ -9,6 +9,7 @@
 -- у всех игроков один и тот же таймер, остаток считает клиент.
 -- Решение «можно ли подобрать» принимает не Spawn, а обработчик подбора (сервис Raid).
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
@@ -33,6 +34,7 @@ Spawn.RestockAttribute = "NextRestockAt"
 Spawn.State = table.freeze({
 	InZone = "InZone", -- стоит в зоне, его можно подобрать
 	Carried = "Carried", -- его несёт игрок (Owner)
+	Dropped = "Dropped", -- выпал при смерти: ZoneConfig.LootSeconds его может поднять только погибший (Owner)
 })
 
 export type Record = {
@@ -43,6 +45,11 @@ export type Record = {
 	Owner: Player?,
 	SpawnIndex: number, -- номер точки спавна (MapConfig.Zone.SpawnPoints), куда он вернётся, если его потеряют
 }
+
+-- Атрибуты выпавшего лута на ядре мемлинга: клиент владельца рисует «YOUR LOOT» и таймер,
+-- остальные клиенты прячут у себя кнопку подбора (решает всё равно сервер)
+Spawn.LootOwnerAttribute = "LootOwnerUserId"
+Spawn.LootExpiresAttribute = "LootExpiresAt" -- время сервера (GetServerTimeNow), когда лут вернётся на спавн
 
 type PickupHandler = (player: Player, instanceId: string) -> ()
 
@@ -102,13 +109,10 @@ local function addPickupPrompt(part: Part, instanceId: string, memelingId: strin
 	end)
 end
 
--- Ставит мемлинга на точку. Точка в журнале уже должна быть отмечена (Occupy / FinishReturn)
-local function spawnAt(memelingId: string, spawnIndex: number): Record
-	nextNumber += 1
-	local instanceId = "M" .. nextNumber
+-- Мемлинг в мире на полу зоны: модель, подпись с именем и кнопка подбора
+local function placeInWorld(instanceId: string, memelingId: string, floorPosition: Vector3): Part
 	local size = StyleConfig.Memeling.Size
 	local displayName = TextConfig.MemelingNames[memelingId] or memelingId
-	local floorPosition = MapConfig.Zone.SpawnPoints[spawnIndex]
 
 	-- Мемлинг смотрит на запад — туда, откуда игрок приходит в зону
 	local position = floorPosition + Vector3.new(0, size.Y / 2, 0)
@@ -130,6 +134,14 @@ local function spawnAt(memelingId: string, spawnIndex: number): Record
 		}
 	)
 	addPickupPrompt(part, instanceId, memelingId, displayName)
+	return part
+end
+
+-- Ставит мемлинга на точку. Точка в журнале уже должна быть отмечена (Occupy / FinishReturn)
+local function spawnAt(memelingId: string, spawnIndex: number): Record
+	nextNumber += 1
+	local instanceId = "M" .. nextNumber
+	local part = placeInWorld(instanceId, memelingId, MapConfig.Zone.SpawnPoints[spawnIndex])
 
 	local record: Record = {
 		InstanceId = instanceId,
@@ -171,19 +183,33 @@ function Spawn.SetPickupHandler(handler: PickupHandler)
 	pickupHandler = handler
 end
 
--- Помечает мемлинга как подобранного. Вернёт false, если его уже взяли или его нет.
+-- Можно ли этому игроку поднять мемлинга: стоит в зоне — любому, выпавший лут — только погибшему владельцу
+function Spawn.CanPickUp(record: Record, player: Player): boolean
+	if record.State == Spawn.State.InZone then
+		return true
+	end
+	return record.State == Spawn.State.Dropped and record.Owner == player
+end
+
+-- Помечает мемлинга как подобранного. Вернёт false, если его уже взяли, его нет или он чужой лут.
 -- Это и есть флаг «подобран»: второй вызов для того же мемлинга всегда получит false.
--- Его точка освобождается: её может занять ресток.
+-- Его точка освобождается: её может занять ресток (у выпавшего лута она уже свободна).
 function Spawn.MarkCarried(instanceId: string, owner: Player): boolean
 	local record = memelings[instanceId]
-	if record == nil or record.State ~= Spawn.State.InZone then
+	if record == nil or not Spawn.CanPickUp(record, owner) then
 		return false
+	end
+	if record.State == Spawn.State.InZone then
+		SpawnPointBook.Release(book, record.SpawnIndex)
 	end
 	record.State = Spawn.State.Carried
 	record.Owner = owner
-	SpawnPointBook.Release(book, record.SpawnIndex)
 
-	local prompt = record.Part:FindFirstChild("PickupPrompt")
+	local part = record.Part
+	CollectionService:RemoveTag(part, StyleConfig.Loot.Tag)
+	part:SetAttribute(Spawn.LootOwnerAttribute, nil)
+	part:SetAttribute(Spawn.LootExpiresAttribute, nil)
+	local prompt = part:FindFirstChild("PickupPrompt")
 	if prompt then
 		prompt:Destroy()
 	end
@@ -203,7 +229,7 @@ function Spawn.Despawn(instanceId: string)
 	record.Part:Destroy()
 end
 
--- Мемлинга потеряли (смерть, выход): он пропадает и через ZoneConfig.LostRespawnSeconds
+-- Мемлинга потеряли (падение, выход, лут не подняли вовремя): он пропадает и через ZoneConfig.LostRespawnSeconds
 -- появляется снова на своей точке спавна — тот же мемлинг, новый InstanceId.
 -- Если ресток уже поставил на эту точку другого, потерянный не возвращается (без дублей).
 function Spawn.Lose(instanceId: string)
@@ -227,6 +253,45 @@ end
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
+end
+
+-- Смерть с лутом: мемлинг из рук погибшего встаёт на пол у места смерти (floorPosition — точка на полу зоны).
+-- ZoneConfig.LootSeconds его может поднять только owner, потом он возвращается на свою точку спавна,
+-- как потерянный (Spawn.Lose). Старая модель была приварена к погибшему персонажу — ставим новую
+function Spawn.DropAsLoot(instanceId: string, owner: Player, floorPosition: Vector3)
+	local record = memelings[instanceId]
+	if record == nil or record.State ~= Spawn.State.Carried then
+		return
+	end
+	record.Part:Destroy()
+	local part = placeInWorld(instanceId, record.MemelingId, floorPosition)
+	record.Part = part
+	record.State = Spawn.State.Dropped
+	record.Owner = owner
+	part:SetAttribute(Spawn.LootOwnerAttribute, owner.UserId)
+	part:SetAttribute(Spawn.LootExpiresAttribute, now() + ZoneConfig.LootSeconds)
+	CollectionService:AddTag(part, StyleConfig.Loot.Tag)
+
+	task.delay(ZoneConfig.LootSeconds, function()
+		-- Тот же лут всё ещё лежит (его не подняли и не убрали) — возвращается на спавн
+		if memelings[instanceId] == record and record.State == Spawn.State.Dropped and record.Part == part then
+			print(string.format("[Spawn] Лут %s (%s) не подняли — возвращается на точку", record.MemelingId, instanceId))
+			Spawn.Lose(instanceId)
+		end
+	end)
+end
+
+-- Игрок вышел: его выпавший лут сразу возвращается на точки спавна
+function Spawn.LoseLootOf(player: Player)
+	local ids: { string } = {}
+	for instanceId, record in memelings do
+		if record.State == Spawn.State.Dropped and record.Owner == player then
+			table.insert(ids, instanceId)
+		end
+	end
+	for _, instanceId in ipairs(ids) do
+		Spawn.Lose(instanceId)
+	end
 end
 
 function Spawn.Start()

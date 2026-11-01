@@ -204,8 +204,8 @@ local function tryPickup(player: Player, instanceId: string)
 	end
 
 	local record = Spawn.Get(instanceId)
-	if record == nil or record.State ~= Spawn.State.InZone then
-		return
+	if record == nil or not Spawn.CanPickUp(record, player) then
+		return -- уже подобран или чужой лут
 	end
 	local reach = MemelingSize.Reach(
 		ZoneConfig.PickupDistance,
@@ -325,11 +325,40 @@ function Raid.ReturnToHub(player: Player)
 	end
 end
 
--- Смерть (ловушка, враг, Reset или падение из зоны): всё из рук теряется, вылазка закрыта —
--- награду за неё уже не выдать. Витрину и Aura смерть не трогает. Считаем в stats.deaths.
-local function onDeath(player: Player, cause: string)
+-- Смерть в зоне: всё из рук выпадает на пол у места смерти — лут погибшего (Spawn.DropAsLoot).
+-- Точка — внутри пола зоны, несколько мемлингов раскладываются кругом
+local function dropCarriedAsLoot(player: Player, position: Vector3)
+	local list = carried[player]
+	carried[player] = nil
+	player:SetAttribute("CarriedCount", 0)
+	updateCarrySpeed(player)
+	if list == nil or #list == 0 then
+		return
+	end
+	local zone = MapConfig.Zone
+	local half = zone.Size / 2
+	local margin = ZoneConfig.LootSpreadStuds + StyleConfig.Memeling.Size.X
+	local x = math.clamp(position.X, zone.Center.X - half.X + margin, zone.Center.X + half.X - margin)
+	local z = math.clamp(position.Z, zone.Center.Z - half.Z + margin, zone.Center.Z + half.Z - margin)
+	local floorY = zone.Center.Y + half.Y
+	local radius = if #list > 1 then ZoneConfig.LootSpreadStuds else 0
+	for i, instanceId in ipairs(list) do
+		local angle = (i - 1) * 2 * math.pi / #list
+		Spawn.DropAsLoot(instanceId, player, Vector3.new(x + math.cos(angle) * radius, floorY, z + math.sin(angle) * radius))
+	end
+	print(string.format("[Raid] %s: выпало мемлингов: %d, поднять можно %d с", player.Name, #list, ZoneConfig.LootSeconds))
+end
+
+-- Смерть (ловушка, враг, Reset или падение из зоны): вылазка закрыта — награду за неё уже не выдать.
+-- В зоне всё из рук выпадает лутом на месте смерти (deathPosition); падение из зоны (позиции нет) —
+-- всё теряется, как раньше. Витрину и Aura смерть не трогает. Считаем в stats.deaths.
+local function onDeath(player: Player, cause: string, deathPosition: Vector3?)
 	Analytics.PlayerDied(player, #(carried[player] or {}), cause) -- до потери: сколько было в руках
-	loseCarried(player, "смерть: " .. cause)
+	if deathPosition and states[player] == Raid.State.InRaid then
+		dropCarriedAsLoot(player, deathPosition)
+	else
+		loseCarried(player, "смерть: " .. cause)
+	end
 	runs[player] = nil
 	local data = PlayerData.GetData(player)
 	if data then
@@ -373,7 +402,9 @@ local function onCharacterAdded(player: Player, character: Model)
 		humanoid.Died:Connect(function()
 			-- Источник последнего урона записывает сервис Damage; нет его — значит, Reset
 			local source = humanoid:GetAttribute("LastDamageSource")
-			onDeath(player, if type(source) == "string" then source else "Reset")
+			local root = character:FindFirstChild("HumanoidRootPart")
+			local position = if root and root:IsA("BasePart") then root.Position else nil
+			onDeath(player, if type(source) == "string" then source else "Reset", position)
 		end)
 	end
 end
@@ -391,6 +422,7 @@ end
 
 local function onPlayerRemoving(player: Player)
 	loseCarried(player, "выход из игры")
+	Spawn.LoseLootOf(player)
 	states[player] = nil
 	portalBusy[player] = nil
 	runs[player] = nil

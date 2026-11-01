@@ -316,6 +316,17 @@ StyleConfig.Outline = {
 	RefreshSeconds = 0.3, -- как часто клиент пересчитывает, кому нужен контур
 }
 
+-- Свой выпавший лут (после смерти): золотая подсветка сквозь стены и подпись «YOUR LOOT» с таймером.
+-- Видит только погибший (client/Controllers/LootController и OutlineController)
+StyleConfig.Loot = {
+	Tag = "Loot", -- тег CollectionService на ядре выпавшего мемлинга
+	Color = Palette.Sun,
+	FillTransparency = 0.6,
+	LabelHeight = 7, -- подпись — на столько студов выше центра мемлинга
+	LabelWidth = 200, -- в пикселях: одинаково крупно на любом расстоянии
+	LabelTextSize = 24,
+}
+
 StyleConfig.Memeling = {
 	-- «Габарит» мемлинга: центр — в середине, низ — на 3 ниже, верх — около 3 выше (шляпы чуть выше).
 	-- По нему ставим мемлинга на пол и на постамент и считаем высоту подписей.

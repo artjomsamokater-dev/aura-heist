@@ -49,13 +49,26 @@ local function getAdornee(target: Instance): Model?
 	return nil
 end
 
+-- Свой выпавший лут (после смерти, тег StyleConfig.Loot.Tag): подсвечивается золотом и сквозь стены
+local function isMyLoot(target: Instance): boolean
+	return CollectionService:HasTag(target, StyleConfig.Loot.Tag) and target:GetAttribute("LootOwnerUserId") == player.UserId
+end
+
+-- Вид контура: обычный тёмный или золотой у своего лута. Ставится при каждом пересчёте —
+-- лут могут поднять, и он снова станет обычным
+local function applyStyle(outline: Highlight, loot: boolean)
+	local lootStyle = StyleConfig.Loot
+	outline.OutlineColor = if loot then lootStyle.Color else style.Color
+	outline.FillColor = lootStyle.Color
+	outline.FillTransparency = if loot then lootStyle.FillTransparency else 1 -- обычный — только контур
+	outline.DepthMode = if loot then Enum.HighlightDepthMode.AlwaysOnTop else Enum.HighlightDepthMode.Occluded
+end
+
 local function makeOutline(adornee: Model): Highlight
 	local outline = Instance.new("Highlight")
 	outline.Name = "Outline"
-	outline.FillTransparency = 1 -- только контур, без заливки
-	outline.OutlineColor = style.Color
 	outline.OutlineTransparency = 0
-	outline.DepthMode = Enum.HighlightDepthMode.Occluded -- сквозь стены не виден
+	applyStyle(outline, false)
 	outline.Adornee = adornee
 	outline.Parent = adornee
 	return outline
@@ -86,8 +99,8 @@ local function refresh()
 		if position and target:IsDescendantOf(Workspace) and getAdornee(target) then
 			local distance = if eye then (position - eye).Magnitude else 0
 			local tier = TIER_NEAR
-			if character and target:IsDescendantOf(character) then
-				tier = TIER_CARRIED
+			if (character and target:IsDescendantOf(character)) or isMyLoot(target) then
+				tier = TIER_CARRIED -- в руках или свой выпавший лут — контур всегда
 			elseif target:GetAttribute("OwnerUserId") == player.UserId then
 				tier = TIER_OWN_PEDESTAL
 			end
@@ -119,6 +132,10 @@ local function refresh()
 		local adornee = getAdornee(target)
 		if not outlines[target] and adornee then
 			outlines[target] = makeOutline(adornee)
+		end
+		local outline = outlines[target]
+		if outline then
+			applyStyle(outline, isMyLoot(target))
 		end
 	end
 	report()
