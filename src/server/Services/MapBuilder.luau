@@ -23,6 +23,7 @@ local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
 local MemelingKit = require(ServerScriptService.Server.Visual.MemelingKit)
 local MemelingBuilders = require(ServerScriptService.Server.Visual.MemelingBuilders)
 local HubDecor = require(ServerScriptService.Server.Visual.HubDecor)
+local Icons = require(ReplicatedStorage.Shared.Ui.Icons)
 
 local MapBuilder = {}
 
@@ -195,6 +196,44 @@ local function addLabel(part: BasePart, text: string, options: LabelOptions?)
 	gui.AlwaysOnTop = false
 	gui.Parent = part
 	makeLabelText(gui, text)
+end
+
+-- Подпись над кнопкой участка: тёмная плашка, слева иконка (shared/Ui/Icons), справа короткий текст
+-- (цена или количество). Имена «Label» / «Text» — как у addLabel, поэтому SetLabelText работает так же
+local function addIconLabel(part: BasePart, icon: string)
+	local style = StyleConfig.PlotParts
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Label"
+	gui.Size = UDim2.fromScale(style.ButtonLabelWidth, style.ButtonLabelHeight)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, style.ButtonLabelLift, 0)
+	gui.MaxDistance = StyleConfig.Label.MaxDistance
+	gui.Parent = part
+	local panel = Instance.new("Frame")
+	panel.Name = "Panel"
+	panel.Size = UDim2.fromScale(1, 1)
+	panel.BackgroundColor3 = style.ButtonLabelPanel
+	panel.BackgroundTransparency = style.ButtonLabelPanelTransparency
+	panel.BorderSizePixel = 0
+	panel.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.3, 0)
+	corner.Parent = panel
+	-- Квадрат под иконку: высота плашки, по ширине — её доля
+	local iconShare = style.ButtonLabelHeight / style.ButtonLabelWidth
+	local slot = Instance.new("Frame")
+	slot.Name = "IconSlot"
+	slot.BackgroundTransparency = 1
+	slot.Size = UDim2.fromScale(iconShare, 1)
+	slot.Parent = gui
+	Icons.Make(icon, slot).Size = UDim2.fromScale(0.82, 0.82)
+	makeLabelText(gui, "")
+	local text = gui:FindFirstChild("Text")
+	if text and text:IsA("TextLabel") then
+		text.Position = UDim2.fromScale(iconShare, 0.1)
+		text.Size = UDim2.fromScale(1 - iconShare - 0.06, 0.8)
+		text.TextXAlignment = Enum.TextXAlignment.Left
+		text.TextWrapped = false
+	end
 end
 
 -- Надпись прямо на табличке, на обеих сторонах: крупно и не висит в воздухе
@@ -1061,7 +1100,7 @@ local function buildPlots()
 			button.CastShadow = false
 			button:SetAttribute("UpgradeId", upgradeId)
 			makeRoundLook(button, StyleConfig.PlotParts.UpgradeButton, StyleConfig.PlotParts.ButtonRim)
-			addLabel(button, "")
+			addIconLabel(button, StyleConfig.PlotParts.ButtonIcons[upgradeId] or "Aura")
 		end
 
 		-- Диск запаса; подпись и кнопку «Sell» на него вешает Studio
@@ -1074,7 +1113,7 @@ local function buildPlots()
 		)
 		reserve.CastShadow = false
 		makeRoundLook(reserve, StyleConfig.PlotParts.ReservePad, StyleConfig.PlotParts.ReserveRim)
-		addLabel(reserve, "")
+		addIconLabel(reserve, StyleConfig.PlotParts.ReserveIcon)
 
 		-- Диск Rebirth; подпись и кнопку (удержание 2 с) на него вешает Studio
 		local rebirth = makePart(
@@ -1086,7 +1125,7 @@ local function buildPlots()
 		)
 		rebirth.CastShadow = false
 		makeRoundLook(rebirth, StyleConfig.PlotParts.RebirthPad, StyleConfig.PlotParts.RebirthRim)
-		addLabel(rebirth, "")
+		addIconLabel(rebirth, StyleConfig.PlotParts.RebirthIcon)
 
 		model.Parent = folder
 		plots[i] = model

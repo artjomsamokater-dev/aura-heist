@@ -1,10 +1,14 @@
 --!strict
--- Icons: простые иконки HUD, нарисованные из рамок (Frame + UICorner + UIStroke) в цветах палитры.
--- Без эмодзи: на всех телефонах и компьютерах выглядят одинаково.
---   "Aura"  — золотой шарик с бликом
---   "Bag"   — мятный рюкзак с ручкой и клапаном
---   "Clock" — циферблат со стрелками
---   "Squad" — два человечка рядом
+-- Icons: простые иконки, нарисованные из рамок (Frame + UICorner + UIStroke) в цветах палитры.
+-- Без эмодзи: на всех телефонах и компьютерах выглядят одинаково. Общие для клиента (HUD) и сервера
+-- (подписи над кнопками участка рисует MapBuilder).
+--   "Aura"     — золотой шарик с бликом
+--   "Bag"      — мятный рюкзак с ручкой и клапаном
+--   "Clock"    — циферблат со стрелками
+--   "Squad"    — два человечка рядом
+--   "Pedestal" — круглый постамент со звёздочкой сверху
+--   "Box"      — ящик с крышкой (запас)
+--   "Star"     — звезда (Rebirth)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -78,11 +82,42 @@ local function squad(holder: Frame)
 	end
 end
 
+local function pedestal(holder: Frame)
+	local column = frame(holder, Palette.PlumLight, UDim2.fromScale(0.5, 0.66), UDim2.fromScale(0.6, 0.46), UDim.new(0.15, 0))
+	stroke(column, Palette.PlumDark, 2)
+	local top = frame(holder, Palette.CreamLight, UDim2.fromScale(0.5, 0.42), UDim2.fromScale(0.76, 0.16), UDim.new(0.5, 0))
+	stroke(top, Palette.PlumDark, 2)
+	local gem = frame(holder, Palette.Mint, UDim2.fromScale(0.5, 0.22), UDim2.fromScale(0.24, 0.24), UDim.new(0.2, 0))
+	gem.Rotation = 45
+	stroke(gem, Palette.MintDark, 2)
+end
+
+local function box(holder: Frame)
+	local body = frame(holder, Palette.CreamDark, UDim2.fromScale(0.5, 0.6), UDim2.fromScale(0.74, 0.54), UDim.new(0.12, 0))
+	stroke(body, Palette.PlumDark, 2)
+	local lid = frame(holder, Palette.Cream, UDim2.fromScale(0.5, 0.3), UDim2.fromScale(0.84, 0.18), UDim.new(0.2, 0))
+	stroke(lid, Palette.PlumDark, 2)
+	frame(body, Palette.PlumDark, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.12, 1), nil)
+end
+
+-- Звезда: два квадрата, повёрнутых на 45° друг к другу, и кружок в середине
+local function star(holder: Frame)
+	for _, rotation in ipairs({ 0, 45 }) do
+		local square = frame(holder, Palette.PlumLight, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.62, 0.62), UDim.new(0.12, 0))
+		square.Rotation = rotation
+		stroke(square, Palette.PlumDark, 2)
+	end
+	frame(holder, Palette.CreamLight, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.3, 0.3), CIRCLE)
+end
+
 local DRAW: { [string]: (Frame) -> () } = {
 	Aura = aura,
 	Bag = bag,
 	Clock = clock,
 	Squad = squad,
+	Pedestal = pedestal,
+	Box = box,
+	Star = star,
 }
 
 -- Иконка kind размером size × size пикселей (или по размеру родителя, если size не задан)

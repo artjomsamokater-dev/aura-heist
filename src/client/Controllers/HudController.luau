@@ -14,7 +14,7 @@ local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local formatNumber = require(ReplicatedStorage.Shared.Util.FormatNumber)
-local Icons = require(script.Parent.Parent.Ui.Icons)
+local Icons = require(ReplicatedStorage.Shared.Ui.Icons)
 local ExtractTarget = require(script.Parent.Parent.Util.ExtractTarget)
 
 local HudController = {}

@@ -176,14 +176,16 @@ local function refreshButtons(plotIndex: number, data: PlayerData.Data?)
 			local cost = UpgradeValues.NextCost(id, level)
 			local prompt = button:FindFirstChild("BuyPrompt")
 			if cost then
-				local text = string.format(TextConfig.UpgradeLabels[id], UpgradeValues.NextValue(id, level), formatNumber(cost))
-				MapBuilder.SetLabelText(button, text)
+				MapBuilder.SetLabelText(button, string.format(TextConfig.UpgradePrice, formatNumber(cost)))
 			else
-				MapBuilder.SetLabelText(button, TextConfig.UpgradeMaxed[id])
+				MapBuilder.SetLabelText(button, TextConfig.UpgradeMaxed)
 			end
 			if prompt and prompt:IsA("ProximityPrompt") then
-				prompt.Enabled = cost ~= nil
-				prompt.ObjectText = if cost then string.format(TextConfig.PriceTag, formatNumber(cost)) else ""
+				-- Кнопки покупки работают только на занятом участке (у свободного их не видно)
+				prompt.Enabled = cost ~= nil and data ~= nil
+				prompt.ObjectText = if cost
+					then string.format(TextConfig.UpgradeLabels[id], UpgradeValues.NextValue(id, level), formatNumber(cost))
+					else ""
 			end
 		end
 	end

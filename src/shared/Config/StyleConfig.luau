@@ -278,6 +278,15 @@ StyleConfig.PlotParts = {
 	RebirthTagHeight = 3.2, -- на сколько студов над головой (выше имени Roblox)
 	LockedPedestalTransparency = 0.75, -- некупленный постамент — полупрозрачный «призрак»
 	PedestalRim = Palette.Sun, -- жёлтый ободок: на постаменте есть кнопки Collect и Sell
+	-- Подписи над кнопками: иконка + коротко (цена / количество) на тёмной плашке, крупно
+	ButtonIcons = { pedestals = "Pedestal", carrySlots = "Bag", storage = "Clock" } :: { [string]: string },
+	ReserveIcon = "Box",
+	RebirthIcon = "Star",
+	ButtonLabelWidth = 6.5, -- студов
+	ButtonLabelHeight = 2.2,
+	ButtonLabelLift = 2.4, -- на сколько студов над кнопкой
+	ButtonLabelPanel = Palette.PlumDark,
+	ButtonLabelPanelTransparency = 0.2,
 }
 
 -- Кнопки ProximityPrompt

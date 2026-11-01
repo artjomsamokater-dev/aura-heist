@@ -40,28 +40,26 @@ TextConfig.BuyAction = "Buy"
 TextConfig.PriceTag = "%s Aura" -- цена на кнопке покупки
 TextConfig.SellAction = "Sell"
 TextConfig.SellPriceTag = "+%s Aura" -- сколько получишь за продажу
-TextConfig.ReserveLabel = "Reserve: %d" -- сколько мемлингов в запасе
+TextConfig.ReserveLabel = "x%d" -- рядом с иконкой ящика: сколько мемлингов в запасе
 
 -- Rebirth: площадка на участке и счётчик над именем игрока
 TextConfig.RebirthAction = "Rebirth"
-TextConfig.RebirthLabel = "REBIRTH\n%s Aura" -- %s — цена
-TextConfig.RebirthLocked = "REBIRTH\nMax all upgrades"
+TextConfig.RebirthLabel = "%s" -- рядом с иконкой звезды: цена
+TextConfig.RebirthLocked = "Max all" -- сначала купить все улучшения
 TextConfig.RebirthTag = "REBIRTH %d" -- %d — сколько rebirth сделано
 
--- Кнопки улучшений на участке: что даст следующий уровень и цена (%d — новое значение, %s — цена)
+-- Кнопки улучшений: над кнопкой — иконка и цена (коротко, крупно); подробно — в самой кнопке «Buy»
+TextConfig.UpgradePrice = "%s" -- %s — цена
+TextConfig.UpgradeMaxed = "MAX"
+-- Подпись кнопки «Buy»: что даст следующий уровень и цена (%d — новое значение, %s — цена)
 TextConfig.UpgradeLabels = {
-	pedestals = "Pedestal #%d\n%s Aura",
-	carrySlots = "Backpack: %d slots\n%s Aura",
-	storage = "Storage x%d\n%s Aura",
-} :: { [string]: string }
-TextConfig.UpgradeMaxed = {
-	pedestals = "Pedestals\nMAX",
-	carrySlots = "Backpack\nMAX",
-	storage = "Storage\nMAX",
+	pedestals = "Pedestal #%d · %s Aura",
+	carrySlots = "Backpack %d slots · %s Aura",
+	storage = "Storage x%d · %s Aura",
 } :: { [string]: string }
 
 -- HUD (клиент)
--- HUD: иконки рисуются (client/Ui/Icons), крупное число — главное, мелкая подпись — пояснение.
+-- HUD: иконки рисуются (shared/Ui/Icons), крупное число — главное, мелкая подпись — пояснение.
 -- Без эмодзи: на разных устройствах они выглядят по-разному
 TextConfig.HudBaseValue = "%s" -- %s — число Aura на базе
 TextConfig.HudBaseCaption = "SAFE AT BASE"

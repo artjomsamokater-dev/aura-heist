@@ -14,7 +14,7 @@ local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local EconomyConfig = require(ReplicatedStorage.Shared.Config.EconomyConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local Icons = require(script.Parent.Parent.Ui.Icons)
+local Icons = require(ReplicatedStorage.Shared.Ui.Icons)
 
 local AnnouncementController = {}
 
