@@ -318,6 +318,12 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
      (покачивается), 4 тусклые статуи-мемлинга, пульсирующая стрелка на полу, табличка-подсказка
      (MapConfig.Portal.Podium/Columns/Sign/Statues/Arrow/InfoSign); анимацию делает PortalController.
      Триггер не сдвинут; подпись-Billboard над порталом убрана (её заменила вывеска).
+- 7.1 (агрессия врагов): почему стояли — по логике 3.5 враг спал, пока игрок дальше WakeRadius (90; от входа
+  до врагов > 120), а проснувшись без цели шёл «домой» и стоял. Теперь: WakeRadius 200, без цели — патруль
+  (EnemyConfig.PatrolRadius / PatrolWalkSpeed / PatrolPauseSeconds), охрана — Raid.OnPickup → враги ближе
+  AggroRadius (45) гонятся, «!» на AlertSeconds и звук (StyleConfig.EnemyAlert); погоня до LeashRadius (70),
+  безопасной части или EXTRACT (EnemyMath.ChaseBlock / ShouldAggro / PatrolPoint + тесты). Output раз в
+  StatusLogSeconds (5): «[Enemy] Grumblob1: патруль — …», «бросил погоню …: причина».
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),

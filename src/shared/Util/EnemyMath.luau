@@ -45,4 +45,32 @@ function EnemyMath.FlatDistance(ax: number, az: number, bx: number, bz: number):
 	return math.sqrt(dx * dx + dz * dz)
 end
 
+-- Почему погоня невозможна или прекращается: nil — можно гнаться
+export type DropReason = "leash" | "safe" | "extract"
+
+-- Можно ли гнаться за игроком: он не дальше leash от врага, стоит в опасной части и не у EXTRACT
+function EnemyMath.ChaseBlock(distance: number, leash: number, targetInDanger: boolean, targetAtExtract: boolean): DropReason?
+	if not targetInDanger then
+		return "safe"
+	end
+	if targetAtExtract then
+		return "extract"
+	end
+	if distance > leash then
+		return "leash"
+	end
+	return nil
+end
+
+-- Охрана: игрок подобрал мемлинга. Враг ближе aggroRadius сразу гонится — если погоня вообще возможна
+function EnemyMath.ShouldAggro(distance: number, aggroRadius: number, targetInDanger: boolean, targetAtExtract: boolean): boolean
+	return distance <= aggroRadius and EnemyMath.ChaseBlock(distance, aggroRadius, targetInDanger, targetAtExtract) == nil
+end
+
+-- Точка патруля около дома: угол (радианы) и доля радиуса 0..1 — случайные, их передаёт сервис
+function EnemyMath.PatrolPoint(homeX: number, homeZ: number, radius: number, angle: number, fraction: number): (number, number)
+	local distance = radius * math.clamp(fraction, 0, 1)
+	return homeX + math.cos(angle) * distance, homeZ + math.sin(angle) * distance
+end
+
 return EnemyMath

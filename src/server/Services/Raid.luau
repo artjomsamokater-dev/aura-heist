@@ -46,6 +46,13 @@ type Run = {
 }
 local runs: { [Player]: Run } = {}
 
+-- Кто хочет знать о подборе (Enemy: охрана). Подписываются через Raid.OnPickup — Raid не знает, кто это
+local pickupListeners: { (player: Player, position: Vector3) -> () } = {}
+
+function Raid.OnPickup(listener: (player: Player, position: Vector3) -> ())
+	table.insert(pickupListeners, listener)
+end
+
 local pickupLimiter =
 	RateLimiter.new(SecurityConfig.RateLimits.Pickup.MaxRequests, SecurityConfig.RateLimits.Pickup.WindowSeconds)
 local dropLimiter = RateLimiter.new(SecurityConfig.RateLimits.Drop.MaxRequests, SecurityConfig.RateLimits.Drop.WindowSeconds)
@@ -233,6 +240,9 @@ local function tryPickup(player: Player, instanceId: string)
 	player:SetAttribute("CarriedCount", #list)
 	updateCarrySpeed(player)
 	print(string.format("[Raid] %s подобрал %s (%s)", player.Name, record.MemelingId, instanceId))
+	for _, listener in ipairs(pickupListeners) do
+		task.spawn(listener, player, root.Position)
+	end
 	Tutorial.Notify(player, "PickUp")
 	local memeling = MemelingConfig.Memelings[record.MemelingId]
 	Analytics.MemelingPicked(player, if memeling then memeling.Rarity else "")

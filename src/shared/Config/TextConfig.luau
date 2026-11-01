@@ -83,6 +83,8 @@ TextConfig.SideExtractMarker = "▼ SLOW EXIT ▼" -- маркер, когда �
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
 
+TextConfig.EnemyAlert = "!" -- над Grumblob, когда он заметил игрока с добычей
+
 -- Свой выпавший лут после смерти (видит только погибший)
 TextConfig.LootLabel = "YOUR LOOT\n%s" -- %s — сколько осталось, например 0:15
 

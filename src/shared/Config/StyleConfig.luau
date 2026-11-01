@@ -534,6 +534,18 @@ StyleConfig.EnemyWindup = {
 	Grow = 0.35, -- к моменту удара шар больше тела на 35%
 }
 
+-- Агро Grumblob (игрок подобрал мемлинга рядом): «!» над врагом и звук. Звук встроенный Roblox
+-- (тот же писк, но низкий — как ворчание); можно заменить на любой SoundId из Toolbox
+StyleConfig.EnemyAlert = {
+	Color = Palette.Coral, -- опасность
+	Stroke = Palette.Ink,
+	SizeStuds = 3,
+	MaxDistance = 120,
+	SoundId = "rbxasset://sounds/electronicpingshort.wav",
+	Volume = 1,
+	PlaybackSpeed = 0.55,
+}
+
 -- Свой выпавший лут (после смерти): золотая подсветка сквозь стены и подпись «YOUR LOOT» с таймером.
 -- Видит только погибший (client/Controllers/LootController и OutlineController)
 StyleConfig.Loot = {
