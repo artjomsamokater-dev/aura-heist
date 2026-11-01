@@ -449,6 +449,22 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
      Портал на 0° (PortalRotations.Candy = 90, розовая воронка); BEST HAUL переехал на 45° r 34 вместо гигантского
      телефона, кусты 14°/346° → 24°/336°.
   3) Раздел «Как добавить новую зону» в этом файле.
+- 7.8 (интерфейс и витрины, механика не менялась; коммит на пункт):
+  1) Меню слева (client/Controllers/MenuController, кнопка-иконка на месте прежней SHOP): Base, Collection, Upgrades,
+     Rebirth, Shop; Quests и Daily rewards — с замком «Soon». Base / Upgrades / Rebirth — панели только для чтения
+     (покупка и Rebirth по-прежнему на кнопках участка), числа — атрибуты сервера + UpgradeValues / RebirthMath.
+     Окна открываются через client/Ui/Windows (одно окно за раз); магазин — пункт Shop и киоск.
+  2) Коллекция (CollectionController): сетка по зонам (shared/Util/CollectionRule + тест), 3D-превью в ViewportFrame
+     из шаблонов ReplicatedStorage.MemelingPreviews (строит MapBuilder), неоткрытые — тёмный силуэт с замком; карточка —
+     модель вращается на подсвеченном постаменте, редкость, доход, цена, скорость, где водится, сколько есть; счётчик N/27.
+     Профиль — схема 7, discovered (миграция: витрина, запас и Secret); отмечает Studio.AddToShowcase. Атрибуты
+     CollectionDiscovered / CollectionOwned / UpgradeLevel_<id>.
+  3) Витрина: стеклянный колпак над мемлингом на постаменте, подставка с неоновым кольцом и свечением цвета редкости
+     (MapBuilder.AddGlassDome, StyleConfig.Showcase); без столкновений и лучей — Collect и Sell работают.
+  4) HUD: под числом банка «+N Aura/s» и полоска заполнения хранилищ (атрибуты BaseIncome / BaseStored / BaseStorageCap
+     от Studio.publishBaseStats).
+  5) Эвакуация: крупная полоска «EXTRACTING... 2.1s» вверху по центру (ExtractFxController, StyleConfig.ExtractFx.Bar*).
+  6) Портал: две висящие хоругви по бокам — цвет воронки зоны, золотая корона, название зоны (MapConfig.Portal.Banners).
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
@@ -458,5 +474,5 @@ luau-lsp analyze с типами Roblox, проверка кодировки (.l
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
 Фазы 1–5 закрыты (в 5.4 сделаны модели; звуков мемлингов пока нет), правки 6.0 и визуальный проход 6.1 перед тестом сделаны,
-7.1 (агрессия врагов), 7.2 (Golden Zone), 7.3 (секретный паркур), 7.4 (магазин косметики), 7.5 (края островов, холмы, BOUNTY), 7.6 (8 новых мемлингов) и 7.7 (зона Candy Chaos) готовы.
+7.1 (агрессия врагов), 7.2 (Golden Zone), 7.3 (секретный паркур), 7.4 (магазин косметики), 7.5 (края островов, холмы, BOUNTY), 7.6 (8 новых мемлингов), 7.7 (зона Candy Chaos) и 7.8 (меню, коллекция, витрины, HUD) готовы.
 Дальше по документации — «Ворота B»: закрытый тест (раздел 7, шаг 3).
