@@ -301,7 +301,7 @@ StyleConfig.Extraction = {
 	Color = Palette.Mint,
 	SideColor = Palette.Sun, -- вторая, медленная точка у входа — солнце, чтобы не спутать с главной
 	Transparency = 0.1,
-	BeaconTransparency = 0.6,
+	BeaconTransparency = 0.35, -- плотнее: столб виден сквозь дымку с другого конца зоны
 	Particles = {
 		Color = Palette.MintLight,
 		Rate = 8,
@@ -388,6 +388,36 @@ StyleConfig.Outline = {
 	MaxCount = 25, -- сколько контуров сразу, не больше
 	Distance = 70, -- дальше этого контура нет (кроме своих: в руках и на своих постаментах)
 	RefreshSeconds = 0.3, -- как часто клиент пересчитывает, кому нужен контур
+}
+
+-- Эвакуация на клиенте (client/Controllers/ExtractFxController): пока стоишь на точке, вокруг ног
+-- загорается круг из сегментов, писк ускоряется; в конце — вспышка экрана и конфетти.
+-- Звуки — встроенные Roblox, можно заменить на любой SoundId из Toolbox
+StyleConfig.ExtractFx = {
+	RingSegments = 24,
+	RingRadius = 4.5,
+	SegmentSize = v3(0.5, 0.25, 1.1),
+	EmptyTransparency = 0.8, -- ещё не заполненный сегмент — еле виден
+	ChargeSound = {
+		SoundId = "rbxasset://sounds/electronicpingshort.wav", -- повторяется по кругу, всё выше и громче
+		FromSpeed = 0.8,
+		ToSpeed = 1.9,
+		FromVolume = 0.25,
+		ToVolume = 0.8,
+	},
+	DoneSound = { SoundId = "rbxasset://sounds/electronicpingshort.wav", Speed = 2.4, Volume = 1 },
+	FlashColor = Palette.CreamLight,
+	FlashTransparency = 0.25, -- самая яркая точка вспышки
+	FlashSeconds = 0.5,
+	Confetti = {
+		Colors = { Palette.Mint, Palette.PlumLight, Palette.CreamLight, Palette.Plum },
+		Count = 60,
+		Speed = NumberRange.new(16, 26),
+		Lifetime = NumberRange.new(1.4, 2),
+		Size = 0.7,
+		Gravity = 35,
+		SpreadAngle = 55,
+	},
 }
 
 -- Свой выпавший лут (после смерти): золотая подсветка сквозь стены и подпись «YOUR LOOT» с таймером.

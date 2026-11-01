@@ -10,6 +10,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
@@ -210,6 +211,13 @@ local function updateLabels(now: number)
 	end
 end
 
+-- Только для картинки на клиенте (круг, звук — client/Controllers/ExtractFxController): когда началось
+-- удержание (время сервера) и сколько его держать. Отсчёт для награды сервер ведёт сам, по holds
+local function setHoldAttributes(player: Player, point: Point?)
+	player:SetAttribute("ExtractHoldStart", if point then Workspace:GetServerTimeNow() else nil)
+	player:SetAttribute("ExtractHoldSeconds", if point then point.Seconds else nil)
+end
+
 local function check()
 	local now = os.clock()
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -229,14 +237,17 @@ local function check()
 		if point then
 			if hold == nil or hold.Point ~= point then
 				holds[player] = { Point = point, StartedAt = now }
+				setHoldAttributes(player, point)
 				print(string.format("[Extraction] %s встал на точку «%s»", player.Name, point.Name))
 			elseif now - hold.StartedAt >= point.Seconds then
 				holds[player] = nil
+				setHoldAttributes(player, nil)
 				complete(player)
 			end
 		elseif hold ~= nil then
 			-- Ушёл с точки, умер, поднял запрещённую редкость или уже не в вылазке — отмена
 			holds[player] = nil
+			setHoldAttributes(player, nil)
 			print(string.format("[Extraction] %s: эвакуация отменена", player.Name))
 		end
 	end

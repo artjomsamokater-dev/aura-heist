@@ -211,8 +211,8 @@ MapConfig.Zone = {
 		},
 		DangerTileSize = 7,
 		Skull = { Height = 3.4, Size = 3.2 }, -- череп под балкой ворот в опасную часть: ниже балки на Height
-		ExtractBeaconDiameter = 4,
-		ExtractBeaconHeight = 60,
+		ExtractBeaconDiameter = 6,
+		ExtractBeaconHeight = 150, -- выше стен и дымки: виден из любой точки зоны
 		SideBeaconHeight = 25, -- столб над второй (медленной) точкой — ниже главного
 		-- Ориентиры: грибы-великаны в углах безопасной части, кристаллы — в углах опасной
 		Mushrooms = {
