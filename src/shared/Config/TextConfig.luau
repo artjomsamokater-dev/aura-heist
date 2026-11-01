@@ -16,7 +16,7 @@ end
 local TextConfig = {}
 
 -- Подписи над объектами карты
-TextConfig.FreePlot = "Free Studio"
+TextConfig.FreePlot = "Empty plot"
 TextConfig.OwnedPlot = "%s's Studio" -- %s заменяется на имя игрока
 TextConfig.Portal = "MEME ZONE"
 TextConfig.Zone = "MEME ZONE"
