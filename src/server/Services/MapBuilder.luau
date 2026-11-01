@@ -178,6 +178,34 @@ export type LabelOptions = {
 	Scale: number?, -- во сколько раз подпись больше или меньше обычной (по умолчанию 1)
 }
 
+-- Подпись фиксированного размера в пикселях (StyleConfig.Label.PedestalLabel*): видна только вблизи и
+-- не меняет размер с расстоянием. half = "Top" | "Bottom" — текст в верхней или нижней части:
+-- две подписи с одной точкой и половинами не налезают друг на друга. Имена «Label» / «Text» —
+-- как у addLabel, поэтому SetLabelText работает так же
+local function addStackLabel(part: BasePart, text: string, height: number, half: string)
+	local style = StyleConfig.Label
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Label"
+	gui.Size = UDim2.fromOffset(style.PedestalLabelWidthPx, style.PedestalLabelHeightPx)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, height, 0)
+	gui.MaxDistance = style.PedestalLabelMaxDistance
+	gui.AlwaysOnTop = false
+	gui.Parent = part
+	local label = Instance.new("TextLabel")
+	label.Name = "Text"
+	label.BackgroundTransparency = 1
+	local top = style.PedestalLabelTopShare
+	label.Position = UDim2.fromScale(0, if half == "Top" then 0 else top)
+	label.Size = UDim2.fromScale(1, if half == "Top" then top else 1 - top)
+	label.TextScaled = true
+	label.Font = StyleConfig.Fonts.Label
+	label.TextColor3 = style.Text
+	label.TextStrokeColor3 = style.Stroke
+	label.TextStrokeTransparency = 0
+	label.Text = text
+	label.Parent = gui
+end
+
 local function makeLabelText(gui: Instance, text: string)
 	local label = Instance.new("TextLabel")
 	label.Name = "Text"
@@ -1895,6 +1923,7 @@ end
 -- Те же помощники для других сервисов
 MapBuilder.MakePart = makePart
 MapBuilder.AddLabel = addLabel
+MapBuilder.AddStackLabel = addStackLabel
 MapBuilder.MakeMemeling = makeMemeling
 MapBuilder.ScaleMemeling = scaleMemeling
 MapBuilder.GetMemelingScale = getMemelingScale

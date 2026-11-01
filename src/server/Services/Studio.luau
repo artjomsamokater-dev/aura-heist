@@ -24,6 +24,7 @@ local PedestalMath = require(ReplicatedStorage.Shared.Util.PedestalMath)
 local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
 local SquadRule = require(ReplicatedStorage.Shared.Util.SquadRule)
 local ZoneRule = require(ReplicatedStorage.Shared.Util.ZoneRule)
+local ShowcaseRule = require(ReplicatedStorage.Shared.Util.ShowcaseRule)
 local RebirthMath = require(ReplicatedStorage.Shared.Util.RebirthMath)
 local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerData = require(script.Parent.PlayerData)
@@ -137,8 +138,8 @@ local function setPromptEnabled(pedestal: Part, name: string, enabled: boolean)
 end
 
 -- Некупленные постаменты — полупрозрачные «призраки», сквозь них можно пройти.
--- Постамент, на котором стоит мемлинг, открыт всегда: после Rebirth витрина остаётся на месте
--- (новых мемлингов туда не поставить, пока постамент снова не куплен)
+-- Постамент, на котором стоит мемлинг, открыт всегда (после пересборки витрины мемлинги стоят только
+-- на открытых — reflowShowcase)
 local function refreshPedestalLocks(plotIndex: number, data: PlayerData.Data?)
 	local unlocked = getPedestalCount(data)
 	local occupied: { [number]: boolean } = {}
@@ -288,17 +289,11 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 	)
 	body:SetAttribute("MemelingId", entry.memelingId)
 	body:SetAttribute("OwnerUserId", player.UserId) -- клиент рисует контур своим мемлингам на постаментах
-	MapBuilder.AddLabel(body, getMemelingLabel(entry, data), {
-		MaxDistance = labelStyle.MemelingMaxDistance,
-		Height = MapBuilder.GetMemelingLabelHeight(entry.memelingId),
-		Scale = labelStyle.MemelingScale,
-	})
-
-	-- Подпись «накоплено» висит выше подписи мемлинга, с зазором (крупный мемлинг — выше)
+	-- Одна плашка прямо над макушкой мемлинга (крупный — выше): сверху имя и доход, снизу «N Aura».
+	-- Обе подписи у одной точки и одного размера в пикселях — не налезают и не растут с расстоянием
 	local height = size.Y * MapBuilder.GetMemelingScale(entry.memelingId)
-	MapBuilder.AddLabel(pedestal, "", {
-		Height = pedestal.Size.Y / 2 + height + labelStyle.HeightStuds * 1.5 + labelStyle.PedestalAuraGap,
-	})
+	MapBuilder.AddStackLabel(body, getMemelingLabel(entry, data), height / 2 + labelStyle.PedestalLabelGap, "Top")
+	MapBuilder.AddStackLabel(pedestal, "", pedestal.Size.Y / 2 + height + labelStyle.PedestalLabelGap, "Bottom")
 
 	rendered[player] = rendered[player] or {}
 	rendered[player][entry.pedestal] = { Entry = entry, Body = body }
@@ -327,12 +322,62 @@ local function unrenderPedestal(player: Player, plotIndex: number, pedestalIndex
 	end
 end
 
+-- Пересборка витрины (Rebirth, старые сохранения): все мемлинги — и с постаментов, и из запаса — по доходу;
+-- самые доходные встают на открытые постаменты 1..N, остальные уходят в запас (ShowcaseRule).
+-- Никто не теряется, флаг отряда сохраняется; при покупке постамента первым из запаса встанет самый доходный
+local function reflowShowcase(player: Player, data: PlayerData.Data)
+	local plotIndex = playerPlots[player]
+	if plotIndex then
+		for _, entry in ipairs(data.showcase) do
+			unrenderPedestal(player, plotIndex, entry.pedestal)
+		end
+	end
+	local candidates: { ShowcaseRule.Candidate } = {}
+	for _, list in ipairs({ data.showcase :: { any }, data.reserve :: { any } }) do
+		for _, entry in ipairs(list) do
+			table.insert(candidates, {
+				memelingId = entry.memelingId,
+				squadBonus = entry.squadBonus,
+				rate = getRate(entry.memelingId, data, entry.squadBonus),
+			})
+		end
+	end
+	local placed, rest = ShowcaseRule.Reflow(candidates, getPedestalCount(data))
+	data.showcase = {}
+	for pedestalIndex, candidate in ipairs(placed) do
+		local entry: ShowcaseEntry = {
+			pedestal = pedestalIndex,
+			memelingId = candidate.memelingId,
+			lastCollect = now(),
+			squadBonus = candidate.squadBonus,
+		}
+		table.insert(data.showcase, entry)
+		if plotIndex then
+			renderEntry(player, plotIndex, entry, data)
+		end
+	end
+	data.reserve = {}
+	for _, candidate in ipairs(rest) do
+		table.insert(data.reserve, { memelingId = candidate.memelingId, squadBonus = candidate.squadBonus })
+	end
+	print(string.format("[Studio] %s: витрина пересобрана — на постаментах %d, в запасе %d", player.Name, #data.showcase, #data.reserve))
+	publishCounts(player)
+end
+
 -- Рисует всю витрину игрока на его участке (после загрузки профиля)
 local function renderShowcase(player: Player)
 	local plotIndex = playerPlots[player]
 	local data = PlayerData.GetData(player)
 	if plotIndex == nil or data == nil then
 		return
+	end
+	-- Старое сохранение: мемлинги стоят на постаментах, которые уже не открыты (Rebirth до исправления)
+	local pedestals: { number } = {}
+	for _, entry in ipairs(data.showcase) do
+		table.insert(pedestals, entry.pedestal)
+	end
+	if ShowcaseRule.NeedsReflow(pedestals, getPedestalCount(data)) then
+		reflowShowcase(player, data)
 	end
 	refreshPedestalLocks(plotIndex, data)
 	refreshButtons(plotIndex, data)
@@ -812,9 +857,13 @@ local function refreshRebirthTag(player: Player)
 	end
 	local tag = Instance.new("BillboardGui")
 	tag.Name = "RebirthTag"
-	tag.Size = UDim2.fromScale(6, 1.2)
-	tag.StudsOffsetWorldSpace = Vector3.new(0, StyleConfig.PlotParts.RebirthTagHeight, 0)
-	tag.MaxDistance = StyleConfig.Label.MaxDistance
+	-- Маленькая подпись фиксированного размера выше имени: вблизи не разрастается и не закрывает
+	-- мемлингов и кнопки, издалека не видна
+	local parts = StyleConfig.PlotParts
+	tag.Size = UDim2.fromOffset(parts.RebirthTagWidthPx, parts.RebirthTagHeightPx)
+	tag.StudsOffsetWorldSpace = Vector3.new(0, parts.RebirthTagHeight, 0)
+	tag.MaxDistance = parts.RebirthTagMaxDistance
+	tag.AlwaysOnTop = false
 	tag.Parent = head
 	local label = Instance.new("TextLabel")
 	label.BackgroundTransparency = 1
@@ -829,7 +878,8 @@ local function refreshRebirthTag(player: Player)
 end
 
 -- Игрок удержал «Rebirth» 2 с (это и есть подтверждение). Всё проверяет сервер:
--- свой участок, рядом, все улучшения куплены, Aura хватает. Витрина и запас остаются
+-- свой участок, рядом, все улучшения куплены, Aura хватает. Мемлинги не теряются: на 3 постамента —
+-- самые доходные, остальные в запас (reflowShowcase)
 local function tryRebirth(player: Player, plotIndex: number)
 	local last = lastPurchaseAt[player]
 	if last and os.clock() - last < SecurityConfig.PurchaseCooldownSeconds then
@@ -851,18 +901,13 @@ local function tryRebirth(player: Player, plotIndex: number)
 	lastPurchaseAt[player] = os.clock()
 	print(string.format("[Studio] %s сделал Rebirth №%d, доход ×%.2f", player.Name, data.rebirths, RebirthMath.IncomeMultiplier(data.rebirths, EconomyConfig.Rebirth.IncomeBonusPercent)))
 
+	-- Постаментов снова стартовое число: лишние мемлинги — в запас, самые доходные — на постаменты
+	reflowShowcase(player, data)
 	refreshPedestalLocks(plotIndex, data)
 	refreshButtons(plotIndex, data)
 	refreshRebirth(plotIndex, data)
 	Raid.RefreshCarrySlots(player)
 	refreshRebirthTag(player)
-	-- Доход мемлингов на витрине вырос — обновляем подписи «+N/s»
-	local playerSlots = rendered[player]
-	if playerSlots then
-		for _, slot in playerSlots do
-			MapBuilder.SetLabelText(slot.Body, getMemelingLabel(slot.Entry, data))
-		end
-	end
 end
 
 local function addRebirthPrompts()

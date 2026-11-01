@@ -104,7 +104,14 @@ StyleConfig.Label = {
 	MemelingMaxDistance = 25, -- имена мемлингов видны только вблизи, чтобы не было каши из надписей
 	MemelingScale = 0.5, -- имя мемлинга вдвое меньше обычной подписи
 	BestHaulScale = 0.7, -- имя и ник на витрине BEST HAUL — крупнее, видно с площади
-	PedestalAuraGap = 2.5, -- насколько подпись «накоплено» выше подписи мемлинга на постаменте
+	-- Подписи мемлинга на постаменте: имя с доходом и «N Aura» — одной плашкой прямо над мемлингом.
+	-- Размер в пикселях (не растёт и не мельчает с расстоянием), видно только вблизи. Две подписи — у одной
+	-- точки и одного размера: имя в верхней половине, «N Aura» в нижней — друг на друга не налезают никогда
+	PedestalLabelWidthPx = 150,
+	PedestalLabelHeightPx = 62,
+	PedestalLabelTopShare = 0.62, -- имя и доход (2–3 строки) сверху, «N Aura» — оставшаяся нижняя часть
+	PedestalLabelMaxDistance = 30,
+	PedestalLabelGap = 0.4, -- на столько студов выше макушки мемлинга
 	-- Плотность имени владельца на табличке (SurfaceGui). TextScaled не растит текст больше 100 пикселей,
 	-- поэтому при 20 пикселях на студ имя заполняет табличку по высоте
 	SignPixelsPerStud = 20,
@@ -302,7 +309,10 @@ StyleConfig.PlotParts = {
 	RebirthPad = Palette.Sun, -- площадка Rebirth
 	RebirthRim = Palette.PlumDark,
 	RebirthTag = Palette.PlumLight, -- счётчик rebirth над именем игрока
-	RebirthTagHeight = 3.2, -- на сколько студов над головой (выше имени Roblox)
+	RebirthTagHeight = 3.6, -- на сколько студов над головой (выше имени Roblox)
+	RebirthTagWidthPx = 96, -- маленькая подпись фиксированного размера (не растёт вблизи)
+	RebirthTagHeightPx = 18,
+	RebirthTagMaxDistance = 60,
 	LockedPedestalTransparency = 0.75, -- некупленный постамент — полупрозрачный «призрак»
 	PedestalRim = Palette.Sun, -- жёлтый ободок: на постаменте есть кнопки Collect и Sell
 	-- Подписи над кнопками: иконка + коротко (цена / количество) на тёмной плашке, крупно

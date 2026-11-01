@@ -360,6 +360,13 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   (+ тест) — CanBuy / ToggleEquip, списание только Economy.TrySpend, профиль — схема 6, cosmetics {owned,
   equipped}; Rebirth не трогает. Картинка — server/Visual/CosmeticsBuilder; салют — client FireworksController.
   Клиент: ShopController (кнопка SHOP слева, киоск «Open shop» на площади на месте пончика, вкладки, карточки).
+- Баг после Rebirth: мемлинги держали постаменты 4–10 открытыми, покупка «Pedestal» ничего не давала (цена
+  уходила до 14 000). Теперь Rebirth (и загрузка старого сохранения с мемлингами на закрытых постаментах)
+  пересобирает витрину — Studio.reflowShowcase / shared/Util/ShowcaseRule (+ тест «10 → 3 + 7, кнопка 100»):
+  самые доходные на стартовые постаменты, остальные в запас по доходу (флаг отряда сохраняется), купленный
+  постамент забирает лучшего из запаса. Подписи на постаменте — одна плашка в пикселях прямо над мемлингом
+  (MapBuilder.AddStackLabel: имя и доход сверху, «N Aura» снизу, видно ближе 30 студов). «REBIRTH N» —
+  маленькая подпись фиксированного размера выше имени (StyleConfig.PlotParts.RebirthTag*).
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),

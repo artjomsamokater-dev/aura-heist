@@ -26,7 +26,8 @@ EconomyConfig.SquadBonus = {
 EconomyConfig.AutosaveSeconds = 90 -- как часто сохраняем профиль игрока
 
 -- Rebirth: когда куплены ВСЕ улучшения и есть Cost Aura — Aura и улучшения сбрасываются,
--- витрина и запас остаются, доход постаментов навсегда выше на IncomeBonusPercent за каждый rebirth.
+-- мемлинги не теряются (на стартовые постаменты — самые доходные, остальные в запас), доход постаментов
+-- навсегда выше на IncomeBonusPercent за каждый rebirth.
 -- Цена следующего: BaseCost × CostGrowth ^ (сколько rebirth уже сделано)
 EconomyConfig.Rebirth = {
 	BaseCost = 50000,
