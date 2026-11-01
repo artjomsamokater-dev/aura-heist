@@ -233,8 +233,22 @@ StyleConfig.Prompts = {
 -- Meme Zone: спокойный тёмный пол с узором; опасная часть — тёмная слива, граница — коралл
 StyleConfig.Zone = {
 	SafeFloor = Palette.MintDark,
-	DangerFloor = Palette.PlumDark,
-	DangerBorder = Palette.Coral, -- полоса на полу по границе опасной части
+	DangerFloor = Color3.fromRGB(44, 22, 40), -- темнее прежнего: почти чёрно-фиолетовый с красным
+	DangerStripes = { Palette.Coral, Palette.Ink }, -- лента и полосы на воротах: красный + чёрный = опасно
+	-- Туман и свет опасной части — локально (частицы и PointLight), общий Lighting не трогаем
+	DangerFog = {
+		Texture = "rbxasset://textures/particles/smoke_main.dds", -- встроенная текстура дыма Roblox
+		Color = Color3.fromRGB(150, 60, 120),
+		Rate = 1.2, -- мало: крупные частицы дороги на телефоне
+		Lifetime = NumberRange.new(5, 7),
+		Speed = NumberRange.new(0.3, 0.8),
+		Size = 14,
+		Transparency = 0.78, -- в начале жизни; к концу — совсем прозрачные
+	},
+	DangerLight = { Color = Color3.fromRGB(210, 60, 150), Brightness = 1.3, Range = 45 },
+	DangerTile = Palette.Plum, -- светящиеся плиты-узор: фиолетовые (не красные — это не ловушка)
+	DangerTileTransparency = 0.55,
+	Skull = { Bone = Palette.CreamLight, Holes = Palette.Ink },
 	Entry = Palette.CreamLight,
 	Path = Palette.MintLight, -- дорожка от входа к EXTRACT
 	PathTransparency = 0.15,

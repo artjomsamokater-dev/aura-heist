@@ -185,7 +185,32 @@ MapConfig.Zone = {
 		PathFromX = -90, -- дорожка от входа...
 		PathToX = 78, -- ...до края площадки EXTRACT
 		PathWidth = 6,
-		DangerBorderWidth = 1.2, -- полоса на полу по границе опасной части
+		DangerBorderWidth = 2.4, -- полосатая красно-чёрная лента на полу по границе опасной части
+		DangerStripeLength = 4, -- длина одной полосы ленты
+		-- Атмосфера опасной части (только там, не через общий Lighting): точки (X, Z) с туманом и
+		-- фиолетово-красным светом и светящиеся плиты на полу. В стороне от EXTRACT (X = 90, Z = 0)
+		DangerFogPoints = {
+			Vector2.new(35, -60),
+			Vector2.new(35, 60),
+			Vector2.new(65, -75),
+			Vector2.new(65, 75),
+			Vector2.new(98, -60),
+			Vector2.new(98, 60),
+		},
+		DangerFogAreaSize = 30, -- туман появляется в квадрате такого размера вокруг точки
+		DangerLightHeight = 14,
+		DangerTiles = { -- светящиеся фиолетовые плиты-узор (декор, не ловушка)
+			Vector2.new(24, -100),
+			Vector2.new(24, 100),
+			Vector2.new(48, -30),
+			Vector2.new(48, 30),
+			Vector2.new(80, -100),
+			Vector2.new(80, 100),
+			Vector2.new(106, -20),
+			Vector2.new(106, 20),
+		},
+		DangerTileSize = 7,
+		Skull = { Height = 3.4, Size = 3.2 }, -- череп под балкой ворот в опасную часть: ниже балки на Height
 		ExtractBeaconDiameter = 4,
 		ExtractBeaconHeight = 60,
 		SideBeaconHeight = 25, -- столб над второй (медленной) точкой — ниже главного

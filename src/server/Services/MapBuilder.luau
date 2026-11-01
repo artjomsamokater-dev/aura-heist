@@ -926,6 +926,117 @@ local function buildGate(name: string, x: number, color: Color3, parent: Instanc
 	decorate(beam, true)
 end
 
+-- Опасная часть: полосатая красно-чёрная лента по границе, полосы на воротах, череп под балкой,
+-- местный туман и фиолетово-красный свет (частицы и PointLight только над опасной частью), светящиеся плиты
+local function buildDangerArea(parent: Instance)
+	local zone = MapConfig.Zone
+	local decor = zone.Decor
+	local style = StyleConfig.Zone
+	local top = zone.Center.Y + zone.Size.Y / 2
+	local borderX = zone.Center.X + zone.DangerFromX
+	local stripes = style.DangerStripes
+
+	-- Лента на полу: чередуются красные и чёрные отрезки
+	local count = math.floor(zone.Size.Z / decor.DangerStripeLength)
+	for i = 1, count do
+		local z = zone.Center.Z - zone.Size.Z / 2 + (i - 0.5) * decor.DangerStripeLength
+		local stripe = makePart(
+			"DangerStripe" .. i,
+			Vector3.new(decor.DangerBorderWidth, 0.1, decor.DangerStripeLength),
+			CFrame.new(borderX, top + 0.05, z),
+			stripes[(i - 1) % #stripes + 1],
+			parent
+		)
+		stripe.CanCollide = false
+		decorate(stripe, false)
+	end
+
+	-- Полосы на столбах ворот: чёрные кольца поверх красных столбов
+	for _, side in ipairs({ -1, 1 }) do
+		for band = 1, 3 do
+			local ring = makeColumn(
+				"GateBand" .. side .. "_" .. band,
+				CFrame.new(borderX, top + band * decor.GateHeight / 4, zone.Center.Z + side * decor.GatePillarZ),
+				1.2,
+				decor.GatePillarDiameter + 0.15,
+				stripes[2],
+				parent
+			)
+			decorate(ring, false)
+		end
+	end
+
+	-- Череп под балкой, смотрит на безопасную часть (−X): «дальше опасно»
+	local skull = decor.Skull
+	local bone = style.Skull
+	local center = Vector3.new(borderX, top + decor.GateHeight - skull.Height, zone.Center.Z)
+	local facing = CFrame.lookAt(center, center - Vector3.xAxis) -- −Z черепа смотрит на запад
+	local s = skull.Size
+	local function piece(name: string, kind: string, size: Vector3, offset: Vector3, color: Color3)
+		local part = makeShape(name, kind, size, facing * CFrame.new(offset), color, parent)
+		part.CanCollide = false
+		decorate(part, false)
+	end
+	piece("SkullHead", "Ball", Vector3.one * s, Vector3.zero, bone.Bone)
+	piece("SkullJaw", "Block", Vector3.new(s * 0.62, s * 0.36, s * 0.55), Vector3.new(0, -s * 0.48, -s * 0.12), bone.Bone)
+	for _, x in ipairs({ -1, 1 }) do
+		piece("SkullEye" .. x, "Ball", Vector3.one * s * 0.3, Vector3.new(x * s * 0.2, s * 0.05, -s * 0.38), bone.Holes)
+	end
+	piece("SkullNose", "Ball", Vector3.one * s * 0.14, Vector3.new(0, -s * 0.15, -s * 0.45), bone.Holes)
+	for t = -1, 1 do
+		piece("SkullTooth" .. t, "Block", Vector3.new(s * 0.06, s * 0.18, s * 0.06), Vector3.new(t * s * 0.14, -s * 0.5, -s * 0.4), bone.Holes)
+	end
+
+	-- Туман и фиолетово-красный свет — только над опасной частью
+	local fog = style.DangerFog
+	local light = style.DangerLight
+	for i, point in ipairs(decor.DangerFogPoints) do
+		local spot = makePart(
+			"DangerFog" .. i,
+			Vector3.new(decor.DangerFogAreaSize, 1, decor.DangerFogAreaSize),
+			CFrame.new(zone.Center.X + point.X, top + 1, zone.Center.Z + point.Y),
+			fog.Color,
+			parent
+		)
+		spot.Transparency = 1
+		spot.CanCollide = false
+		decorate(spot, false)
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.Texture = fog.Texture
+		emitter.Color = ColorSequence.new(fog.Color)
+		emitter.Rate = fog.Rate
+		emitter.Lifetime = fog.Lifetime
+		emitter.Speed = fog.Speed
+		emitter.Size = NumberSequence.new(fog.Size)
+		emitter.Transparency = NumberSequence.new(fog.Transparency, 1)
+		emitter.Shape = Enum.ParticleEmitterShape.Box
+		emitter.EmissionDirection = Enum.NormalId.Top
+		emitter.RotSpeed = NumberRange.new(-10, 10)
+		emitter.LightInfluence = 0.3
+		emitter.Parent = spot
+
+		local lamp = makePart("DangerLight" .. i, Vector3.one, CFrame.new(zone.Center.X + point.X, top + decor.DangerLightHeight, zone.Center.Z + point.Y), light.Color, parent)
+		lamp.Transparency = 1
+		lamp.CanCollide = false
+		decorate(lamp, false)
+		addLight(lamp, light.Color, light.Brightness, light.Range)
+	end
+
+	-- Светящиеся фиолетовые плиты-узор на полу
+	for i, point in ipairs(decor.DangerTiles) do
+		local tile = makePart(
+			"DangerTile" .. i,
+			Vector3.new(decor.DangerTileSize, 0.1, decor.DangerTileSize),
+			CFrame.new(zone.Center.X + point.X, top + 0.05, zone.Center.Z + point.Y) * CFrame.Angles(0, math.rad(45), 0),
+			style.DangerTile,
+			parent
+		)
+		makeGlow(tile, style.DangerTileTransparency)
+		tile.CanCollide = false
+		decorate(tile, false)
+	end
+end
+
 local function buildLandmarks(parent: Instance)
 	local zone = MapConfig.Zone
 	local decor = zone.Decor
@@ -1012,15 +1123,7 @@ local function buildZone()
 	decorFolder.Name = "Decor"
 	decorFolder.Parent = folder
 
-	-- Полоса по границе опасной части
-	local border = makePart(
-		"DangerBorder",
-		Vector3.new(decor.DangerBorderWidth, 0.1, zone.Size.Z),
-		CFrame.new(zone.Center.X + zone.DangerFromX, top + 0.05, zone.Center.Z),
-		style.DangerBorder,
-		decorFolder
-	)
-	decorate(border, false)
+	buildDangerArea(decorFolder)
 
 	-- Дорожка от входа к EXTRACT
 	local pathLength = decor.PathToX - decor.PathFromX
