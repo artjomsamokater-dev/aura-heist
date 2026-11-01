@@ -24,6 +24,7 @@ require("./ShowcaseRule.spec")
 require("./FallRule.spec")
 require("./BountyRule.spec")
 require("./CollectionRule.spec")
+require("./RectRule.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

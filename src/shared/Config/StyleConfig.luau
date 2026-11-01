@@ -968,7 +968,11 @@ StyleConfig.CosmeticsLayout = {
 -- Окно магазина (client/Controllers/ShopController)
 -- Меню слева и его панели (задача 7.8): светлые панели, яркие пункты, закрытые — бледные с замком
 StyleConfig.MenuUi = {
-	ButtonSize = 64, -- круглая кнопка меню слева по центру высоты (на месте прежней кнопки SHOP)
+	-- Кнопка меню — в верхней полосе Roblox справа от системных кнопок: размер — доля высоты полосы
+	-- (системные кнопки 44 px в полосе 58 px), отступ от них TopbarGap. ButtonSize — если полоса скрыта
+	TopbarButtonShare = 44 / 58,
+	TopbarGap = 8,
+	ButtonSize = 44,
 	ButtonColor = Palette.Sun,
 	Panel = Palette.CreamLight,
 	Header = Palette.Mint,

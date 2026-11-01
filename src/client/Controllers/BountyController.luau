@@ -84,6 +84,7 @@ function BountyController.Start()
 	gui.IgnoreGuiInset = true
 	gui.Parent = playerGui
 	local holder = Instance.new("Frame")
+	holder.Name = "Panel" -- по этому имени раскладку проверяет client/Util/LayoutCheck
 	holder.BackgroundTransparency = 1
 	holder.AnchorPoint = Vector2.new(0.5, 0)
 	holder.Position = UDim2.new(0.5, 0, 0, GuiService:GetGuiInset().Y + HUD.TimerTop + HUD.TimerHeight + HUD.BountyGap)

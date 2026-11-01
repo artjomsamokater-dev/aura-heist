@@ -20,6 +20,7 @@ local FireworksController = require(script.Controllers.FireworksController)
 local BountyController = require(script.Controllers.BountyController)
 local CollectionController = require(script.Controllers.CollectionController)
 local MenuController = require(script.Controllers.MenuController)
+local LayoutCheck = require(script.Util.LayoutCheck)
 
 HudController.Start()
 HazardController.Start()
@@ -40,4 +41,20 @@ task.spawn(ShopController.Start) -- ждёт RemoteEvent магазина
 task.spawn(FireworksController.Start) -- свой бесконечный цикл салюта
 task.spawn(BountyController.Start) -- «Охота»: табличка у портала, плашка в зоне, метки
 task.spawn(CollectionController.Start) -- окно коллекции (строит плитки при первом открытии)
-task.spawn(MenuController.Start) -- меню слева: Base, Collection, Upgrades, Rebirth, Shop
+task.spawn(MenuController.Start) -- меню в верхней полосе: Base, Collection, Upgrades, Rebirth, Shop
+
+-- Проверка раскладки HUD: когда всё построено, и после каждого изменения размера окна (поворот телефона)
+local Workspace = game:GetService("Workspace")
+task.delay(3, LayoutCheck.Run)
+local pendingCheck = false
+if Workspace.CurrentCamera then
+	Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+		if not pendingCheck then
+			pendingCheck = true
+			task.delay(1, function()
+				pendingCheck = false
+				LayoutCheck.Run()
+			end)
+		end
+	end)
+end

@@ -1,11 +1,13 @@
 --!strict
--- MenuController: меню слева (задача 7.8). Круглая кнопка-иконка по центру высоты (на месте прежней кнопки SHOP,
--- не перекрывает HUD) открывает панель: Base, Collection, Upgrades, Rebirth, Shop; Quests и Daily rewards —
+-- MenuController: меню (задача 7.8). Круглая кнопка-иконка в верхней полосе Roblox — справа от системных
+-- кнопок (меню, чат, микрофон), того же размера и на той же линии; место считается от GuiService.TopbarInset
+-- (свободная часть полосы) и не пересекается с HUD, таймером рестока и плашкой BOUNTY. Открывает панель: Base, Collection, Upgrades, Rebirth, Shop; Quests и Daily rewards —
 -- закрытые пункты с замком «Soon». Base / Upgrades / Rebirth — панели только для чтения: покупки и Rebirth
 -- по-прежнему на кнопках участка (механика не менялась). Данные — атрибуты игрока от сервера
 -- (StudioIndex, PedestalMemelings, ReserveCount, BaseIncome / BaseStored / BaseStorageCap, UpgradeLevel_<id>,
 -- Rebirths, BankedAura); цены и значения клиент считает теми же общими формулами (UpgradeValues, RebirthMath).
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -280,26 +282,23 @@ function MenuController.Start()
 	gui.Name = "Menu"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	gui.ScreenInsets = Enum.ScreenInsets.None -- координаты от края экрана: так же считается TopbarInset
 	gui.DisplayOrder = 10
 	gui.Parent = playerGui
 
 	local toggle = Instance.new("TextButton")
 	toggle.Name = "MenuButton"
 	toggle.Text = ""
-	toggle.AnchorPoint = Vector2.new(0, 0.5)
-	toggle.Position = UDim2.new(0, HUD.Margin, 0.5, 0)
-	toggle.Size = UDim2.fromOffset(UI.ButtonSize, UI.ButtonSize)
 	toggle.BackgroundColor3 = UI.ButtonColor
 	toggle.Parent = gui
 	corner(toggle, UDim.new(1, 0))
-	stroke(toggle, HUD.Stroke, HUD.StrokeThickness)
-	Icons.Make("Menu", toggle, UI.ButtonSize * 0.6)
+	stroke(toggle, HUD.Stroke, 2)
+	local icon = Icons.Make("Menu", toggle)
+	icon.Size = UDim2.fromScale(0.62, 0.62)
 
 	local listHeight = #ITEMS * (UI.ItemHeight + 6) + 62
 	local list = Instance.new("Frame")
 	list.Name = "MenuPanel"
-	list.AnchorPoint = Vector2.new(0, 0.5)
-	list.Position = UDim2.new(0, HUD.Margin + UI.ButtonSize + 10, 0.5, 0)
 	list.Size = UDim2.fromOffset(UI.PanelWidth, listHeight)
 	list.BackgroundColor3 = UI.Panel
 	list.BorderSizePixel = 0
@@ -307,7 +306,29 @@ function MenuController.Start()
 	list.Parent = gui
 	corner(list, UDim.new(0, HUD.CornerRadius))
 	stroke(list, HUD.Stroke, HUD.StrokeThickness)
-	addFit(list, UI.PanelWidth + HUD.Margin + UI.ButtonSize + 10, listHeight)
+	addFit(list, UI.PanelWidth + HUD.Margin, listHeight + 80)
+
+	-- Кнопка — в свободной части верхней полосы Roblox (TopbarInset: справа от системных кнопок), размер —
+	-- как у системных кнопок (доля высоты полосы), по центру полосы по высоте, отступ слева TopbarGap.
+	-- Панель пунктов открывается под кнопкой. Полосы нет (скрыта) — верх экрана с отступом HUD.Margin
+	local function placeButton()
+		local inset = GuiService.TopbarInset
+		local height = if inset.Height > 0 then inset.Height else GuiService:GetGuiInset().Y
+		local size = math.floor(height * UI.TopbarButtonShare)
+		if height <= 0 then
+			height, size = UI.ButtonSize + HUD.Margin * 2, UI.ButtonSize
+		end
+		local left = if inset.Width > 0 then inset.Min.X else HUD.Margin
+		local top = inset.Min.Y + math.floor((height - size) / 2)
+		toggle.Size = UDim2.fromOffset(size, size)
+		toggle.Position = UDim2.fromOffset(left + UI.TopbarGap, top)
+		list.Position = UDim2.fromOffset(left + UI.TopbarGap, inset.Min.Y + height + UI.TopbarGap)
+	end
+	placeButton()
+	GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(placeButton)
+	if Workspace.CurrentCamera then
+		Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(placeButton)
+	end
 	local listLayout = Instance.new("UIListLayout")
 	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	listLayout.Padding = UDim.new(0, 6)

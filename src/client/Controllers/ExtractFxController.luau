@@ -117,6 +117,7 @@ local function buildBar(playerGui: Instance): (ScreenGui, Frame, TextLabel)
 	gui.Enabled = false
 	gui.Parent = playerGui
 	local holder = Instance.new("Frame")
+	holder.Name = "Panel" -- по этому имени раскладку проверяет client/Util/LayoutCheck
 	holder.AnchorPoint = Vector2.new(0.5, 0)
 	holder.Position = UDim2.new(0.5, 0, 0, GuiService:GetGuiInset().Y + style.BarTop)
 	holder.Size = UDim2.new(0.8, 0, 0, style.BarHeight)
