@@ -140,6 +140,44 @@ StyleConfig.Hub = {
 	Mug = { Body = Palette.PlumLight, Band = Palette.Mint, Coffee = Color3.fromHex("6B4226"), Steam = Palette.CreamLight },
 	Cheese = { Body = Color3.fromHex("FFE08A"), Holes = Color3.fromHex("E8B850") },
 	Donut = { Dough = Color3.fromHex("D9A866"), Frosting = Palette.PlumLight, Sprinkles = { Palette.Mint, Palette.CreamLight, Palette.PlumDark } },
+	Phone = { Body = Palette.PlumDark, Screen = Palette.CreamLight, Apps = { Palette.Mint, Palette.PlumLight, Palette.MintDark, Palette.Plum }, Button = Palette.PlumLight },
+	Banana = { Peel = Color3.fromHex("FFE9A8"), Tips = Color3.fromHex("8B5A2B") }, -- бледная, не «интерактивный» жёлтый
+	Duck = { Body = Color3.fromHex("FFF0B3"), Beak = Color3.fromHex("FFB070"), Eye = Palette.Ink }, -- пастельная уточка
+	Headphones = { Band = Palette.PlumDark, Cups = Palette.Mint, Cushions = Palette.CreamLight },
+	-- Декор площади (server/Visual/HubDecor): только фоновые цвета, без жёлтого и красного
+	Decor = {
+		TreeTrunk = Palette.CreamDark,
+		TreeCrown = Palette.Mint,
+		TreeCrownLight = Palette.MintLight,
+		Bush = Palette.MintDark,
+		BushLight = Palette.Mint,
+		BedSoil = Palette.PlumDark,
+		BedRim = Palette.PlumLight,
+		Petals = { Palette.PlumLight, Palette.CreamLight, Palette.Plum }, -- лепестки цветов по очереди
+		FlowerCenter = Palette.CreamLight,
+		Stem = Palette.MintDark,
+		LampPost = Palette.PlumDark,
+		LampGlow = Palette.CreamLight, -- светящийся шар фонаря (Neon)
+		Bench = Palette.CreamDark,
+		BenchLegs = Palette.PlumDark,
+		SignPost = Palette.PlumDark,
+		SignBoard = Palette.CreamLight,
+		SignText = Palette.Ink,
+		FountainRim = Palette.PlumLight,
+		FountainStone = Palette.CreamLight,
+		Water = Palette.Mint,
+		WaterTransparency = 0.25,
+		Splash = { -- брызги фонтана: мало частиц, без света
+			Color = Palette.MintLight,
+			Rate = 18,
+			Lifetime = NumberRange.new(0.9, 1.2),
+			Speed = NumberRange.new(8, 11),
+			Size = 0.5,
+			SpreadAngle = 18,
+			LightEmission = 0.3,
+		},
+		SplashGravity = 28,
+	},
 	SpawnForceFieldSeconds = 0, -- без силового поля при появлении
 }
 

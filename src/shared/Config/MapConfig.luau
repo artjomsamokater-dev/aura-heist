@@ -45,6 +45,53 @@ MapConfig.Hub = {
 		{ Kind = "Mug", Offset = polar(180, 36) },
 		{ Kind = "Cheese", Offset = polar(315, 37) },
 		{ Kind = "Donut", Offset = polar(180, 21) },
+		{ Kind = "Phone", Offset = polar(45, 38) },
+		{ Kind = "Banana", Offset = polar(135, 38) },
+		{ Kind = "Duck", Offset = polar(225, 37) },
+		{ Kind = "Headphones", Offset = polar(270, 37) },
+	},
+	-- Декор площади (server/Visual/HubDecor): места — угол (градусы) и расстояние от центра.
+	-- Деревья и кусты — у края между мостиками; клумбы и скамейки — вокруг фонтана в секторах 45°/135°/…
+	Decor = {
+		FountainRadius = 6.5,
+		Trees = {
+			{ Angle = 31, Radius = 45 },
+			{ Angle = 59, Radius = 45 },
+			{ Angle = 121, Radius = 45 },
+			{ Angle = 149, Radius = 45 },
+			{ Angle = 211, Radius = 45 },
+			{ Angle = 239, Radius = 45 },
+			{ Angle = 301, Radius = 45 },
+			{ Angle = 329, Radius = 45 },
+		},
+		Bushes = {
+			{ Angle = 166, Radius = 44 },
+			{ Angle = 194, Radius = 44 },
+			{ Angle = 256, Radius = 44 },
+			{ Angle = 284, Radius = 44 },
+			{ Angle = 346, Radius = 44 },
+			{ Angle = 14, Radius = 44 },
+		},
+		FlowerBeds = { -- клумбы: круглая грядка и крупные цветы
+			{ Angle = 45, Radius = 17 },
+			{ Angle = 135, Radius = 17 },
+			{ Angle = 225, Radius = 17 },
+			{ Angle = 315, Radius = 17 },
+		},
+		Benches = { -- лицом к фонтану
+			{ Angle = 45, Radius = 24 },
+			{ Angle = 135, Radius = 24 },
+			{ Angle = 225, Radius = 24 },
+			{ Angle = 315, Radius = 24 },
+		},
+		-- Фонари вдоль дорожек: на этом расстоянии от центра, сбоку от дорожки на Side студов
+		LampRadius = 32,
+		LampSide = 4.5,
+		PortalLamps = { Radius = 23, Side = 7 }, -- пара фонарей у дорожки к порталу (снаружи точки появления)
+		Signposts = { -- указатели со стрелками к порталу и витрине
+			{ Angle = 45, Radius = 12.5 },
+			{ Angle = 225, Radius = 12.5 },
+		},
 	},
 }
 

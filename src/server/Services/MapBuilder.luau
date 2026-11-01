@@ -22,6 +22,7 @@ local MemelingSize = require(ReplicatedStorage.Shared.Util.MemelingSize)
 local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
 local MemelingKit = require(ServerScriptService.Server.Visual.MemelingKit)
 local MemelingBuilders = require(ServerScriptService.Server.Visual.MemelingBuilders)
+local HubDecor = require(ServerScriptService.Server.Visual.HubDecor)
 
 local MapBuilder = {}
 
@@ -749,6 +750,8 @@ local function buildProps(parent: Instance)
 				)
 				add(sprinkle, false)
 			end
+		elseif not HubDecor.BuildGiant(prop.Kind, base, model) then
+			warn(string.format("[MapBuilder] Неизвестный предмет площади: %s", prop.Kind))
 		end
 		model.Parent = folder
 	end
@@ -763,6 +766,7 @@ local function buildHub()
 	buildPlazaFloor(folder)
 	buildBestHaul(folder)
 	buildProps(folder)
+	HubDecor.Build(folder)
 
 	-- Игрок появляется лицом к порталу: персонаж смотрит туда же, куда точка появления
 	local spawnPosition = MapConfig.Spawn.Position
