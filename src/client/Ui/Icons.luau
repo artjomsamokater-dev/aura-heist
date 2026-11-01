@@ -64,7 +64,7 @@ local function clock(holder: Frame)
 	minute.AnchorPoint = Vector2.new(0.5, 0.5)
 	local hour = frame(face, Palette.Ink, UDim2.fromScale(0.62, 0.5), UDim2.fromScale(0.26, 0.08), CIRCLE)
 	hour.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame(face, Palette.Coral, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.14, 0.14), CIRCLE)
+	frame(face, Palette.Plum, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.14, 0.14), CIRCLE)
 end
 
 local function squad(holder: Frame)

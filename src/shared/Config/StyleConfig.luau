@@ -2,9 +2,14 @@
 -- StyleConfig: ВЕСЬ внешний вид в одном месте — палитра, материалы, частицы, свет, шрифты,
 -- облик мемлингов, раскладка HUD. Позиции карты — в MapConfig, тексты — в TextConfig.
 --
--- Арт-правила (задача 1.8):
+-- Арт-правила (задача 1.8, смысл цветов — задача 6.1):
 -- • Палитра — 5 основных цветов (крем, коралл, солнце, мята, слива) и их оттенки: мир и интерфейс.
 --   Исключение (задача 5.4): у мемлингов и врага свои цвета персонажа — StyleConfig.Characters.
+-- • У цвета есть смысл, и он не нарушается:
+--   солнце (жёлтый) — ВСЁ, с чем можно что-то сделать: кнопки, рамка портала, SLOW EXIT, точки покупки и продажи;
+--   коралл (красный) + чернила (чёрные полосы) — ТОЛЬКО опасность: ловушки, граница и ворота опасной части;
+--   мята и светлая слива — фон мира (полы, ограды, декор); крем — мелкие нейтральные детали.
+--   Цвета редкостей (Memeling.Rarities) — только у редкости: кольцо, плашки объявлений, строки результата.
 -- • Один материал — SmoothPlastic; Neon только для того, что светится (портал, EXTRACT, лазер, искры).
 -- • Мягкие скруглённые формы: шары и цилиндры, острых коробок — минимум.
 -- • Все участки в одном стиле, отличаются только акцентным цветом.
@@ -26,30 +31,31 @@ local v3 = Vector3.new
 -- ── Палитра ────────────────────────────────────────────────────────────────
 -- Ключи палитры — это и имена цветов в облике мемлингов (поле Color у деталей)
 local Palette = {
-	-- 1. Крем — спокойный фон: полы участков, дорожки, белки глаз
+	-- 1. Крем — нейтральные мелочи: белки глаз, текст, ободки
 	Cream = rgb(250, 236, 210),
 	CreamLight = rgb(255, 249, 238),
 	CreamDark = rgb(214, 194, 166),
 	CreamGray = rgb(226, 218, 206), -- тело Common: светлое, но не белое
-	-- 2. Коралл — тёплый акцент: портал, лазер, враг
-	Coral = rgb(255, 122, 100),
-	CoralLight = rgb(255, 176, 156),
-	CoralDark = rgb(192, 80, 72),
-	-- 3. Солнце — Aura, золото, кнопки
-	Sun = rgb(255, 198, 88),
-	SunLight = rgb(255, 228, 156),
-	SunDark = rgb(220, 148, 56),
-	-- 4. Мята — природа, безопасность, EXTRACT
+	-- 2. Коралл — ТОЛЬКО опасность (вместе с чёрными полосами Ink)
+	Coral = rgb(235, 64, 64),
+	CoralLight = rgb(255, 128, 112),
+	CoralDark = rgb(150, 30, 40),
+	-- 3. Солнце — ТОЛЬКО интерактивное: кнопки, рамка портала, SLOW EXIT, покупка/продажа, Aura
+	Sun = rgb(255, 214, 64),
+	SunLight = rgb(255, 234, 150),
+	SunDark = rgb(222, 170, 30),
+	-- 4. Мята — фон мира: полы, безопасность, EXTRACT
 	Mint = rgb(98, 200, 172),
-	MintLight = rgb(166, 228, 204),
+	MintLight = rgb(176, 232, 210),
 	MintDark = rgb(48, 124, 118),
-	MintGrass = rgb(132, 194, 146), -- земля вокруг
-	-- 5. Слива — глубина: тени, обводки, опасная часть
+	MintGrass = rgb(132, 194, 146),
+	-- 5. Слива — фон мира: светло-фиолетовые полы участков, ограды, тени, обводки
 	Plum = rgb(134, 100, 176),
 	PlumLight = rgb(190, 166, 226),
+	PlumPale = rgb(228, 218, 246), -- самый светлый фиолетовый: полы участков
 	PlumDark = rgb(66, 48, 92),
-	-- Служебные оттенки сливы: почти чёрный для зрачков и текста
-	Ink = rgb(42, 32, 56),
+	-- Служебные оттенки сливы: почти чёрный для зрачков, текста и полос опасности
+	Ink = rgb(30, 22, 40),
 }
 
 export type Particles = {
@@ -105,22 +111,23 @@ StyleConfig.Label = {
 -- Земля вокруг (Baseplate)
 StyleConfig.Ground = Palette.MintGrass
 
--- Хаб: насыщенный тёплый пол; портал — самое яркое в хабе
+-- Хаб: светлый мятный пол (фон); портал — самое яркое в хабе
 StyleConfig.Hub = {
-	Floor = Palette.SunDark,
-	Spawn = Palette.SunLight,
+	Floor = Palette.MintLight,
+	Spawn = Palette.PlumLight,
 	SpawnForceFieldSeconds = 0, -- без силового поля при появлении
 }
 
--- Портал — круглая воронка цвета сливы: контраст с солнечно-оранжевым полом хаба.
+-- Портал — круглая воронка цвета сливы: контраст со светлым мятным полом хаба.
+-- Рамка жёлтая — в портал можно войти (жёлтый = интерактивное).
 -- Вокруг крутится кольцо из бусин, в середину затягивает вихрь искр, рядом слышен гул.
 -- Кольцо и вихрь вращает клиент (client/Controllers/PortalController) — по сети вращение не идёт
 StyleConfig.Portal = {
 	Color = Palette.Plum,
 	Core = Palette.PlumDark, -- тёмная середина воронки: кажется глубокой
 	Transparency = 0.15,
-	Frame = Palette.PlumDark, -- рамка портала
-	FrameCaps = Palette.Sun,
+	Frame = Palette.Sun, -- рамка портала
+	FrameCaps = Palette.SunDark,
 	BeaconTransparency = 0.55, -- столб света над порталом: видно от любого участка
 	Light = { Brightness = 3, Range = 26 },
 	Ring = {
@@ -160,36 +167,37 @@ StyleConfig.Portal = {
 	},
 }
 
--- Участки: один стиль (кремовый пол, арка, ограда, коврик), отличаются только акцентом
+-- Участки: один стиль (светло-фиолетовый пол, арка, ограда, коврик), отличаются только акцентом.
+-- Акценты — только фоновые цвета (мята и слива): жёлтый и красный на участке значат другое
 StyleConfig.Plot = {
-	Floor = Palette.Cream,
-	Rail = Palette.CreamDark, -- перекладины ограды
-	Rug = Palette.CreamLight, -- коврик от арки к постаментам (кайма — акцент)
+	Floor = Palette.PlumPale,
+	Rail = Palette.PlumLight, -- перекладины ограды
+	Rug = Palette.MintLight, -- коврик от арки к постаментам (кайма — акцент)
 	Accents = { -- по номеру участка: арка, табличка, столбики ограды, постаменты, кайма коврика
-		Palette.Coral,
-		Palette.Sun,
 		Palette.Mint,
 		Palette.Plum,
-		Palette.CoralDark,
-		Palette.SunDark,
 		Palette.MintDark,
-		Palette.PlumLight,
+		Palette.PlumDark,
+		Palette.Mint,
+		Palette.Plum,
+		Palette.MintDark,
+		Palette.PlumDark,
 	},
-	ArchCaps = Palette.Sun, -- шары на столбах арки
+	ArchCaps = Palette.MintLight, -- шары на столбах арки
 }
 
--- Детали участка
+-- Детали участка: всё, на что можно нажать (кнопки улучшений, запас, Rebirth), — жёлтое
 StyleConfig.PlotParts = {
-	UpgradeButton = Palette.Sun, -- кнопки улучшений: золотые диски
+	UpgradeButton = Palette.Sun, -- кнопки улучшений
 	ButtonRim = Palette.SunDark,
-	ReservePad = Palette.Mint, -- площадка запаса
-	ReserveRim = Palette.MintDark,
-	RebirthPad = Palette.Plum, -- площадка Rebirth: слива
-	RebirthRim = Palette.PlumLight,
+	ReservePad = Palette.Sun, -- площадка запаса (на ней кнопка Sell)
+	ReserveRim = Palette.MintDark, -- ободок отличает её от кнопок улучшений
+	RebirthPad = Palette.Sun, -- площадка Rebirth
+	RebirthRim = Palette.PlumDark,
 	RebirthTag = Palette.PlumLight, -- счётчик rebirth над именем игрока
 	RebirthTagHeight = 3.2, -- на сколько студов над головой (выше имени Roblox)
 	LockedPedestalTransparency = 0.75, -- некупленный постамент — полупрозрачный «призрак»
-	PedestalRim = Palette.CreamLight, -- светлый ободок сверху постамента
+	PedestalRim = Palette.Sun, -- жёлтый ободок: на постаменте есть кнопки Collect и Sell
 }
 
 -- Кнопки ProximityPrompt
@@ -206,13 +214,13 @@ StyleConfig.Zone = {
 	DangerFloor = Palette.PlumDark,
 	DangerBorder = Palette.Coral, -- полоса на полу по границе опасной части
 	Entry = Palette.CreamLight,
-	Path = Palette.SunLight, -- дорожка от входа к EXTRACT
+	Path = Palette.MintLight, -- дорожка от входа к EXTRACT
 	PathTransparency = 0.15,
 	EntryGate = Palette.Mint, -- ворота у входа
 	DangerGate = Palette.Coral, -- ворота в опасную часть
-	GateCaps = Palette.Sun,
+	GateCaps = Palette.MintLight,
 	MushroomStem = Palette.CreamLight, -- ориентиры безопасной части — грибы-великаны
-	MushroomCap = Palette.Coral,
+	MushroomCap = Palette.Plum,
 	MushroomDots = Palette.CreamLight,
 	Crystal = Palette.PlumLight, -- ориентиры опасной части — кристаллы
 	-- Узор плиткой поверх пола (Texture на верхней грани)
@@ -222,27 +230,28 @@ StyleConfig.Zone = {
 	FloorTextureColor = Palette.CreamLight,
 }
 
--- Ловушки: коралл = опасно, солнце = сейчас ударит
+-- Ловушки: только красный и чёрный. Тёмно-красная плита = опасно, ярко-красная = сейчас ударит
 StyleConfig.Hazards = {
 	Laser = Palette.Coral,
 	LaserBlinkTransparency = 0.7, -- мигание у конца дорожки перед проездом
 	LaserBlinkHz = 4, -- сколько раз в секунду мигает
 	Rail = Palette.CoralDark, -- рельсы дорожки лазера на полу
 	RailWidth = 0.6,
-	SlamIdle = Palette.Plum,
-	SlamWarn = Palette.Sun,
-	SlamStrike = Palette.CreamLight,
+	SlamIdle = Palette.CoralDark,
+	SlamWarn = Palette.Coral,
+	SlamStrike = Palette.CoralLight,
 	SlamPopHeight = 0.8, -- плита подпрыгивает при ударе
 	SlamPopSeconds = 0.15,
 }
 
--- Событие Giant Object: колесо сыра с дырками и глупой рожицей
+-- Событие Giant Object: колесо сыра с дырками и глупой рожицей.
+-- Сыр — цвет персонажа (как у мемлингов), но бока красные, а маршрут мигает красным: это опасность
 StyleConfig.Event = {
-	Cheese = Palette.Sun,
-	Holes = Palette.SunDark,
-	Rind = Palette.SunLight, -- светлые бока колеса
+	Cheese = Color3.fromHex("FFE08A"),
+	Holes = Color3.fromHex("E8B850"),
+	Rind = Palette.Coral, -- красные бока колеса: опасно
 	Face = Palette.Ink,
-	RouteHighlight = Palette.Sun, -- подсветка маршрута перед стартом
+	RouteHighlight = Palette.Coral, -- подсветка маршрута перед стартом
 	RouteBlinkHz = 3, -- сколько раз в секунду мигает подсветка
 	RouteBlinkTransparency = 0.6,
 	-- Сигнал перед стартом: встроенный звук Roblox (если его нет — просто тишина, подсветка остаётся)
@@ -404,16 +413,18 @@ StyleConfig.Memeling = {
 		MaxDistance = 60,
 	},
 
-	-- Редкость — кольцо-подставка: Common и Rare без света, Epic и Legendary — неон, свет и искры
+	-- Редкость — кольцо-подставка: Common и Rare без света, Epic и Legendary — неон, свет и искры.
+	-- Цвета редкостей не совпадают ни с одним цветом палитры (задача 6.1): синий, ярко-пурпурный и оранжевый
+	-- не спутать ни с жёлтым «интерактивным», ни со светло-фиолетовым фоном
 	Rarities = {
 		Common = { Color = hex("D6D6D0") },
-		Rare = { Color = hex("6FB2FF") },
+		Rare = { Color = hex("3D9BFF") },
 		Epic = {
-			Color = hex("B98CFF"),
+			Color = hex("D63CFF"),
 			Glow = true,
 			Light = { Brightness = 1.5, Range = 12 },
 			Particles = {
-				Color = hex("D9C2FF"),
+				Color = hex("EFA6FF"),
 				Rate = 2,
 				Lifetime = NumberRange.new(0.8, 1.2),
 				Speed = NumberRange.new(1, 2),
@@ -424,11 +435,11 @@ StyleConfig.Memeling = {
 		},
 		-- Legendary без пересвета: кольцо обычное, мягкое сияние даёт полупрозрачный ореол вокруг него
 		Legendary = {
-			Color = hex("FFC83D"),
+			Color = hex("FF8A1F"),
 			Halo = { Grow = 0.8, Transparency = 0.8 },
 			Light = { Brightness = 0.8, Range = 10 },
 			Particles = {
-				Color = hex("FFE7A0"),
+				Color = hex("FFC48A"),
 				Rate = 3,
 				Lifetime = NumberRange.new(0.8, 1.4),
 				Speed = NumberRange.new(1, 2),
@@ -529,8 +540,8 @@ StyleConfig.Hud = {
 	-- Кнопки действий справа над кнопкой прыжка (Drop, Extract)
 	ActionButtonSize = 92, -- диаметр, в пикселях
 	ActionButtonGap = 12,
-	ActionDrop = Palette.Coral,
-	ActionExtract = Palette.Mint,
+	ActionDrop = Palette.Sun, -- кнопки — жёлтые, как всё интерактивное
+	ActionExtract = Palette.Sun,
 	ActionTextSize = 20,
 	ExtractButtonRange = 45, -- кнопка Extract появляется, когда до площадки ближе, в студах
 
@@ -542,12 +553,12 @@ StyleConfig.Hud = {
 	ResultTitleSize = 36,
 	ResultRowSize = 22,
 	ResultRowHeight = 34,
-	ResultButton = Palette.Mint,
+	ResultButton = Palette.Sun,
 	ResultButtonHeight = 48,
 
 	-- Туториал: подсказка внизу по центру (между джойстиком и кнопкой прыжка) и стрелка к цели
 	TutorialPanel = Palette.CreamLight,
-	TutorialAccent = Palette.Coral, -- стрелка и номер шага
+	TutorialAccent = Palette.Sun, -- стрелка и номер шага: показывает, куда нажать/идти
 	TutorialWidth = 330,
 	TutorialHeight = 52,
 	TutorialTextSize = 24,
