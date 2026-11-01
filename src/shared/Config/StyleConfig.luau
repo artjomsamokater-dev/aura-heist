@@ -66,6 +66,8 @@ export type Particles = {
 export type RarityStyle = {
 	Color: Color3, -- цвет кольца; им же красятся плашки объявлений и строки экрана результата
 	Glow: boolean?, -- кольцо светится (Neon)
+	-- Мягкое сияние: вокруг кольца полупрозрачный неоновый ореол шире кольца на Grow студов
+	Halo: { Grow: number, Transparency: number }?,
 	Light: { Brightness: number, Range: number }?, -- свет вокруг мемлинга (только Epic и Legendary)
 	Particles: Particles?,
 }
@@ -255,7 +257,7 @@ StyleConfig.Characters = {
 		Blade = hex("E4E8EF"),
 		Guard = hex("FFC83D"),
 	},
-	Grumbloaf = { Body = hex("C98A4B"), Cuts = hex("F0C890"), Legs = hex("9C6331") },
+	Grumbloaf = { Body = hex("C98A4B"), Cuts = hex("F0C890"), Legs = hex("9C6331"), Sticker = hex("FF6F8E") },
 	NoodleNinja = {
 		Cup = hex("E84A4A"),
 		Rim = hex("FF8C8C"),
@@ -283,7 +285,7 @@ StyleConfig.Characters = {
 		Handle = hex("8B5A2B"),
 		Head = hex("B0B6C4"),
 		Glasses = hex("2A1638"),
-		Mustache = hex("5A3A22"),
+		Mustache = hex("3B2414"), -- темнее, чтобы усы читались на сером бойке
 		Cap = hex("2A1638"),
 		Tassel = hex("FFC83D"),
 		Bump = hex("FF9E9E"),
@@ -304,6 +306,9 @@ StyleConfig.Characters = {
 -- Ставит контур клиент (client/Controllers/OutlineController) всем с тегом Tag.
 StyleConfig.Outline = {
 	Tag = "Outlined", -- тег CollectionService: мемлинги и враги
+	-- Видимые детали мемлинга лежат в Model с этим именем внутри ядра: Highlight ставится на неё.
+	-- Само ядро невидимое (Transparency = 1), а Highlight на прозрачной детали ничего не рисует
+	Figure = "Figure",
 	Color = hex("2A1638"),
 	MaxCount = 25, -- сколько контуров сразу, не больше
 	Distance = 70, -- дальше этого контура нет (кроме своих: в руках и на своих постаментах)
@@ -315,16 +320,17 @@ StyleConfig.Memeling = {
 	-- По нему ставим мемлинга на пол и на постамент и считаем высоту подписей.
 	Size = v3(6, 6, 6),
 	LabelHeight = 5.5, -- подпись с именем — на столько выше центра (над шляпами и хохолками)
+	-- Размер по редкости: весь мемлинг (габарит, детали, подписи, дальность подбора) × множитель.
+	-- Низ остаётся на полу — мемлинг растёт вверх
+	RarityScale = { Common = 1, Rare = 1.1, Epic = 1.2, Legendary = 1.4 } :: { [string]: number },
 	-- В руках мемлинг уменьшается (весь, с деталями), подпись над ним скрыта — не закрывает обзор
 	CarryScale = 0.6,
 	-- Где мемлинги висят, когда их несут: относительно HumanoidRootPart (-Z = перед персонажем).
-	-- Первый — перед грудью, остальные — стопкой на голове. Числа — под уменьшенный размер (тело ≈ 3,6)
-	CarrySlotOffsets = {
-		v3(0, 0.5, -3.4), -- в руках
-		v3(0, 4.4, 0), -- на голове
-		v3(0, 8.2, 0), -- на голове, сверху на втором
-	},
-	CarryStackStep = v3(0, 3.8, 0), -- если слотов больше, чем мест выше, — ещё выше по стопке
+	-- Первый — перед грудью (крупный — чуть дальше вперёд), остальные — стопкой на голове:
+	-- низ стопки на высоте CarryHeadTop, между мемлингами зазор CarryStackGap. Высота каждого — по его размеру
+	CarryFront = v3(0, 0.5, -3.4), -- центр первого при обычном размере (тело в руках ≈ 3,6)
+	CarryHeadTop = 2.6,
+	CarryStackGap = 0.2,
 
 	-- Невидимое ядро: к нему приварены все детали, на нём кнопка подбора и подпись
 	CoreSize = v3(4, 5.6, 4),
@@ -375,18 +381,19 @@ StyleConfig.Memeling = {
 				LightEmission = 1,
 			},
 		},
+		-- Legendary без пересвета: кольцо обычное, мягкое сияние даёт полупрозрачный ореол вокруг него
 		Legendary = {
 			Color = hex("FFC83D"),
-			Glow = true,
-			Light = { Brightness = 2.5, Range = 16 },
+			Halo = { Grow = 0.8, Transparency = 0.8 },
+			Light = { Brightness = 0.8, Range = 10 },
 			Particles = {
 				Color = hex("FFE7A0"),
-				Rate = 5,
+				Rate = 3,
 				Lifetime = NumberRange.new(0.8, 1.4),
-				Speed = NumberRange.new(1, 2.5),
-				Size = 1,
+				Speed = NumberRange.new(1, 2),
+				Size = 0.7,
 				SpreadAngle = 180,
-				LightEmission = 1,
+				LightEmission = 0.4,
 			},
 		},
 	} :: { [string]: RarityStyle },

@@ -21,7 +21,7 @@ local DebugCommands = {}
 
 local MAX_AURA = 10_000_000 -- больше за раз не даём даже в Studio, чтобы не сломать подписи опечаткой
 local LINEUP_NAME = "DebugMemelingLineup"
-local LINEUP_STEP = 7 -- расстояние между мемлингами в ряду, в студах
+local LINEUP_STEP = 9 -- расстояние между мемлингами в ряду, в студах (Legendary ×1,4 — шире 7)
 local LINEUP_DISTANCE = 14 -- на сколько студов перед игроком ряд
 
 -- Все Id мемлингов: от Common к Legendary, внутри редкости — по алфавиту
@@ -74,7 +74,7 @@ local function toggleLineup(player: Player)
 		local core = MapBuilder.MakeMemeling("Lineup" .. i, id, CFrame.lookAt(position, position - forward), folder)
 		MapBuilder.AddLabel(core, TextConfig.MemelingNames[id] or id, {
 			MaxDistance = StyleConfig.Label.MaxDistance,
-			Height = StyleConfig.Memeling.LabelHeight,
+			Height = MapBuilder.GetMemelingLabelHeight(id),
 			Scale = StyleConfig.Label.MemelingScale,
 		})
 	end

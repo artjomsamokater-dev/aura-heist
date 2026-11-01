@@ -15,6 +15,7 @@ require("./SquadRule.spec")
 require("./GiantRoute.spec")
 require("./TutorialSteps.spec")
 require("./RebirthMath.spec")
+require("./MemelingSize.spec")
 
 if not TestKit.summary() then
 	error("есть проваленные тесты")

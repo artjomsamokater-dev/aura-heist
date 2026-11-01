@@ -18,6 +18,7 @@ local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local PlotLayout = require(ReplicatedStorage.Shared.Util.PlotLayout)
+local MemelingSize = require(ReplicatedStorage.Shared.Util.MemelingSize)
 local UpgradeConfig = require(ReplicatedStorage.Shared.Config.UpgradeConfig)
 local MemelingKit = require(ServerScriptService.Server.Visual.MemelingKit)
 local MemelingBuilders = require(ServerScriptService.Server.Visual.MemelingBuilders)
@@ -233,6 +234,7 @@ local function fromCustomModel(name: string, memelingId: string, cframe: CFrame,
 	end
 	core.Name = name
 	core.Anchored = true
+	local figure = MemelingKit.MakeFigure(core)
 	for _, part in ipairs(model:GetDescendants()) do -- список берём до переноса: детали могут лежать внутри ядра
 		if part:IsA("BasePart") and part ~= core then
 			part.Anchored = false
@@ -244,7 +246,7 @@ local function fromCustomModel(name: string, memelingId: string, cframe: CFrame,
 			weld.Part0 = core
 			weld.Part1 = part
 			weld.Parent = part
-			part.Parent = core
+			part.Parent = figure
 		end
 	end
 	core.Parent = parent
@@ -252,9 +254,54 @@ local function fromCustomModel(name: string, memelingId: string, cframe: CFrame,
 	return core
 end
 
+-- Множитель размера мемлинга по его редкости (StyleConfig.Memeling.RarityScale)
+local function getMemelingScale(memelingId: string): number
+	local memeling = MemelingConfig.Memelings[memelingId]
+	return MemelingSize.Scale(StyleConfig.Memeling.RarityScale, if memeling then memeling.Rarity else nil)
+end
+
+-- Уменьшает (или увеличивает) мемлинга целиком: ядро и все детали, с сохранением формы.
+-- lift — на сколько студов поднять центр (вдоль «верха» ядра), чтобы низ остался на месте.
+-- Детали приварены к ядру — сварки пересоздаём после изменения размеров
+local function scaleMemeling(core: BasePart, factor: number, lift: number?)
+	local oldCFrame = core.CFrame
+	local newCFrame = oldCFrame * CFrame.new(0, lift or 0, 0)
+	local relative: { [BasePart]: CFrame } = {}
+	for _, part in ipairs(core:GetDescendants()) do
+		if part:IsA("BasePart") then
+			relative[part] = oldCFrame:ToObjectSpace(part.CFrame)
+			for _, weld in ipairs(part:GetChildren()) do
+				if weld:IsA("WeldConstraint") then
+					weld:Destroy()
+				end
+			end
+		end
+	end
+	core.Size *= factor
+	core.CFrame = newCFrame
+	for part, offset in pairs(relative) do
+		part.Size *= factor
+		part.CFrame = newCFrame * CFrame.new(offset.Position * factor) * offset.Rotation
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = core
+		weld.Part1 = part
+		weld.Parent = part
+	end
+	for _, child in ipairs(core:GetDescendants()) do
+		if child:IsA("PointLight") then
+			child.Range *= factor
+		elseif child:IsA("BillboardGui") then
+			child.StudsOffsetWorldSpace *= factor -- «Z z z» над головой остаётся над головой
+			child.StudsOffset *= factor
+		end
+	end
+end
+
 -- Мемлинг-персонаж: своя модель из ServerStorage.MemelingModels или модель из кода (MemelingBuilders),
 -- под ним кольцо цвета редкости. Возвращает ядро (Part) — с ним работают подбор, подписи и переноска;
--- детали к нему приварены. Мемлинг смотрит лицом в сторону −Z переданного cframe.
+-- детали к нему приварены и лежат в модели Figure внутри ядра (на неё клиент вешает контур).
+-- cframe — центр мемлинга обычного размера; крупная редкость растёт вверх, низ остаётся на месте.
+-- Мемлинг смотрит лицом в сторону −Z переданного cframe.
 local function makeMemeling(name: string, memelingId: string, cframe: CFrame, parent: Instance): Part
 	local memeling = MemelingConfig.Memelings[memelingId]
 	local core = fromCustomModel(name, memelingId, cframe, parent)
@@ -263,13 +310,19 @@ local function makeMemeling(name: string, memelingId: string, cframe: CFrame, pa
 		local plain = makePart(name, StyleConfig.Memeling.CoreSize, cframe, StyleConfig.Outline.Color, parent)
 		plain.Transparency = 1
 		plain.CastShadow = false
-		if not MemelingBuilders.Build(memelingId, MemelingKit.new(plain, cframe)) then
+		local figure = MemelingKit.MakeFigure(plain)
+		if not MemelingBuilders.Build(memelingId, MemelingKit.new(plain, cframe, figure)) then
 			warn(string.format("[MapBuilder] Нет строителя для мемлинга %s", memelingId))
 		end
 		core = plain
 	end
 	local ready = core :: Part
-	MemelingKit.RarityRing(MemelingKit.new(ready, cframe), if memeling then memeling.Rarity else "Common")
+	local figure = ready:FindFirstChild(StyleConfig.Outline.Figure) or ready
+	MemelingKit.RarityRing(MemelingKit.new(ready, cframe, figure), if memeling then memeling.Rarity else "Common")
+	local scale = getMemelingScale(memelingId)
+	if scale ~= 1 then
+		scaleMemeling(ready, scale, MemelingSize.Lift(StyleConfig.Memeling.Size.Y, scale))
+	end
 	MemelingKit.TagOutline(ready)
 	return ready
 end
@@ -854,34 +907,17 @@ function MapBuilder.SetLookTransparency(part: Instance, transparency: number)
 	end
 end
 
--- Уменьшает (или увеличивает) мемлинга целиком: ядро и все детали, с сохранением формы.
--- Детали приварены к ядру — сварки пересоздаём после изменения размеров
-function MapBuilder.ScaleMemeling(core: BasePart, factor: number)
-	local coreCFrame = core.CFrame
-	for _, child in ipairs(core:GetChildren()) do
-		if child:IsA("BasePart") then
-			local relative = coreCFrame:ToObjectSpace(child.CFrame)
-			local weld = child:FindFirstChildOfClass("WeldConstraint")
-			if weld then
-				weld:Destroy()
-			end
-			child.Size *= factor
-			child.CFrame = coreCFrame * CFrame.new(relative.Position * factor) * relative.Rotation
-			local newWeld = Instance.new("WeldConstraint")
-			newWeld.Part0 = core
-			newWeld.Part1 = child
-			newWeld.Parent = child
-		elseif child:IsA("PointLight") then
-			child.Range *= factor
-		end
-	end
-	core.Size *= factor
+-- Высота подписи с именем над центром мемлинга — с учётом размера его редкости
+function MapBuilder.GetMemelingLabelHeight(memelingId: string): number
+	return StyleConfig.Memeling.LabelHeight * getMemelingScale(memelingId)
 end
 
 -- Те же помощники для других сервисов
 MapBuilder.MakePart = makePart
 MapBuilder.AddLabel = addLabel
 MapBuilder.MakeMemeling = makeMemeling
+MapBuilder.ScaleMemeling = scaleMemeling
+MapBuilder.GetMemelingScale = getMemelingScale
 
 -- Меняет текст подписи, созданной addLabel или addSignText (у таблички их две — с обеих сторон)
 function MapBuilder.SetLabelText(part: Instance?, text: string)

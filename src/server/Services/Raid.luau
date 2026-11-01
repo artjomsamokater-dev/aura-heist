@@ -12,6 +12,7 @@ local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
 local CarrySpeed = require(ReplicatedStorage.Shared.Util.CarrySpeed)
+local MemelingSize = require(ReplicatedStorage.Shared.Util.MemelingSize)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SecurityConfig = require(ReplicatedStorage.Shared.Config.SecurityConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
@@ -119,20 +120,32 @@ local function loseCarried(player: Player, reason: string)
 	print(string.format("[Raid] %s потерял мемлингов: %d (%s)", player.Name, #list, reason))
 end
 
--- Где висит мемлинг номер slotIndex: места из StyleConfig, дальше — выше по стопке
-local function getCarryOffset(slotIndex: number): Vector3
-	local offsets = StyleConfig.Memeling.CarrySlotOffsets
-	local offset = offsets[slotIndex]
-	if offset then
-		return offset
+-- Высота мемлинга в руках: габарит × уменьшение в руках × размер его редкости
+local function getCarriedHeight(instanceId: string): number
+	local record = Spawn.Get(instanceId)
+	local scale = if record then MapBuilder.GetMemelingScale(record.MemelingId) else 1
+	return StyleConfig.Memeling.Size.Y * StyleConfig.Memeling.CarryScale * scale
+end
+
+-- Где висит мемлинг номер slotIndex из списка в руках: первый — перед грудью (крупный — дальше вперёд,
+-- чтобы не влезал в персонажа), остальные — стопкой на голове, каждый на верхушке предыдущего
+local function getCarryOffset(list: { string }, slotIndex: number): Vector3
+	local cfg = StyleConfig.Memeling
+	if slotIndex == 1 then
+		local extra = getCarriedHeight(list[1]) - cfg.Size.Z * cfg.CarryScale
+		return cfg.CarryFront - Vector3.new(0, 0, math.max(0, extra) / 2)
 	end
-	return offsets[#offsets] + StyleConfig.Memeling.CarryStackStep * (slotIndex - #offsets)
+	local heights: { number } = {}
+	for i = 2, slotIndex do
+		table.insert(heights, getCarriedHeight(list[i]))
+	end
+	return Vector3.new(0, MemelingSize.StackCenterY(heights, #heights, cfg.CarryHeadTop, cfg.CarryStackGap), 0)
 end
 
 -- Мемлинг едет вместе с персонажем: приварен к HumanoidRootPart и лежит внутри модели персонажа.
 -- Развёрнут на 180°, чтобы глазами смотрел на игрока (камера обычно сзади).
-local function attachToCharacter(part: Part, character: Model, root: BasePart, slotIndex: number)
-	local offset = getCarryOffset(slotIndex)
+local function attachToCharacter(part: Part, character: Model, root: BasePart, list: { string }, slotIndex: number)
+	local offset = getCarryOffset(list, slotIndex)
 	-- В руках мемлинг меньше и без подписи — не закрывает обзор (пока он ещё закреплён — уменьшаем)
 	MapBuilder.ScaleMemeling(part, StyleConfig.Memeling.CarryScale)
 	local label = part:FindFirstChild("Label")
@@ -173,7 +186,12 @@ local function tryPickup(player: Player, instanceId: string)
 	if record == nil or record.State ~= Spawn.State.InZone then
 		return
 	end
-	if not RemoteGuard.IsNear(root, record.Part.Position, ZoneConfig.PickupDistance) then
+	local reach = MemelingSize.Reach(
+		ZoneConfig.PickupDistance,
+		StyleConfig.Memeling.Size.X,
+		MapBuilder.GetMemelingScale(record.MemelingId)
+	)
+	if not RemoteGuard.IsNear(root, record.Part.Position, reach) then
 		return
 	end
 
@@ -188,7 +206,7 @@ local function tryPickup(player: Player, instanceId: string)
 		return
 	end
 	table.insert(list, instanceId)
-	attachToCharacter(record.Part, character, root, #list)
+	attachToCharacter(record.Part, character, root, list, #list)
 	player:SetAttribute("CarriedCount", #list)
 	updateCarrySpeed(player)
 	print(string.format("[Raid] %s подобрал %s (%s)", player.Name, record.MemelingId, instanceId))

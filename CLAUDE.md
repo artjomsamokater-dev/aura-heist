@@ -236,6 +236,16 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   Контур #2A1638 ставит клиент (client/Controllers/OutlineController) по тегу Outlined: в руках → свои постаменты
   (атрибут OwnerUserId) → ближние; не больше StyleConfig.Outline.MaxCount (25, лимит Roblox 31).
   Отладка в Studio: /memelings — ряд из всех 8 перед игроком (повтор убирает).
+- 5.4b (правки моделей, механика не менялась): контура не было, потому что Highlight висел на невидимом ядре.
+  Теперь видимые детали лежат в Model StyleConfig.Outline.Figure («Figure») внутри ядра, Highlight — на ней
+  (Adornee = Model, Occluded, без заливки); клиент пишет в Output «[Outline] Активных контуров: N».
+  Размер по редкости — StyleConfig.Memeling.RarityScale (Common 1, Rare 1,1, Epic 1,2, Legendary 1,4): мемлинг
+  растёт вверх (низ на месте), подписи выше, дальность подбора — от края (shared/Util/MemelingSize + тест),
+  в руках стопка считается по реальной высоте (CarryFront / CarryHeadTop / CarryStackGap вместо CarrySlotOffsets).
+  Legendary без пересвета: кольцо не неон, мягкий полупрозрачный ореол (Halo), свет слабее. Переделаны
+  Snoozeasaurus (голова с мордой, дуги-глаза, корона, шипы по спине, хвост), Bonk (короткий стальной боёк,
+  крупное лицо, усы), Pickle (две руки вверх, очки-звёзды, крупный диско-шар на нитке над рукой), Grumbloaf
+  (глаза по центру). Сзади у каждого деталь: хвост, плащ, наклейка, пупырышки, обмотка, шипы.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),

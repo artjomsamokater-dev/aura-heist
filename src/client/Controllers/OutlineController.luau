@@ -5,6 +5,7 @@
 --   2) мемлинги на постаментах его участка (атрибут OwnerUserId);
 --   3) остальные с тегом StyleConfig.Outline.Tag — ближние, не дальше Outline.Distance.
 -- Всего не больше Outline.MaxCount. Highlight создаётся только на этом клиенте, сервер о нём не знает.
+-- Тег стоит на невидимом ядре мемлинга; Highlight вешается на модель Figure с видимыми деталями (задача 5.4b).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -35,16 +36,43 @@ local function getPosition(target: Instance): Vector3?
 	return nil
 end
 
-local function makeOutline(target: Instance): Highlight
+-- На что вешать контур: у мемлинга — модель Figure внутри невидимого ядра (Highlight на прозрачной
+-- детали ничего не рисует), у врага — сама модель. Без модели контура нет
+local function getAdornee(target: Instance): Model?
+	if target:IsA("Model") then
+		return target
+	end
+	local figure = target:FindFirstChild(style.Figure)
+	if figure and figure:IsA("Model") then
+		return figure
+	end
+	return nil
+end
+
+local function makeOutline(adornee: Model): Highlight
 	local outline = Instance.new("Highlight")
 	outline.Name = "Outline"
 	outline.FillTransparency = 1 -- только контур, без заливки
 	outline.OutlineColor = style.Color
 	outline.OutlineTransparency = 0
 	outline.DepthMode = Enum.HighlightDepthMode.Occluded -- сквозь стены не виден
-	outline.Adornee = target
-	outline.Parent = target
+	outline.Adornee = adornee
+	outline.Parent = adornee
 	return outline
+end
+
+local lastReported = -1
+
+-- Сколько контуров активно — в Output, только когда число изменилось
+local function report()
+	local count = 0
+	for _ in pairs(outlines) do
+		count += 1
+	end
+	if count ~= lastReported then
+		lastReported = count
+		print(string.format("[Outline] Активных контуров: %d (не больше %d)", count, style.MaxCount))
+	end
 end
 
 local function refresh()
@@ -55,7 +83,7 @@ local function refresh()
 
 	for _, target in ipairs(CollectionService:GetTagged(style.Tag)) do
 		local position = getPosition(target)
-		if position and target:IsDescendantOf(Workspace) then
+		if position and target:IsDescendantOf(Workspace) and getAdornee(target) then
 			local distance = if eye then (position - eye).Magnitude else 0
 			local tier = TIER_NEAR
 			if character and target:IsDescendantOf(character) then
@@ -82,16 +110,18 @@ local function refresh()
 	end
 	-- Сначала убираем лишние, потом добавляем новые — чтобы не превысить лимит Roblox даже на миг
 	for target, outline in pairs(outlines) do
-		if not wanted[target] or outline.Parent ~= target then
+		if not wanted[target] or outline.Parent == nil or outline.Parent ~= getAdornee(target) then
 			outline:Destroy()
 			outlines[target] = nil
 		end
 	end
 	for target in pairs(wanted) do
-		if not outlines[target] then
-			outlines[target] = makeOutline(target)
+		local adornee = getAdornee(target)
+		if not outlines[target] and adornee then
+			outlines[target] = makeOutline(adornee)
 		end
 	end
+	report()
 end
 
 function OutlineController.Start()

@@ -20,6 +20,7 @@ local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local RarityRoll = require(ReplicatedStorage.Shared.Util.RarityRoll)
 local SpawnPointBook = require(ReplicatedStorage.Shared.Util.SpawnPointBook)
+local MemelingSize = require(ReplicatedStorage.Shared.Util.MemelingSize)
 local MapBuilder = require(script.Parent.MapBuilder)
 local Announcer = require(script.Parent.Announcer)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
@@ -81,12 +82,14 @@ local function rollMemeling(floorPosition: Vector3): (string?, string, string?)
 	return ids[random:NextInteger(1, #ids)], part, rarity
 end
 
-local function addPickupPrompt(part: Part, instanceId: string, displayName: string)
+local function addPickupPrompt(part: Part, instanceId: string, memelingId: string, displayName: string)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "PickupPrompt"
 	prompt.ActionText = TextConfig.PickupAction
 	prompt.ObjectText = displayName
-	prompt.MaxActivationDistance = ZoneConfig.PickupDistance
+	-- Крупного мемлинга можно подобрать с того же расстояния до его края (центр дальше)
+	prompt.MaxActivationDistance =
+		MemelingSize.Reach(ZoneConfig.PickupDistance, StyleConfig.Memeling.Size.X, MapBuilder.GetMemelingScale(memelingId))
 	prompt.HoldDuration = 0
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = part
@@ -122,11 +125,11 @@ local function spawnAt(memelingId: string, spawnIndex: number): Record
 		displayName,
 		{
 			MaxDistance = StyleConfig.Label.MemelingMaxDistance,
-			Height = StyleConfig.Memeling.LabelHeight,
+			Height = MapBuilder.GetMemelingLabelHeight(memelingId),
 			Scale = StyleConfig.Label.MemelingScale,
 		}
 	)
-	addPickupPrompt(part, instanceId, displayName)
+	addPickupPrompt(part, instanceId, memelingId, displayName)
 
 	local record: Record = {
 		InstanceId = instanceId,

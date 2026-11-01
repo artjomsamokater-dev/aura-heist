@@ -4,7 +4,8 @@
 -- Цвета — StyleConfig.Characters, общие размеры и цвета лица — StyleConfig.Memeling.
 --
 -- Места — от центра мемлинга (габарит 6 × 6 × 6): низ −3, кольцо редкости до −2,6, на нём стоят ноги.
--- −Z — лицо, +X — слева для зрителя (блик), −X — справа (тень). Деталей — не больше ~25 на мемлинга.
+-- −Z — лицо, +X — слева для зрителя (блик), −X — справа (тень). Деталей — не больше ~32 на мемлинга.
+-- Сзади и сбоку у каждого есть своя деталь (хвост, плащ, наклейка, пупырышки, обмотка, шипы), чтобы не был гладким.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -26,12 +27,21 @@ local front = MemelingKit.Front
 local frontRound = MemelingKit.FrontRound
 local UP = MemelingKit.UP
 local ALONG_Z = MemelingKit.ALONG_Z
-local TRIANGLE_UP = MemelingKit.TRIANGLE_UP
 local TRIANGLE_DOWN = MemelingKit.TRIANGLE_DOWN
 
 local Colors = StyleConfig.Characters
 
 local Builders: { [string]: (kit: Kit) -> () } = {}
+
+-- Глубина задней поверхности овала (z > 0) в точке (x, y): туда сажаем детали спины
+local function back(center: Vector3, size: Vector3, x: number, y: number): number
+	return 2 * center.Z - front(center, size, x, y)
+end
+
+-- Шип-ромб: кубик, повёрнутый на 45° вокруг X, наполовину утоплен в тело — сбоку виден треугольник
+local function spike(kit: Kit, size: number, position: Vector3, color: Color3, turnY: number?)
+	add(kit, "Block", v3(size * 0.4, size, size), position, color, v3(45, turnY or 0, 0))
+end
 
 -- 1. Toast Paw (Common): ломоть тоста — корочка вокруг мякиша, кривые глаза, открытый рот с языком,
 -- две кошачьи лапки с розовыми подушечками
@@ -59,6 +69,10 @@ function Builders.ToastPaw(kit: Kit)
 		add(kit, "Oval", v3(1.3, 0.9, 1.4), v3(x, -2.15, -0.75), c.Crumb)
 		add(kit, "Ball", v3(0.42, 0.42, 0.42), v3(x, -2.15, -1.47), c.Pads)
 	end
+
+	-- Сзади — кошачий хвост загибается вверх справа (виден сбоку и чуть-чуть спереди)
+	add(kit, "Oval", v3(0.55, 2.2, 0.55), v3(-1.7, -1.1, 1.05), c.Crust, v3(0, 0, 35))
+	add(kit, "Ball", v3(0.7, 0.7, 0.7), v3(-2.3, 0, 1.05), c.Crumb)
 end
 
 -- 2. Sir Wobbleton (Common): желейное яйцо-пудинг в маленьком серебряном шлеме с плюмажем,
@@ -91,6 +105,9 @@ function Builders.SirWobbleton(kit: Kit)
 	for _, x in ipairs({ 0.85, -0.85 }) do
 		add(kit, "Oval", v3(1.1, 0.6, 1.4), v3(x, -2.3, -0.3), c.Feet)
 	end
+
+	-- Сзади — маленький красный плащ рыцаря
+	add(kit, "Oval", v3(3, 3, 1.6), v3(0, -0.5, back(center, size, 0, -0.5) - 0.55), c.Plume) -- выпуклый, облегает спину
 end
 
 -- 3. Grumbloaf (Common): широкий батон с насечками сверху, сердитые брови, маленькие ножки
@@ -106,19 +123,24 @@ function Builders.Grumbloaf(kit: Kit)
 	add(kit, "Oval", v3(0.55, 0.35, 2.2), v3(0, 1.45, 0), c.Cuts, v3(0, 30, 0))
 	add(kit, "Oval", v3(0.55, 0.35, 2.2), v3(-1.5, 1.17, 0), c.Cuts, v3(0, 30, 0))
 
-	-- Сердитое лицо: брови к переносице, рот чёрточкой
-	eye(kit, v3(1, 0.05, front(center, size, 1, 0.05)), 1.05, v2(0, -0.2))
-	eye(kit, v3(-1, 0, front(center, size, -1, 0)), 0.8, v2(0, -0.2))
+	-- Сердитое лицо по центру морды: глаза близко к середине и наполовину утоплены в тело,
+	-- брови к переносице, рот чёрточкой
+	for _, e in ipairs({ { X = 0.75, Y = 0.05, Size = 0.95 }, { X = -0.75, Y = 0, Size = 0.82 } }) do
+		eye(kit, v3(e.X, e.Y, front(center, size, e.X, e.Y) + e.Size * 0.2), e.Size, v2(0, -0.2))
+	end
 	local brow = StyleConfig.Memeling.Face.Mouth
-	add(kit, "Block", v3(1.15, 0.3, 0.3), v3(1, 0.72, front(center, size, 1, 0.72) - 0.05), brow, v3(0, 0, 20))
-	add(kit, "Block", v3(1.15, 0.3, 0.3), v3(-1, 0.62, front(center, size, -1, 0.62) - 0.05), brow, v3(0, 0, -20))
-	mouth(kit, v3(1.2, 0.28, 0.25), v3(0, -0.85, front(center, size, 0, -0.85)))
-	blush(kit, v3(0.8, 0.4, 0.2), v3(1.75, -0.55, front(center, size, 1.75, -0.55)))
-	blush(kit, v3(0.8, 0.4, 0.2), v3(-1.75, -0.55, front(center, size, -1.75, -0.55) - 0.15))
+	add(kit, "Block", v3(1, 0.3, 0.3), v3(0.75, 0.65, front(center, size, 0.75, 0.65) - 0.05), brow, v3(0, 0, 20))
+	add(kit, "Block", v3(1, 0.3, 0.3), v3(-0.75, 0.58, front(center, size, -0.75, 0.58) - 0.05), brow, v3(0, 0, -20))
+	mouth(kit, v3(1.1, 0.28, 0.25), v3(0, -0.8, front(center, size, 0, -0.8)))
+	blush(kit, v3(0.8, 0.4, 0.2), v3(1.6, -0.5, front(center, size, 1.6, -0.5)))
+	blush(kit, v3(0.8, 0.4, 0.2), v3(-1.6, -0.5, front(center, size, -1.6, -0.5) - 0.15))
 
 	for _, x in ipairs({ 1.3, -1.3 }) do
 		add(kit, "Oval", v3(0.8, 1, 0.8), v3(x, -2.1, -0.2), c.Legs)
 	end
+
+	-- Сзади — розовая наклейка-ценник
+	add(kit, "Oval", v3(1.1, 0.7, 0.2), v3(0.8, -0.2, back(center, size, 0.8, -0.2) - 0.03), c.Sticker, v3(0, 0, 15))
 end
 
 -- 4. Noodle Ninja (Rare): стаканчик лапши — лапша торчит сверху, тёмная повязка ниндзя
@@ -198,108 +220,137 @@ function Builders.DiscoPickle(kit: Kit)
 	add(kit, "Ball", v3(0.4, 0.4, 0.4), v3(1.1, -1.9, front(center, size, 1.1, -1.9)), c.Bumps)
 	add(kit, "Ball", v3(0.4, 0.4, 0.4), v3(-0.9, -1.4, front(center, size, -0.9, -1.4) - 0.1), c.Bumps)
 
-	-- Очки-звёзды (два квадрата под 45° — восьмиконечная звезда), глаза поверх стёкол
+	-- Очки-звёзды: пять розовых лучей-ромбов вокруг каждого глаза (середину звезды закрывает глаз)
 	for _, lens in ipairs({
-		{ X = 0.65, Y = 1.2, Size = 1.15, Eye = 0.85, Turn = -25 },
-		{ X = -0.6, Y = 1.15, Size = 0.9, Eye = 0.65, Turn = 25 },
+		{ X = 0.65, Y = 1.2, Size = 1.25, Eye = 0.85 },
+		{ X = -0.62, Y = 1.15, Size = 1.05, Eye = 0.68 },
 	}) do
-		local z = front(center, size, lens.X, lens.Y)
-		local star = v3(lens.Size, lens.Size, 0.2)
-		add(kit, "Block", star, v3(lens.X, lens.Y, z - 0.05), c.Glasses, v3(0, lens.Turn, 0))
-		add(kit, "Block", star, v3(lens.X, lens.Y, z - 0.05), c.Glasses, v3(0, lens.Turn, 45))
-		eye(kit, v3(lens.X, lens.Y, z - 0.1), lens.Eye, v2(0, 0.3))
+		local ray = lens.Size * 0.4
+		for k = 0, 4 do
+			local angle = 90 + k * 72 -- первый луч смотрит вверх
+			local rx = lens.X + math.cos(math.rad(angle)) * lens.Size * 0.38
+			local ry = lens.Y + math.sin(math.rad(angle)) * lens.Size * 0.38
+			-- Квадрат, повёрнутый на angle + 45°, смотрит углом наружу — это кончик луча
+			add(kit, "Block", v3(ray, ray, 0.3), v3(rx, ry, front(center, size, rx, ry) - 0.02), c.Glasses, v3(0, 0, angle + 45))
+		end
+		eye(kit, v3(lens.X, lens.Y, front(center, size, lens.X, lens.Y) - 0.12), lens.Eye, v2(0, 0.3))
 	end
 	mouth(kit, v3(1.5, 0.55, 0.3), v3(0, -0.15, front(center, size, 0, -0.15)))
-	blush(kit, v3(0.7, 0.35, 0.2), v3(1, 0.35, front(center, size, 1, 0.35)))
-	blush(kit, v3(0.7, 0.35, 0.2), v3(-1, 0.35, front(center, size, -1, 0.35) - 0.15))
+	blush(kit, v3(0.7, 0.35, 0.2), v3(1, 0.3, front(center, size, 1, 0.3)))
+	blush(kit, v3(0.7, 0.35, 0.2), v3(-1, 0.3, front(center, size, -1, 0.3) - 0.15))
 
-	-- Руки вверх, в левой — нитка с диско-шаром
-	add(kit, "Oval", v3(0.6, 1.9, 0.6), v3(1.75, 1.6, 0), c.Body, v3(0, 0, -25))
-	add(kit, "Oval", v3(0.6, 1.9, 0.6), v3(-1.75, 1.6, 0), c.Body, v3(0, 0, 25))
-	add(kit, "Cylinder", v3(1.3, 0.08, 0.08), v3(2.4, 1.85, 0), c.String, UP)
-	local ball = add(kit, "Block", v3(1, 1, 1), v3(2.45, 0.75, -0.2), c.DiscoBall, v3(35, 45, 0))
+	-- Обе руки подняты вверх, на концах — ладошки
+	for _, side in ipairs({ 1, -1 }) do
+		add(kit, "Oval", v3(0.7, 2, 0.7), v3(side * 1.85, 1.5, 0), c.Body, v3(0, 0, side * -30))
+		add(kit, "Ball", v3(0.75, 0.75, 0.75), v3(side * 2.4, 2.45, 0), c.Body)
+	end
+	-- Над левой ладошкой — крупный гранёный диско-шар на нитке
+	add(kit, "Cylinder", v3(1, 0.08, 0.08), v3(2.4, 3.3, 0), c.String, UP)
+	local ball = add(kit, "Block", v3(1.5, 1.5, 1.5), v3(2.4, 4.4, 0), c.DiscoBall, v3(35, 45, 0))
 	ball.Reflectance = 0.3 -- гранёный и блестящий
+
+	-- Сзади — пупырышки, как у настоящего огурца
+	add(kit, "Ball", v3(0.45, 0.45, 0.45), v3(0.7, 0.6, back(center, size, 0.7, 0.6)), c.Bumps)
+	add(kit, "Ball", v3(0.45, 0.45, 0.45), v3(-0.5, -0.9, back(center, size, -0.5, -0.9)), c.Bumps)
+	add(kit, "Ball", v3(0.4, 0.4, 0.4), v3(0.2, 1.8, back(center, size, 0.2, 1.8)), c.Bumps)
 end
 
 -- 7. Professor Bonk (Epic): молоток-профессор — рукоять и боёк, круглые очки, усы,
 -- шапочка выпускника с кисточкой, шишка на голове
 function Builders.ProfessorBonk(kit: Kit)
 	local c = Colors.ProfessorBonk
-	add(kit, "Cylinder", v3(3, 1, 1), v3(0, -1.1, 0), c.Handle, UP)
-	local head = v3(0, 1.2, 0)
-	local radius = 1.3
-	add(kit, "Cylinder", v3(4.4, radius * 2, radius * 2), head, c.Head) -- боёк лежит вдоль X
-	shade(kit, "Cylinder", v3(0.3, 2.62, 2.62), v3(-2.1, 1.2, 0), c.Head) -- тёмный торец справа
-	gloss(kit, v3(1.4, 0.3, 0.25), v3(1.3, 2.32, -0.72), v3(58, 0, 0))
+	-- Коричневая рукоять с тёмной обмоткой (обмотку видно со всех сторон)
+	add(kit, "Cylinder", v3(3, 1, 1), v3(0, -1.3, 0), c.Handle, UP)
+	add(kit, "Cylinder", v3(0.3, 1.1, 1.1), v3(0, -1.75, 0), c.Cap, UP)
+	-- Боёк короче и толще: на нём крупное лицо. Лежит вдоль X, серо-стальной
+	local head = v3(0, 1, 0)
+	local radius = 1.5
+	local length = 3.4
+	add(kit, "Cylinder", v3(length, radius * 2, radius * 2), head, c.Head)
+	shade(kit, "Cylinder", v3(0.3, radius * 2 + 0.02, radius * 2 + 0.02), v3(-length / 2 + 0.14, head.Y, 0), c.Head) -- тёмный торец справа
+	gloss(kit, v3(1.2, 0.3, 0.25), v3(0.9, 2.2, -0.92), v3(53, 0, 0))
 
 	-- Лицо на бойке: глубина поверхности зависит только от высоты (цилиндр вдоль X)
 	local function faceZ(y: number): number
 		local dy = y - head.Y
 		return head.Z - math.sqrt(math.max(0, radius * radius - dy * dy))
 	end
-	-- Круглые очки: тёмный диск за белком — видна оправа
-	for _, glass in ipairs({ { X = 0.75, Y = 1.35, Eye = 1.15 }, { X = -0.75, Y = 1.4, Eye = 0.9 } }) do
+	-- Крупные круглые очки: тёмный диск за белком — видна оправа
+	for _, glass in ipairs({ { X = 0.8, Y = 1.2, Eye = 1.4 }, { X = -0.8, Y = 1.25, Eye = 1.1 } }) do
 		local z = faceZ(glass.Y)
 		add(kit, "Cylinder", v3(0.12, glass.Eye * 1.26, glass.Eye * 1.26), v3(glass.X, glass.Y, z - 0.03), c.Glasses, ALONG_Z)
 		eye(kit, v3(glass.X, glass.Y, z), glass.Eye, v2(-0.2, 0.2))
 	end
-	add(kit, "Oval", v3(1.1, 0.4, 0.35), v3(0.45, 0.6, faceZ(0.6)), c.Mustache, v3(0, 0, 15))
-	add(kit, "Oval", v3(1.1, 0.4, 0.35), v3(-0.45, 0.6, faceZ(0.6)), c.Mustache, v3(0, 0, -15))
-	blush(kit, v3(0.6, 0.32, 0.2), v3(1.45, 0.85, faceZ(0.85) - 0.05))
-	blush(kit, v3(0.6, 0.32, 0.2), v3(-1.45, 0.85, faceZ(0.85) - 0.05))
+	-- Пышные тёмные усы с закрученными кончиками
+	add(kit, "Oval", v3(1.5, 0.55, 0.45), v3(0.6, 0.3, faceZ(0.3)), c.Mustache, v3(0, 0, 15))
+	add(kit, "Oval", v3(1.5, 0.55, 0.45), v3(-0.6, 0.3, faceZ(0.3)), c.Mustache, v3(0, 0, -15))
+	add(kit, "Ball", v3(0.4, 0.4, 0.4), v3(1.32, 0.42, faceZ(0.42) + 0.05), c.Mustache)
+	add(kit, "Ball", v3(0.4, 0.4, 0.4), v3(-1.32, 0.42, faceZ(0.42) + 0.05), c.Mustache)
+	blush(kit, v3(0.55, 0.3, 0.2), v3(1.15, -0.1, faceZ(-0.1) - 0.05))
+	blush(kit, v3(0.55, 0.3, 0.2), v3(-1.15, -0.1, faceZ(-0.1) - 0.05))
 
 	-- Шапочка выпускника: тулья, доска ромбом, кисточка сбоку
-	add(kit, "Cylinder", v3(0.6, 1.9, 1.9), v3(0, 2.6, 0), c.Cap, UP)
-	add(kit, "Block", v3(2.8, 0.18, 2.8), v3(0, 2.95, 0), c.Cap, v3(0, 45, 0))
-	add(kit, "Block", v3(0.1, 0.9, 0.1), v3(1.9, 2.45, 0), c.Tassel)
-	add(kit, "Ball", v3(0.35, 0.35, 0.35), v3(1.9, 1.95, 0), c.Tassel)
-	add(kit, "Oval", v3(0.9, 0.7, 0.9), v3(-1.3, 2.45, -0.3), c.Bump) -- шишка
+	add(kit, "Cylinder", v3(0.6, 1.9, 1.9), v3(0, 2.65, 0), c.Cap, UP)
+	add(kit, "Block", v3(2.8, 0.18, 2.8), v3(0, 3, 0), c.Cap, v3(0, 45, 0))
+	add(kit, "Block", v3(0.1, 0.9, 0.1), v3(1.9, 2.5, 0), c.Tassel)
+	add(kit, "Ball", v3(0.35, 0.35, 0.35), v3(1.9, 2, 0), c.Tassel)
+	add(kit, "Oval", v3(0.9, 0.7, 0.9), v3(-1.2, 2.45, -0.4), c.Bump) -- шишка
 end
 
--- 8. Mega Snoozeasaurus (Legendary): золотой свернувшийся динозавр — светлое брюхо, оранжевые шипы
--- на спине, корона, глаза закрыты дугами, пузырь из носа, над ним «Z z z»
+-- 8. Mega Snoozeasaurus (Legendary): золотой сидящий динозавр — тело со светлым брюхом, отдельная голова
+-- с мордой, глаза закрыты дугами, корона на голове, ряд оранжевых шипов по спине до хвоста,
+-- пузырь из носа, над ним «Z z z». Крупнее остальных — за счёт размера редкости (RarityScale)
 function Builders.MegaSnoozeasaurus(kit: Kit)
 	local c = Colors.MegaSnoozeasaurus
-	local body, bodySize = v3(0, -0.9, 0.4), v3(4.8, 3.4, 4)
+	local body, bodySize = v3(0, -1.05, 0.5), v3(4, 3.2, 4.4)
 	add(kit, "Oval", bodySize, body, c.Body)
-	shade(kit, "Oval", v3(4.7, 3.3, 3.9), v3(-0.25, -0.93, 0.42), c.Body)
-	add(kit, "Oval", v3(3, 2.2, 1.4), v3(-0.5, -1.3, -1.05), c.Belly)
-
-	-- Хвост обвивает тело спереди справа
-	add(kit, "Oval", v3(2.2, 1.3, 1.6), v3(-1.9, -1.8, -1.1), c.Body, v3(0, 30, 0))
-	add(kit, "Oval", v3(1.3, 0.9, 1), v3(-0.9, -2.1, -1.9), c.Body, v3(0, 60, 0))
-
-	-- Шипы по спине
-	for _, x in ipairs({ 1.8, -0.5, -1.3, -2 }) do
-		local dx = x / (bodySize.X / 2)
-		local top = body.Y + bodySize.Y / 2 * math.sqrt(math.max(0, 1 - dx * dx))
-		add(kit, "Wedge", v3(0.3, 1, 1), v3(x, top + 0.3, 0.6), c.Spikes, TRIANGLE_UP)
+	shade(kit, "Oval", v3(3.9, 3.1, 4.3), v3(-0.22, -1.08, 0.52), c.Body)
+	add(kit, "Oval", v3(2.6, 2.2, 1), v3(0, -1.25, front(body, bodySize, 0, -1.25) + 0.2), c.Belly)
+	for _, x in ipairs({ 1.3, -1.3 }) do
+		add(kit, "Oval", v3(1.2, 0.8, 1.5), v3(x, -2.25, -1.2), c.Body) -- лапы
 	end
 
-	-- Голова лежит спереди слева
-	local head, headSize = v3(0.6, 0.4, -1.3), v3(2.6, 2.2, 2.4)
+	-- Шея и голова спереди сверху, морда вытянута к зрителю
+	add(kit, "Oval", v3(1.6, 1.4, 1.6), v3(0, 0.1, -0.7), c.Body)
+	local head, headSize = v3(0, 1.05, -1), v3(2.8, 2.2, 2.6)
 	add(kit, "Oval", headSize, head, c.Body)
-	gloss(kit, v3(0.9, 0.35, 0.22), v3(1.25, 1.2, front(head, headSize, 1.25, 1.2) - 0.02), v3(40, 0, -30))
+	local snout, snoutSize = v3(0, 0.65, -2.1), v3(2, 1.3, 1.8)
+	add(kit, "Oval", snoutSize, snout, c.Body)
+	gloss(kit, v3(0.8, 0.3, 0.22), v3(0.75, 1.85, front(head, headSize, 0.75, 1.85) - 0.02), v3(40, 0, -30))
+	mouth(kit, v3(0.9, 0.15, 0.15), v3(0, 0.3, front(snout, snoutSize, 0, 0.3))) -- сонная улыбка
 
-	-- Корона: обруч и три зубца, в середине — камень
-	add(kit, "Cylinder", v3(0.6, 1.3, 1.3), v3(0.7, 1.7, -1.2), c.Crown, UP)
-	add(kit, "Ball", v3(0.35, 0.35, 0.35), v3(0.25, 2.1, -1.25), c.Crown)
-	add(kit, "Ball", v3(0.4, 0.4, 0.4), v3(0.7, 2.15, -1.25), c.Jewel)
-	add(kit, "Ball", v3(0.35, 0.35, 0.35), v3(1.15, 2.1, -1.25), c.Crown)
-
-	-- Закрытые глаза — дуги «◡» из двух чёрточек; одна дуга шире другой
-	for _, closed in ipairs({ { X = 1.15, Half = 0.32 }, { X = 0.1, Half = 0.24 } }) do
-		local y = 0.55
-		local z = front(head, headSize, closed.X, y) - 0.05
-		local length = closed.Half / math.cos(math.rad(25))
-		local stroke = v3(length, 0.13, 0.15)
-		mouth(kit, stroke, v3(closed.X + closed.Half / 2, y + 0.07, z), v3(0, 0, 25))
-		mouth(kit, stroke, v3(closed.X - closed.Half / 2, y + 0.07, z), v3(0, 0, -25))
+	-- Закрытые глаза — крупные дуги из двух чёрточек над мордой
+	for _, x in ipairs({ 0.6, -0.6 }) do
+		local y = 1.35
+		local half = 0.34
+		local z = front(head, headSize, x, y) - 0.03
+		local stroke = v3(half / math.cos(math.rad(25)), 0.18, 0.18)
+		mouth(kit, stroke, v3(x + half / 2, y + 0.07, z), v3(0, 0, 25))
+		mouth(kit, stroke, v3(x - half / 2, y + 0.07, z), v3(0, 0, -25))
 	end
-	local bubble = add(kit, "Ball", v3(0.8, 0.8, 0.8), v3(0.95, 0, -2.75), c.Bubble)
+	local bubble = add(kit, "Ball", v3(0.8, 0.8, 0.8), v3(0.6, 0.75, -3.25), c.Bubble)
 	bubble.Transparency = 0.35
-	blush(kit, v3(0.55, 0.3, 0.2), v3(1.45, 0.2, front(head, headSize, 1.45, 0.2)))
-	blush(kit, v3(0.55, 0.3, 0.2), v3(-0.25, 0.2, front(head, headSize, -0.25, 0.2)))
+	blush(kit, v3(0.55, 0.3, 0.2), v3(1.05, 0.95, front(head, headSize, 1.05, 0.95)))
+	blush(kit, v3(0.55, 0.3, 0.2), v3(-1.05, 0.95, front(head, headSize, -1.05, 0.95) - 0.1))
+
+	-- Корона на макушке: обруч, четыре зубца по краю, камень спереди
+	add(kit, "Cylinder", v3(0.5, 1.4, 1.4), v3(0, 2.3, -0.9), c.Crown, UP)
+	for _, p in ipairs({ v3(0.45, 2.65, -1.35), v3(-0.45, 2.65, -1.35), v3(0.45, 2.65, -0.45), v3(-0.45, 2.65, -0.45) }) do
+		add(kit, "Ball", v3(0.38, 0.38, 0.38), p, c.Crown)
+	end
+	add(kit, "Ball", v3(0.4, 0.4, 0.4), v3(0, 2.35, -1.6), c.Jewel)
+
+	-- Ряд оранжевых шипов по спине: от затылка к хвосту, всё мельче
+	for _, s in ipairs({ { Z = 0.6, Size = 0.95 }, { Z = 1.3, Size = 0.9 }, { Z = 1.95, Size = 0.8 }, { Z = 2.45, Size = 0.65 } }) do
+		local dz = (s.Z - body.Z) / (bodySize.Z / 2)
+		local top = body.Y + bodySize.Y / 2 * math.sqrt(math.max(0, 1 - dz * dz))
+		spike(kit, s.Size, v3(0, top, s.Z), c.Spikes)
+	end
+
+	-- Хвост сзади, загибается вправо; на нём последний шип
+	add(kit, "Oval", v3(1.4, 1.1, 2.4), v3(-0.6, -2, 2.9), c.Body, v3(0, -25, 0))
+	add(kit, "Oval", v3(0.8, 0.7, 1.4), v3(-1.4, -2.25, 3.9), c.Body, v3(0, -50, 0))
+	spike(kit, 0.5, v3(-0.65, -1.45, 3), c.Spikes, -25)
 
 	-- «Z z z» над головой: подпись в мире, не Label (Label меняют постаменты и прячет переноска)
 	local snooze = StyleConfig.Memeling.Snooze

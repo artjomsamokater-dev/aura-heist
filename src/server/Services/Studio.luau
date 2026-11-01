@@ -284,15 +284,16 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 	)
 	body:SetAttribute("MemelingId", entry.memelingId)
 	body:SetAttribute("OwnerUserId", player.UserId) -- клиент рисует контур своим мемлингам на постаментах
-	MapBuilder.AddLabel(
-		body,
-		getMemelingLabel(entry, data),
-		{ MaxDistance = labelStyle.MemelingMaxDistance, Height = StyleConfig.Memeling.LabelHeight, Scale = labelStyle.MemelingScale }
-	)
+	MapBuilder.AddLabel(body, getMemelingLabel(entry, data), {
+		MaxDistance = labelStyle.MemelingMaxDistance,
+		Height = MapBuilder.GetMemelingLabelHeight(entry.memelingId),
+		Scale = labelStyle.MemelingScale,
+	})
 
-	-- Подпись «накоплено» висит выше подписи мемлинга, с зазором
+	-- Подпись «накоплено» висит выше подписи мемлинга, с зазором (крупный мемлинг — выше)
+	local height = size.Y * MapBuilder.GetMemelingScale(entry.memelingId)
 	MapBuilder.AddLabel(pedestal, "", {
-		Height = pedestal.Size.Y / 2 + size.Y + labelStyle.HeightStuds * 1.5 + labelStyle.PedestalAuraGap,
+		Height = pedestal.Size.Y / 2 + height + labelStyle.HeightStuds * 1.5 + labelStyle.PedestalAuraGap,
 	})
 
 	rendered[player] = rendered[player] or {}

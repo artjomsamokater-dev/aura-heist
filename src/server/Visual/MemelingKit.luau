@@ -22,12 +22,21 @@ MemelingKit.TRIANGLE_DOWN = Vector3.new(0, 90, 180) -- острием вниз (
 
 export type Kit = {
 	Core: BasePart, -- ядро: к нему привариваются детали
+	Holder: Instance, -- куда кладутся детали: модель Figure внутри ядра (на неё клиент вешает контур) или само ядро
 	Origin: CFrame, -- центр мемлинга, лицо смотрит в −Z
 	Count: number, -- сколько деталей уже добавлено
 }
 
-function MemelingKit.new(core: BasePart, origin: CFrame): Kit
-	return { Core = core, Origin = origin, Count = 0 }
+function MemelingKit.new(core: BasePart, origin: CFrame, holder: Instance?): Kit
+	return { Core = core, Holder = holder or core, Origin = origin, Count = 0 }
+end
+
+-- Модель Figure внутри ядра: в ней лежат все видимые детали мемлинга (StyleConfig.Outline.Figure)
+function MemelingKit.MakeFigure(core: BasePart): Model
+	local figure = Instance.new("Model")
+	figure.Name = StyleConfig.Outline.Figure
+	figure.Parent = core
+	return figure
 end
 
 -- Kind: "Ball" (шар, размер одинаковый по осям) | "Oval" (овал любого размера) |
@@ -73,7 +82,7 @@ function MemelingKit.Add(kit: Kit, kind: string, size: Vector3, offset: Vector3,
 	weld.Part0 = kit.Core
 	weld.Part1 = part
 	weld.Parent = part
-	part.Parent = kit.Core
+	part.Parent = kit.Holder
 	return part
 end
 
@@ -164,6 +173,20 @@ function MemelingKit.RarityRing(kit: Kit, rarityId: string)
 	ring.Name = "RarityRing"
 	if style.Glow then
 		ring.Material = StyleConfig.GlowMaterial
+	end
+	if style.Halo then
+		-- Мягкое сияние: чуть шире и тоньше кольца, полупрозрачный неон
+		local halo = MemelingKit.Add(
+			kit,
+			"Cylinder",
+			Vector3.new(cfg.RingHeight * 0.5, cfg.RingDiameter + style.Halo.Grow, cfg.RingDiameter + style.Halo.Grow),
+			Vector3.new(0, -cfg.Size.Y / 2 + cfg.RingHeight * 0.25, 0),
+			style.Color,
+			MemelingKit.UP
+		)
+		halo.Name = "RarityHalo"
+		halo.Material = StyleConfig.GlowMaterial
+		halo.Transparency = style.Halo.Transparency
 	end
 	if style.Light then
 		local light = Instance.new("PointLight")
