@@ -7,12 +7,14 @@
 -- • Humanoid + PathfindingService: сквозь стены не проходят, путь пересчитывается раз в ThinkSeconds.
 -- • Спят, если ни одного игрока в вылазке нет ближе WakeRadius: тогда ничего не считают.
 -- • Урон при касании: сервер раз в DamageTickSeconds меряет расстояние (без Touched), с перезарядкой.
+--   Перед ударом — замах WindupSeconds (враг раздувается и краснеет, рисует клиент): успел отбежать — промах.
 -- • Раз в PerfReportSeconds пишут в Output, сколько времени сервера на них уходит.
 
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local EnemyConfig = require(ReplicatedStorage.Shared.Config.EnemyConfig)
@@ -41,6 +43,7 @@ type Chaser = {
 	Waypoints: { PathWaypoint }?,
 	WaypointIndex: number,
 	LastHit: { [Player]: number },
+	Windup: { Player: Player, StrikeAt: number }?, -- замах: по кому и когда ударит (os.clock)
 }
 
 type Target = {
@@ -142,6 +145,7 @@ local function buildChaser(index: number, floorPosition: Vector3, parent: Instan
 		Waypoints = nil,
 		WaypointIndex = 0,
 		LastHit = setmetatable({}, { __mode = "k" }) :: any,
+		Windup = nil,
 	}
 
 	-- Дошёл до точки пути — идём к следующей
@@ -246,22 +250,44 @@ local function think(chaser: Chaser)
 	end
 end
 
+-- Замах: атрибут WindupUntil (время сервера) на модели — клиент рисует раздувание и покраснение
+local function setWindup(chaser: Chaser, windup: { Player: Player, StrikeAt: number }?)
+	chaser.Windup = windup
+	chaser.Model:SetAttribute("WindupUntil", if windup then Workspace:GetServerTimeNow() + EnemyConfig.Chaser.WindupSeconds else nil)
+end
+
+-- Удар в два шага: игрок подошёл ближе WindupRadius → замах WindupSeconds → удар, если он всё ещё в HitRadius
 local function checkHits()
 	local startedAt = os.clock()
 	local cfg = EnemyConfig.Chaser
 	local now = os.clock()
 	local targets = getTargets()
 	for _, chaser in ipairs(chasers) do
-		if not chaser.Sleeping then
-			local position = chaser.Root.Position
+		local position = chaser.Root.Position
+		local windup = chaser.Windup
+		if chaser.Sleeping then
+			if windup then
+				setWindup(chaser, nil)
+			end
+		elseif windup then
+			if now >= windup.StrikeAt then
+				setWindup(chaser, nil)
+				chaser.LastHit[windup.Player] = now -- и при промахе: следующий замах не сразу
+				for _, target in ipairs(targets) do
+					if target.Player == windup.Player and (target.Root.Position - position).Magnitude <= cfg.HitRadius then
+						Damage.Apply(target.Player, cfg.Damage, "Grumblob")
+					end
+				end
+			end
+		else
 			for _, target in ipairs(targets) do
 				local last = chaser.LastHit[target.Player]
 				if
 					(last == nil or now - last >= cfg.HitCooldownSeconds)
-					and (target.Root.Position - position).Magnitude <= cfg.HitRadius
+					and (target.Root.Position - position).Magnitude <= cfg.WindupRadius
 				then
-					chaser.LastHit[target.Player] = now
-					Damage.Apply(target.Player, cfg.Damage, "Grumblob")
+					setWindup(chaser, { Player = target.Player, StrikeAt = now + cfg.WindupSeconds })
+					break
 				end
 			end
 		end

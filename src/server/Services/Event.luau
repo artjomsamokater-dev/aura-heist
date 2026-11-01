@@ -18,6 +18,7 @@ local HazardConfig = require(ReplicatedStorage.Shared.Config.HazardConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local GiantRoute = require(ReplicatedStorage.Shared.Util.GiantRoute)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local MapBuilder = require(script.Parent.MapBuilder)
 local Raid = require(script.Parent.Raid)
 local Damage = require(script.Parent.Damage)
@@ -29,6 +30,7 @@ local MAX_HEALTH = 100 -- здоровье персонажа Roblox по умо
 
 local random = Random.new()
 local eventFolder: Folder? = nil
+local knockbackEvent: RemoteEvent? = nil
 
 type Target = {
 	Player: Player,
@@ -192,6 +194,22 @@ local function hits(frame: CFrame, root: BasePart): boolean
 	return alongAxis and inCircle
 end
 
+-- Сбитый игрок отлетает: в сторону от оси движения колеса (куда стоял — туда и летит) и вверх.
+-- Направление считает сервер, толкает своего персонажа клиент (Remotes.Knockback)
+local function knockback(target: Target, frame: CFrame)
+	local event = knockbackEvent
+	if event == nil then
+		return
+	end
+	local side = frame.RightVector * Vector3.new(1, 0, 1)
+	local offset = frame:PointToObjectSpace(target.Root.Position)
+	local direction = if offset.X >= 0 then side else -side
+	if direction.Magnitude < 0.01 then
+		direction = frame.LookVector * Vector3.new(1, 0, 1)
+	end
+	event:FireClient(target.Player, direction.Unit)
+end
+
 -- Колесо катится по маршруту; урон проверяется параллельно, пока оно едет
 local function roll(wheel: Part, points: { Vector3 })
 	local cfg = EventConfig.GiantObject
@@ -210,6 +228,7 @@ local function roll(wheel: Part, points: { Vector3 })
 				if (last == nil or now - last >= cfg.HitCooldownSeconds) and hits(frame, target.Root) then
 					lastHit[target.Player] = now
 					Damage.Apply(target.Player, cfg.Damage, "Giant Object")
+					knockback(target, frame)
 				end
 			end
 			task.wait(cfg.TickSeconds)
@@ -275,6 +294,7 @@ function Event.Start()
 	folder.Name = "Events"
 	folder.Parent = MapBuilder.GetZoneFolder()
 	eventFolder = folder
+	knockbackEvent = RemoteGuard.CreateRemote(Remotes.Knockback) -- только сервер → игрок, сервер его не слушает
 
 	task.spawn(function()
 		while true do

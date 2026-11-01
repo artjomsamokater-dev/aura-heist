@@ -420,6 +420,14 @@ StyleConfig.ExtractFx = {
 	},
 }
 
+-- Замах Grumblob (client/Controllers/HitFxController): вокруг врага растёт красный полупрозрачный шар —
+-- враг «раздувается и краснеет» за WindupSeconds до удара
+StyleConfig.EnemyWindup = {
+	Color = Palette.Coral,
+	Transparency = 0.45,
+	Grow = 0.35, -- к моменту удара шар больше тела на 35%
+}
+
 -- Свой выпавший лут (после смерти): золотая подсветка сквозь стены и подпись «YOUR LOOT» с таймером.
 -- Видит только погибший (client/Controllers/LootController и OutlineController)
 StyleConfig.Loot = {

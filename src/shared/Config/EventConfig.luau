@@ -23,6 +23,10 @@ EventConfig.GiantObject = {
 	Speed = 20, -- студов в секунду
 	Damage = 30,
 	HitCooldownSeconds = 1, -- один игрок получает урон от колеса не чаще
+	-- Сбитый колесом отлетает в сторону от колеса и вверх (урон тот же)
+	KnockbackSpeed = 55, -- студов в секунду вбок
+	KnockbackUp = 35, -- студов в секунду вверх
+	KnockbackSeconds = 0.6, -- столько персонаж летит, не управляясь
 	TickSeconds = 0.1, -- как часто сервер проверяет попадание
 	Diameter = 10,
 	Thickness = 4,
