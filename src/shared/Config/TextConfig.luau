@@ -64,9 +64,9 @@ TextConfig.HudHandsValue = "%d / %d" -- сколько несёшь / сколь
 TextConfig.HudHandsCaption = "LOST IF YOU DIE"
 TextConfig.RestockTimer = "New memelings in %s" -- %s — сколько осталось, например 1:23
 
--- Бонус отряда: плашка обоим игрокам и отметка на мемлинге (%d — проценты к цене продажи)
-TextConfig.SquadBonusBanner = "SQUAD BONUS! +%d%% sell price"
-TextConfig.SquadTag = "\nSQUAD +%d%%"
+-- Бонус отряда: плашка обоим игрокам и отметка на мемлинге (%d — проценты к доходу на постаменте)
+TextConfig.SquadBonusBanner = "SQUAD BONUS! +%d%% income forever"
+TextConfig.SquadTag = "\nSQUAD +%d%% income"
 
 -- Объявление о редком спавне всем игрокам: «A LEGENDARY appeared in the DANGER zone!»
 TextConfig.AnnounceSpawn = "A %s appeared in the %s zone!" -- %s — редкость, %s — часть зоны
@@ -87,7 +87,7 @@ TextConfig.ResultTitle = "EXTRACTED!"
 TextConfig.ResultRow = "%s · %s · +%d/s" -- имя · редкость · доход в секунду
 TextConfig.ResultEmpty = "Empty hands this time"
 TextConfig.ResultTime = "Raid time %s" -- %s — например 1:23
-TextConfig.ResultSquad = "SQUAD BONUS +%d%% sell price"
+TextConfig.ResultSquad = "SQUAD BONUS +%d%% income"
 TextConfig.ResultBack = "Back to base"
 
 -- Туториал: одна короткая подсказка на шаг (номер = шаг из shared/Util/TutorialSteps)

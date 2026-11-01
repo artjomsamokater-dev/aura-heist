@@ -30,7 +30,7 @@ export type ShowcaseEntry = {
 	pedestal: number, -- номер постамента на участке (1, 2, ...)
 	memelingId: string, -- Id из MemelingConfig
 	lastCollect: number, -- время сервера (секунды Unix), с которого копится Aura
-	squadBonus: boolean?, -- принесён в отряде: цена продажи выше (EconomyConfig.SquadBonus)
+	squadBonus: boolean?, -- принесён в отряде: доход на постаменте выше (EconomyConfig.SquadBonus)
 }
 
 -- Мемлинг «в запасе» (не хватило постаментов)

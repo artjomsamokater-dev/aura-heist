@@ -3,8 +3,8 @@
 -- их проверяют тесты в tests/SquadRule.spec.luau.
 --
 -- Правило: два разных игрока завершили эвакуацию не дальше radius студов друг от друга (по полу)
--- и с разницей во времени не больше window секунд — оба получают бонус к цене продажи
--- принесённых мемлингов. Каждая эвакуация получает бонус не больше одного раза.
+-- и с разницей во времени не больше window секунд — оба получают бонус к доходу
+-- принесённых мемлингов на постаменте. Каждая эвакуация получает бонус не больше одного раза.
 
 local SquadRule = {}
 
@@ -47,12 +47,12 @@ function SquadRule.FindPartners(new: Extraction, recent: { Extraction }, radius:
 	return partners
 end
 
--- Цена продажи с бонусом отряда, округлённая вниз (игроку дробей не показываем)
-function SquadRule.SellPrice(basePrice: number, bonusPercent: number, hasBonus: boolean): number
+-- Во сколько раз доход мемлинга на постаменте выше из-за бонуса отряда (без бонуса — 1)
+function SquadRule.IncomeMultiplier(bonusPercent: number, hasBonus: boolean): number
 	if not hasBonus then
-		return basePrice
+		return 1
 	end
-	return math.floor(basePrice * (100 + bonusPercent) / 100)
+	return 1 + bonusPercent / 100
 end
 
 return SquadRule

@@ -164,7 +164,7 @@ function ResultController.Start()
 		makeText(frame, string.format(TextConfig.ResultTime, formatClock(raidSeconds)), HUD.ResultRowSize - 4, HUD.TextDark, 50).TextTransparency = 0.25
 		local squadText = makeText(
 			frame,
-			string.format(TextConfig.ResultSquad, EconomyConfig.SquadBonus.SellBonusPercent),
+			string.format(TextConfig.ResultSquad, EconomyConfig.SquadBonus.IncomeBonusPercent),
 			HUD.ResultRowSize,
 			HUD.ResultTitleColor,
 			51

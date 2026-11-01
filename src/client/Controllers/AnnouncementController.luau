@@ -137,7 +137,7 @@ function AnnouncementController.Start()
 	local squadBonus = folder:WaitForChild(Remotes.SquadBonus)
 	if squadBonus:IsA("RemoteEvent") then
 		squadBonus.OnClientEvent:Connect(function()
-			show(string.format(TextConfig.SquadBonusBanner, EconomyConfig.SquadBonus.SellBonusPercent), HUD.HandsCard, "Squad")
+			show(string.format(TextConfig.SquadBonusBanner, EconomyConfig.SquadBonus.IncomeBonusPercent), HUD.HandsCard, "Squad")
 		end)
 	end
 end

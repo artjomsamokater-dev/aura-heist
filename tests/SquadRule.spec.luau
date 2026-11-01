@@ -9,7 +9,7 @@ local test, equal = TestKit.test, TestKit.equal
 
 local RADIUS = EconomyConfig.SquadBonus.Radius
 local WINDOW = EconomyConfig.SquadBonus.WindowSeconds
-local PERCENT = EconomyConfig.SquadBonus.SellBonusPercent
+local PERCENT = EconomyConfig.SquadBonus.IncomeBonusPercent
 
 local function extraction(ownerId: number, x: number, z: number, time: number): SquadRule.Extraction
 	return { OwnerId = ownerId, X = x, Z = z, Time = time, Bonus = false }
@@ -56,12 +56,11 @@ test("старые эвакуации убираются, свежие оста�
 	equal(recent[1].OwnerId, 2)
 end)
 
-test("цена с бонусом: +25%, округление вниз; без бонуса — без изменений", function()
-	equal(SquadRule.SellPrice(20, PERCENT, true), 25)
-	equal(SquadRule.SellPrice(80, PERCENT, true), 100)
-	equal(SquadRule.SellPrice(1200, PERCENT, true), 1500)
-	equal(SquadRule.SellPrice(30, 25, true), 37, "37.5 → 37")
-	equal(SquadRule.SellPrice(300, PERCENT, false), 300)
+test("доход с бонусом отряда: +50% (×1,5); без бонуса — ×1", function()
+	equal(PERCENT, 50)
+	equal(SquadRule.IncomeMultiplier(PERCENT, true), 1.5)
+	equal(SquadRule.IncomeMultiplier(PERCENT, false), 1)
+	equal(60 * SquadRule.IncomeMultiplier(PERCENT, true), 90, "Legendary 60/с → 90/с")
 end)
 
 return nil

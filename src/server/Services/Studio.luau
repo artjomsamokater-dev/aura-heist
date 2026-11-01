@@ -94,13 +94,16 @@ local function getStorageSeconds(data: PlayerData.Data): number
 	return UpgradeValues.StorageSeconds(data.upgrades.storage)
 end
 
--- Доход мемлинга в секунду: по редкости, × бонус за rebirth игрока (RebirthMath)
-local function getRate(memelingId: string, data: PlayerData.Data?): number
+-- Доход мемлинга в секунду: по редкости, × бонус за rebirth игрока (RebirthMath),
+-- × бонус отряда, если мемлинг принесён в отряде (SquadRule)
+local function getRate(memelingId: string, data: PlayerData.Data?, squadBonus: boolean?): number
 	local memeling = MemelingConfig.Memelings[memelingId]
 	local rarity = memeling and MemelingConfig.Rarities[memeling.Rarity]
 	local base = if rarity then rarity.AuraPerSecond else 0
 	local rebirths = if data then data.rebirths else 0
-	return base * RebirthMath.IncomeMultiplier(rebirths, EconomyConfig.Rebirth.IncomeBonusPercent)
+	return base
+		* RebirthMath.IncomeMultiplier(rebirths, EconomyConfig.Rebirth.IncomeBonusPercent)
+		* SquadRule.IncomeMultiplier(EconomyConfig.SquadBonus.IncomeBonusPercent, squadBonus == true)
 end
 
 -- Все улучшения на максимуме — тогда доступен Rebirth
@@ -191,13 +194,11 @@ local function rarityOf(memelingId: string): string
 	return if memeling then memeling.Rarity else ""
 end
 
--- Цена продажи — только из MemelingConfig (0, если мемлинга нет в конфиге);
--- принесённые в отряде дороже на EconomyConfig.SquadBonus.SellBonusPercent (SquadRule)
-local function getSellPrice(memelingId: string, squadBonus: boolean?): number
+-- Цена продажи — только из MemelingConfig (0, если мемлинга нет в конфиге). Бонус отряда её не меняет
+local function getSellPrice(memelingId: string): number
 	local memeling = MemelingConfig.Memelings[memelingId]
 	local rarity = memeling and MemelingConfig.Rarities[memeling.Rarity]
-	local base = if rarity then rarity.SellPrice else 0
-	return SquadRule.SellPrice(base, EconomyConfig.SquadBonus.SellBonusPercent, squadBonus == true)
+	return if rarity then rarity.SellPrice else 0
 end
 
 local function getReservePad(plotIndex: number): Part?
@@ -223,7 +224,7 @@ local function refreshReserve(plotIndex: number, data: PlayerData.Data?)
 		prompt.Enabled = count > 0
 		local first = data and data.reserve[1]
 		prompt.ObjectText = if first
-			then string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(first.memelingId, first.squadBonus)))
+			then string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(first.memelingId)))
 			else ""
 	end
 end
@@ -239,7 +240,7 @@ local function publishCounts(player: Player)
 end
 
 local function updatePedestalLabel(pedestal: Part, entry: ShowcaseEntry, data: PlayerData.Data, at: number)
-	local rate = getRate(entry.memelingId, data)
+	local rate = getRate(entry.memelingId, data, entry.squadBonus)
 	local storageSeconds = getStorageSeconds(data)
 	local stored = PedestalMath.GetStored(rate, entry.lastCollect, at, storageSeconds)
 	local full = stored >= rate * storageSeconds
@@ -251,9 +252,9 @@ end
 local function getMemelingLabel(entry: ShowcaseEntry, data: PlayerData.Data?): string
 	local name = TextConfig.MemelingNames[entry.memelingId] or entry.memelingId
 	-- Доход показываем целым, округлённым вниз (с бонусом rebirth он бывает дробным)
-	local text = string.format(TextConfig.PedestalMemeling, name, math.floor(getRate(entry.memelingId, data)))
+	local text = string.format(TextConfig.PedestalMemeling, name, math.floor(getRate(entry.memelingId, data, entry.squadBonus)))
 	if entry.squadBonus then
-		text ..= string.format(TextConfig.SquadTag, EconomyConfig.SquadBonus.SellBonusPercent)
+		text ..= string.format(TextConfig.SquadTag, EconomyConfig.SquadBonus.IncomeBonusPercent)
 	end
 	return text
 end
@@ -262,7 +263,7 @@ local function updateSellPrompt(pedestal: Part, entry: ShowcaseEntry)
 	local sellPrompt = pedestal:FindFirstChild("SellPrompt")
 	if sellPrompt and sellPrompt:IsA("ProximityPrompt") then
 		sellPrompt.ObjectText =
-			string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(entry.memelingId, entry.squadBonus)))
+			string.format(TextConfig.SellPriceTag, formatNumber(getSellPrice(entry.memelingId)))
 	end
 end
 
@@ -374,7 +375,7 @@ local function tryCollect(player: Player, plotIndex: number, pedestalIndex: numb
 	local at = now()
 	local entry = slot.Entry
 	local amount, newLastCollect =
-		PedestalMath.Collect(getRate(entry.memelingId, data), entry.lastCollect, at, getStorageSeconds(data))
+		PedestalMath.Collect(getRate(entry.memelingId, data, entry.squadBonus), entry.lastCollect, at, getStorageSeconds(data))
 	if amount < 1 then
 		return
 	end
@@ -514,7 +515,7 @@ function Studio.AddToShowcase(player: Player, memelingIds: { string }): { Brough
 	return brought
 end
 
--- Бонус отряда на принесённых мемлингах: флаг в профиле, подписи и цены продажи обновляются.
+-- Бонус отряда на принесённых мемлингах: флаг в профиле, подписи с доходом обновляются.
 -- Записи могли уже перейти из запаса на постамент или быть проданы — тогда отмечаем то, что осталось
 function Studio.ApplySquadBonus(player: Player, brought: { BroughtEntry })
 	local marked: { BroughtEntry } = {}
@@ -609,8 +610,9 @@ local function trySellFromPedestal(player: Player, plotIndex: number, pedestalIn
 		return
 	end
 
-	local price = getSellPrice(entry.memelingId, entry.squadBonus)
-	local collected = PedestalMath.Collect(getRate(entry.memelingId, data), entry.lastCollect, now(), getStorageSeconds(data))
+	local price = getSellPrice(entry.memelingId)
+	local collected =
+		PedestalMath.Collect(getRate(entry.memelingId, data, entry.squadBonus), entry.lastCollect, now(), getStorageSeconds(data))
 
 	-- Сначала мемлинг уходит из профиля, потом начисление: повторное нажатие уже ничего не найдёт
 	table.remove(data.showcase, position)
@@ -637,7 +639,7 @@ local function trySellFromReserve(player: Player, plotIndex: number)
 
 	local reserveEntry = table.remove(data.reserve, 1) :: PlayerData.ReserveEntry
 	data.stats.memelingsSold += 1
-	local price = getSellPrice(reserveEntry.memelingId, reserveEntry.squadBonus)
+	local price = getSellPrice(reserveEntry.memelingId)
 	if price > 0 then
 		Economy.AddBankedAura(player, price, "продажа из запаса " .. reserveEntry.memelingId)
 	end
