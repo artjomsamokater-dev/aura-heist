@@ -799,6 +799,12 @@ StyleConfig.Outline = {
 -- загорается круг из сегментов, писк ускоряется; в конце — вспышка экрана и конфетти.
 -- Звуки — встроенные Roblox, можно заменить на любой SoundId из Toolbox
 StyleConfig.ExtractFx = {
+	-- Полоска «EXTRACTING... 2.1s» вверху по центру (задача 7.8): под таймером рестока и плашкой BOUNTY
+	BarTop = 98, -- от панели Roblox, в пикселях
+	BarHeight = 44,
+	BarMaxWidth = 420,
+	BarTextSize = 24,
+	BarBack = Palette.CreamLight,
 	RingSegments = 24,
 	RingRadius = 4.5,
 	SegmentSize = v3(0.5, 0.25, 1.1),

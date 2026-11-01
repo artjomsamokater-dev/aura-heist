@@ -3,10 +3,12 @@
 -- Сервер выставляет атрибуты ExtractHoldStart (время сервера) и ExtractHoldSeconds, пока игрок стоит
 -- на точке эвакуации (сервис Extraction). По ним:
 --   • вокруг ног загорается круг из сегментов — сколько осталось держать;
+--   • вверху по центру крупная полоска «EXTRACTING... 2.1s» (задача 7.8), поверх остального HUD;
 --   • писк повторяется всё выше и громче;
 --   • в конце — вспышка экрана и конфетти.
 -- Засчитывает эвакуацию только сервер: это лишь подсказка, как долго ещё стоять.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -15,6 +17,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
+local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local ExtractTarget = require(script.Parent.Parent.Util.ExtractTarget)
 
 local ExtractFxController = {}
@@ -102,9 +105,58 @@ local function confetti(root: BasePart)
 	end)
 end
 
+-- Крупная полоска прогресса вверху по центру: под таймером рестока и плашкой BOUNTY.
+-- Вернёт (ScreenGui, заливка, надпись)
+local function buildBar(playerGui: Instance): (ScreenGui, Frame, TextLabel)
+	local hud = StyleConfig.Hud
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "ExtractBar"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 5 -- поверх HUD
+	gui.Enabled = false
+	gui.Parent = playerGui
+	local holder = Instance.new("Frame")
+	holder.AnchorPoint = Vector2.new(0.5, 0)
+	holder.Position = UDim2.new(0.5, 0, 0, GuiService:GetGuiInset().Y + style.BarTop)
+	holder.Size = UDim2.new(0.8, 0, 0, style.BarHeight)
+	holder.BackgroundColor3 = style.BarBack
+	holder.BorderSizePixel = 0
+	holder.Parent = gui
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(style.BarMaxWidth, style.BarHeight)
+	limit.Parent = holder
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = holder
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = hud.Stroke
+	stroke.Thickness = hud.StrokeThickness
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = holder
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.Parent = holder
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = fill
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Font = StyleConfig.Fonts.Hud
+	label.TextSize = style.BarTextSize
+	label.TextColor3 = hud.TextDark
+	label.ZIndex = 2
+	label.Parent = holder
+	return gui, fill, label
+end
+
 function ExtractFxController.Start()
 	local playerGui = player:WaitForChild("PlayerGui")
 	local ring, segments = buildRing()
+	local barGui, barFill, barLabel = buildBar(playerGui)
 	local charge = makeSound(style.ChargeSound.SoundId)
 	charge.Looped = true
 	local done = makeSound(style.DoneSound.SoundId)
@@ -118,6 +170,7 @@ function ExtractFxController.Start()
 		local root = getRoot()
 		if startedAt == nil or seconds == nil or seconds <= 0 or root == nil then
 			ring.Parent = nil
+			barGui.Enabled = false
 			if charge.IsPlaying then
 				charge:Stop()
 			end
@@ -139,6 +192,13 @@ function ExtractFxController.Start()
 			segment.Transparency = if i <= lit then 0 else style.EmptyTransparency
 		end
 		ring.Parent = Workspace
+
+		-- Полоска вверху: заполняется цветом точки эвакуации, внутри — сколько секунд осталось
+		barGui.Enabled = true
+		barFill.Size = UDim2.fromScale(progress, 1)
+		barFill.BackgroundColor3 = color
+		local left = math.max(0, seconds * (1 - progress))
+		barLabel.Text = if progress >= 1 then TextConfig.ExtractingDone else string.format(TextConfig.Extracting, left)
 
 		local sound = style.ChargeSound
 		charge.PlaybackSpeed = sound.FromSpeed + (sound.ToSpeed - sound.FromSpeed) * progress

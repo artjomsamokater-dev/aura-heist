@@ -152,6 +152,8 @@ TextConfig.AnnounceSpawn = "A %s appeared in the %s · %s!" -- редкость,
 TextConfig.RarityNames = { Common = "COMMON", Rare = "RARE", Epic = "EPIC", Legendary = "LEGENDARY", Secret = "SECRET" } :: { [string]: string }
 TextConfig.ZonePartNames = { Safe = "SAFE", Danger = "DANGER" } :: { [string]: string }
 TextConfig.ExtractMarker = "▼ EXTRACT ▼"
+TextConfig.Extracting = "EXTRACTING... %.1fs" -- полоска вверху, пока стоишь на точке (сколько осталось)
+TextConfig.ExtractingDone = "EXTRACTED!"
 TextConfig.SideExtractMarker = "▼ SLOW EXIT ▼" -- маркер, когда ближе доступна вторая точка
 TextConfig.ExtractMarkerDistance = "%s studs" -- %s — расстояние до точки эвакуации
 TextConfig.ExtractEdgeArrow = "▲" -- стрелка у края экрана, когда точка эвакуации не видна
