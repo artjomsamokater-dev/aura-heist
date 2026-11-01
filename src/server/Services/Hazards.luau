@@ -69,6 +69,44 @@ local function validateConfig()
 	end
 end
 
+-- Трещины и кайма на верхней грани плиты: плиту видно на полу всегда, даже когда она не горит.
+-- SurfaceGui едет вместе с деталью, когда клиент подбрасывает плиту при ударе
+local function addCracks(plate: BasePart)
+	local style = StyleConfig.Hazards
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "Cracks"
+	gui.Face = Enum.NormalId.Top
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = style.SlamCrackPixelsPerStud
+	gui.Parent = plate
+
+	local border = Instance.new("Frame")
+	border.Name = "Border"
+	border.Size = UDim2.fromScale(1, 1)
+	border.BackgroundTransparency = 1
+	border.Parent = gui
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = style.SlamCrackColor
+	stroke.Thickness = style.SlamBorderThickness
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = border
+
+	-- Плита квадратная: длину трещины в пикселях считаем по стороне X
+	local side = plate.Size.X * style.SlamCrackPixelsPerStud
+	for i, crack in ipairs(style.SlamCracks) do
+		local delta = crack.To - crack.From
+		local line = Instance.new("Frame")
+		line.Name = "Crack" .. i
+		line.AnchorPoint = Vector2.new(0.5, 0.5)
+		line.Position = UDim2.fromScale((crack.From.X + crack.To.X) / 2, (crack.From.Y + crack.To.Y) / 2)
+		line.Size = UDim2.fromOffset(delta.Magnitude * side, style.SlamCrackThickness)
+		line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
+		line.BackgroundColor3 = style.SlamCrackColor
+		line.BorderSizePixel = 0
+		line.Parent = gui
+	end
+end
+
 local function build()
 	local folder = Instance.new("Folder")
 	folder.Name = "Hazards"
@@ -130,6 +168,7 @@ local function build()
 			style.SlamIdle,
 			folder
 		)
+		addCracks(part)
 		local offsetSeconds = (i - 1) * slam.StaggerSeconds
 		part:SetAttribute("OffsetSeconds", offsetSeconds)
 		CollectionService:AddTag(part, HazardConfig.Tags.Slam)

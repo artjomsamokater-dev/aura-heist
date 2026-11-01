@@ -276,6 +276,23 @@ StyleConfig.Hazards = {
 	SlamIdle = Palette.CoralDark,
 	SlamWarn = Palette.Coral,
 	SlamStrike = Palette.CoralLight,
+	-- Плита всегда отличается от пола: чёрные трещины от центра и чёрная кайма (SurfaceGui на верхней грани).
+	-- Точки — доли стороны плиты: (0, 0) — угол, (0.5, 0.5) — центр
+	SlamCrackColor = Palette.Ink,
+	SlamCrackThickness = 5, -- в пикселях на поверхности
+	SlamCrackPixelsPerStud = 20,
+	SlamCracks = {
+		{ From = Vector2.new(0.5, 0.5), To = Vector2.new(0.18, 0.12) },
+		{ From = Vector2.new(0.5, 0.5), To = Vector2.new(0.88, 0.22) },
+		{ From = Vector2.new(0.5, 0.5), To = Vector2.new(0.8, 0.86) },
+		{ From = Vector2.new(0.5, 0.5), To = Vector2.new(0.12, 0.7) },
+		{ From = Vector2.new(0.18, 0.12), To = Vector2.new(0.05, 0.3) },
+		{ From = Vector2.new(0.88, 0.22), To = Vector2.new(0.96, 0.45) },
+		{ From = Vector2.new(0.8, 0.86), To = Vector2.new(0.58, 0.96) },
+		{ From = Vector2.new(0.12, 0.7), To = Vector2.new(0.3, 0.92) },
+		{ From = Vector2.new(0.66, 0.5), To = Vector2.new(0.7, 0.68) },
+	},
+	SlamBorderThickness = 8, -- чёрная кайма по краю плиты, в пикселях
 	SlamPopHeight = 0.8, -- плита подпрыгивает при ударе
 	SlamPopSeconds = 0.15,
 }
