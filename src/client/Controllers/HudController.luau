@@ -28,8 +28,12 @@ local CAPTION_SIZE = HUD.CaptionSize
 local VALUE_SIZE = HUD.ValueSize
 local TEXT_DARK = HUD.TextDark
 local TEXT_LIGHT = HUD.TextLight
-local PADDING = 8
+local PADDING = HUD.CardPadding
 local CARD_HEIGHT = math.max(HUD.IconSize + PADDING * 2, VALUE_SIZE + CAPTION_SIZE + PADDING * 2 + 4)
+
+local function isInRaid(): boolean
+	return player:GetAttribute("RaidState") == "InRaid"
+end
 
 local function readNumber(name: string): number
 	return tonumber(player:GetAttribute(name)) or 0
@@ -54,9 +58,9 @@ local function addCorner(frame: GuiObject, radius: UDim)
 	corner.Parent = frame
 end
 
--- Скруглённая панель с тенью и обводкой: слева иконка в кружке, справа крупное число,
--- под ним мелкое пояснение. Вернёт подпись числа (её обновляет refresh)
-local function makeCard(parent: Instance, order: number, color: Color3, icon: string, caption: string): TextLabel
+-- Скруглённая панель с тенью и обводкой: слева иконка в кружке (под ней — необязательная подпись badge),
+-- справа крупное число, под ним мелкое пояснение. Вернёт подпись числа (её обновляет refresh) и саму карточку
+local function makeCard(parent: Instance, order: number, color: Color3, icon: string, caption: string, badge: string?): (TextLabel, Frame)
 	local holder = Instance.new("Frame")
 	holder.Name = "Card" .. order
 	holder.LayoutOrder = order
@@ -97,6 +101,23 @@ local function makeCard(parent: Instance, order: number, color: Color3, icon: st
 	bubble.Parent = card
 	addCorner(bubble, UDim.new(1, 0))
 	Icons.Make(icon, bubble, HUD.IconSize * 0.8)
+	if badge then
+		-- Маленькая плашка-подпись поверх низа кружка: что это за иконка
+		local tag = Instance.new("TextLabel")
+		tag.Name = "Badge"
+		tag.AnchorPoint = Vector2.new(0.5, 0.5)
+		tag.Position = UDim2.new(0.5, 0, 1, 0)
+		tag.Size = UDim2.fromOffset(HUD.IconSize, HUD.IconBadgeSize + 4)
+		tag.BackgroundColor3 = HUD.IconBadge
+		tag.BorderSizePixel = 0
+		tag.Font = StyleConfig.Fonts.Hud
+		tag.TextSize = HUD.IconBadgeSize
+		tag.TextColor3 = TEXT_LIGHT
+		tag.Text = badge
+		tag.ZIndex = 2
+		tag.Parent = bubble
+		addCorner(tag, UDim.new(1, 0))
+	end
 
 	local textLeft = PADDING * 2 + HUD.IconSize
 	local valueLabel = makeLabel(card, "", VALUE_SIZE, TEXT_DARK)
@@ -110,7 +131,7 @@ local function makeCard(parent: Instance, order: number, color: Color3, icon: st
 	captionLabel.Position = UDim2.fromOffset(textLeft, PADDING + VALUE_SIZE + 2)
 	captionLabel.Size = UDim2.new(1, -textLeft - PADDING, 0, CAPTION_SIZE + 4)
 	captionLabel.TextTransparency = 0.2
-	return valueLabel
+	return valueLabel, holder
 end
 
 local function buildHud(playerGui: Instance)
@@ -151,16 +172,18 @@ local function buildHud(playerGui: Instance)
 	layout.Padding = UDim.new(0, 6)
 	layout.Parent = column
 
-	local baseValue = makeCard(column, 1, HUD.BaseCard, "Aura", TextConfig.HudBaseCaption)
-	local handsValue = makeCard(column, 2, HUD.HandsCard, "Bag", TextConfig.HudHandsCaption)
+	local baseValue = makeCard(column, 1, HUD.BaseCard, "Aura", TextConfig.HudBaseCaption, TextConfig.HudAuraBadge)
+	-- Рюкзак нужен только в зоне: в хабе карточка скрыта
+	local handsValue, handsCard = makeCard(column, 2, HUD.HandsCard, "Bag", TextConfig.HudHandsCaption)
 
 	local function refresh()
 		baseValue.Text = string.format(TextConfig.HudBaseValue, formatNumber(readNumber("BankedAura")))
 		handsValue.Text =
 			string.format(TextConfig.HudHandsValue, readNumber("CarriedCount"), readNumber("CarrySlots"))
+		handsCard.Visible = isInRaid()
 	end
 
-	for _, name in ipairs({ "BankedAura", "CarriedCount", "CarrySlots" }) do
+	for _, name in ipairs({ "BankedAura", "CarriedCount", "CarrySlots", "RaidState" }) do
 		player:GetAttributeChangedSignal(name):Connect(refresh)
 	end
 	refresh()
@@ -213,8 +236,8 @@ local function buildRestockTimer(playerGui: Instance)
 	task.spawn(function()
 		while gui.Parent do
 			local nextRestockAt = tonumber(ReplicatedStorage:GetAttribute("NextRestockAt"))
+			panel.Visible = nextRestockAt ~= nil and isInRaid() -- таймер нужен только в зоне
 			if nextRestockAt then
-				panel.Visible = true
 				label.Text = string.format(TextConfig.RestockTimer, formatClock(nextRestockAt - Workspace:GetServerTimeNow()))
 			end
 			task.wait(0.25)

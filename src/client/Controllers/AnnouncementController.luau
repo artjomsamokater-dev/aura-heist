@@ -1,5 +1,5 @@
 --!strict
--- AnnouncementController: крупная плашка вверху экрана.
+-- AnnouncementController: плашка у самого верха экрана (не в центре — не закрывает игру).
 -- • «A LEGENDARY appeared in the DANGER zone!» — сервер присылает только Id редкости и части зоны
 --   (Remotes.Announcement), цвет плашки — цвет редкости из StyleConfig.
 -- • «SQUAD BONUS!» — сервер присылает только сам факт (Remotes.SquadBonus), процент — из EconomyConfig.
@@ -87,6 +87,12 @@ function AnnouncementController.Start()
 	end
 
 	local function show(text: string, color: Color3, icon: string?)
+		-- У самого верха: в зоне — под таймером рестока, в хабе (таймер скрыт) — на его месте
+		local top = GuiService:GetGuiInset().Y + HUD.TimerTop
+		if player:GetAttribute("RaidState") == "InRaid" then
+			top += HUD.TimerHeight + HUD.AnnounceGap
+		end
+		banner.Position = UDim2.new(0.5, 0, 0, top)
 		banner.BackgroundColor3 = color
 		label.Text = text
 		iconSlot:ClearAllChildren()

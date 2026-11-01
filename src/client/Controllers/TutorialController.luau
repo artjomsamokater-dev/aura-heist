@@ -229,10 +229,21 @@ function TutorialController.Start()
 		end
 	end)
 
+	-- Skip появляется не сразу, а через HUD.TutorialSkipDelaySeconds после первой подсказки:
+	-- сначала игрок читает подсказку, а не жмёт «пропустить» по привычке
+	skip.Visible = false
+	local skipTimerStarted = false
+
 	local function refreshHint()
 		local step = tonumber(player:GetAttribute("TutorialStep")) or 0
 		local text = TextConfig.TutorialHints[step]
 		panel.Visible = step > 0 and text ~= nil
+		if panel.Visible and not skipTimerStarted then
+			skipTimerStarted = true
+			task.delay(HUD.TutorialSkipDelaySeconds, function()
+				skip.Visible = true
+			end)
+		end
 		if text then
 			hint.Text = text
 			stepLabel.Text = string.format(TextConfig.TutorialStepTag, step, TutorialSteps.Count())

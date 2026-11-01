@@ -61,6 +61,7 @@ TextConfig.UpgradeMaxed = {
 -- Без эмодзи: на разных устройствах они выглядят по-разному
 TextConfig.HudBaseValue = "%s" -- %s — число Aura на базе
 TextConfig.HudBaseCaption = "SAFE AT BASE"
+TextConfig.HudAuraBadge = "AURA" -- подпись под иконкой Aura
 TextConfig.HudHandsValue = "%d / %d" -- сколько несёшь / сколько можно
 TextConfig.HudHandsCaption = "LOST IF YOU DIE"
 TextConfig.RestockTimer = "New memelings in %s" -- %s — сколько осталось, например 1:23

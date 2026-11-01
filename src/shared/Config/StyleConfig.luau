@@ -456,10 +456,14 @@ StyleConfig.Hud = {
 	TextLight = Palette.CreamLight,
 	CornerRadius = 16,
 
-	CardWidth = 250,
-	IconSize = 54,
-	ValueSize = 40, -- главное число — крупно
-	CaptionSize = 14, -- пояснение — мелко
+	-- Две карточки слева сверху — компактные (высота ≈ 49 пикселей: в 1,5 раза ниже прежних 74)
+	CardWidth = 210,
+	CardPadding = 4,
+	IconSize = 36,
+	ValueSize = 26, -- главное число — крупно
+	CaptionSize = 11, -- пояснение — мелко
+	IconBadgeSize = 10, -- подпись «AURA» под иконкой Aura
+	IconBadge = Palette.PlumDark,
 	Margin = 12, -- отступ от левого края
 	-- Сверху HUD ставим под панелью Roblox (GuiService:GetGuiInset) и под окном чата
 	ChatReserveDesktop = 210, -- высота окна чата на компьютере, в пикселях
@@ -475,13 +479,14 @@ StyleConfig.Hud = {
 	TimerTextSize = 20,
 	TimerTop = 8, -- отступ от панели Roblox сверху, в пикселях
 
-	-- Объявление о редком спавне: крупная плашка цвета редкости под таймером рестока
+	-- Объявление о редком спавне: плашка цвета редкости у самого верха экрана
+	-- (в зоне — сразу под таймером рестока, в хабе таймера нет — на его месте)
 	AnnounceSeconds = 3.5, -- сколько держится на экране
 	AnnounceFadeSeconds = 0.3, -- появление и исчезание
-	AnnounceWidth = 560,
-	AnnounceHeight = 64,
-	AnnounceTextSize = 30,
-	AnnounceGap = 10, -- отступ под таймером рестока, в пикселях
+	AnnounceWidth = 480,
+	AnnounceHeight = 46,
+	AnnounceTextSize = 24,
+	AnnounceGap = 6, -- отступ под таймером рестока, в пикселях
 
 	-- Крупные кнопки ProximityPrompt (свой стиль вместо стандартного): удобно нажимать пальцем
 	PromptWidth = 180,
@@ -519,6 +524,7 @@ StyleConfig.Hud = {
 	TutorialTextSize = 24,
 	TutorialBottom = 150, -- отступ подсказки от низа экрана (выше джойстика и кнопки прыжка)
 	TutorialSkipWidth = 64,
+	TutorialSkipDelaySeconds = 10, -- кнопка Skip появляется через столько секунд после первой подсказки
 	TutorialArrowSize = 64, -- стрелка над целью, в пикселях
 	TutorialArrowHeight = 8, -- на сколько студов над целью висит стрелка
 	TutorialArrowBob = 1.2, -- на сколько студов стрелка покачивается вверх-вниз
