@@ -33,12 +33,14 @@ export type ShowcaseEntry = {
 	memelingId: string, -- Id из MemelingConfig
 	lastCollect: number, -- время сервера (секунды Unix), с которого копится Aura
 	squadBonus: boolean?, -- принесён в отряде: доход на постаменте выше (EconomyConfig.SquadBonus)
+	bounty: boolean?, -- вынесен, пока был BOUNTY: доход × EconomyConfig.Bounty.IncomeMultiplier навсегда
 }
 
 -- Мемлинг «в запасе» (не хватило постаментов)
 export type ReserveEntry = {
 	memelingId: string,
 	squadBonus: boolean?,
+	bounty: boolean?,
 }
 
 export type Data = {

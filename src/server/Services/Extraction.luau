@@ -25,6 +25,7 @@ local PlayerData = require(script.Parent.PlayerData)
 local Tutorial = require(script.Parent.Tutorial)
 local Analytics = require(script.Parent.Analytics)
 local BestHaul = require(script.Parent.BestHaul)
+local Bounty = require(script.Parent.Bounty)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local RemoteGuard = require(ServerScriptService.Server.Security.RemoteGuard)
 
@@ -177,7 +178,12 @@ local function complete(player: Player)
 	if memelingIds == nil then
 		return -- награда за эту вылазку уже выдана
 	end
-	local entries = Studio.AddToShowcase(player, memelingIds)
+	-- «Охота»: кто из вынесенных сейчас BOUNTY — флаг навсегда (решение — в момент эвакуации)
+	local bounty: { boolean } = {}
+	for i, memelingId in ipairs(memelingIds) do
+		bounty[i] = Bounty.IsBounty(memelingId)
+	end
+	local entries = Studio.AddToShowcase(player, memelingIds, bounty)
 	BestHaul.Offer(player, memelingIds)
 	local squad = applySquadBonus(player, position, entries)
 	local data = PlayerData.GetData(player)
@@ -186,7 +192,7 @@ local function complete(player: Player)
 		data.stats.memelingsExtracted += #memelingIds
 	end
 	Raid.ReturnToHub(player)
-	Announcer.ExtractionResult(player, memelingIds, raidSeconds, squad)
+	Announcer.ExtractionResult(player, memelingIds, raidSeconds, squad, bounty)
 	Analytics.ExtractionSuccess(player, #memelingIds, rarestOf(memelingIds), squad)
 	if ZoneConfig.Zones[zoneId].Tutorial then
 		Tutorial.Notify(player, "Extract") -- туториал — только в стартовой зоне

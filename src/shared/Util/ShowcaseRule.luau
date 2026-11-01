@@ -9,6 +9,7 @@ local ShowcaseRule = {}
 export type Candidate = {
 	memelingId: string,
 	squadBonus: boolean?,
+	bounty: boolean?, -- флаг «Охоты» тоже переходит вместе с мемлингом
 	rate: number, -- доход в секунду (считает Studio.getRate)
 }
 

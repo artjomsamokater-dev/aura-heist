@@ -25,6 +25,7 @@ local UpgradeValues = require(ReplicatedStorage.Shared.Util.UpgradeValues)
 local SquadRule = require(ReplicatedStorage.Shared.Util.SquadRule)
 local ZoneRule = require(ReplicatedStorage.Shared.Util.ZoneRule)
 local ShowcaseRule = require(ReplicatedStorage.Shared.Util.ShowcaseRule)
+local BountyRule = require(ReplicatedStorage.Shared.Util.BountyRule)
 local RebirthMath = require(ReplicatedStorage.Shared.Util.RebirthMath)
 local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerData = require(script.Parent.PlayerData)
@@ -97,8 +98,9 @@ local function getStorageSeconds(data: PlayerData.Data): number
 end
 
 -- Доход мемлинга в секунду: по редкости × множитель самого мемлинга (Golden Zone — ×5, ZoneRule),
--- × бонус за rebirth игрока (RebirthMath), × бонус отряда, если мемлинг принесён в отряде (SquadRule)
-local function getRate(memelingId: string, data: PlayerData.Data?, squadBonus: boolean?): number
+-- × бонус за rebirth игрока (RebirthMath), × бонус отряда, если мемлинг принесён в отряде (SquadRule),
+-- × «Охота», если вынесен, пока был BOUNTY (BountyRule)
+local function getRate(memelingId: string, data: PlayerData.Data?, squadBonus: boolean?, bounty: boolean?): number
 	local memeling = MemelingConfig.Memelings[memelingId]
 	local rarity = memeling and MemelingConfig.Rarities[memeling.Rarity]
 	local base = (if rarity then rarity.AuraPerSecond else 0) * ZoneRule.IncomeMultiplier(memeling)
@@ -106,6 +108,7 @@ local function getRate(memelingId: string, data: PlayerData.Data?, squadBonus: b
 	return base
 		* RebirthMath.IncomeMultiplier(rebirths, EconomyConfig.Rebirth.IncomeBonusPercent)
 		* SquadRule.IncomeMultiplier(EconomyConfig.SquadBonus.IncomeBonusPercent, squadBonus == true)
+		* BountyRule.IncomeMultiplier(EconomyConfig.Bounty.IncomeMultiplier, bounty == true)
 end
 
 -- Все улучшения на максимуме — тогда доступен Rebirth
@@ -244,7 +247,7 @@ local function publishCounts(player: Player)
 end
 
 local function updatePedestalLabel(pedestal: Part, entry: ShowcaseEntry, data: PlayerData.Data, at: number)
-	local rate = getRate(entry.memelingId, data, entry.squadBonus)
+	local rate = getRate(entry.memelingId, data, entry.squadBonus, entry.bounty)
 	local storageSeconds = getStorageSeconds(data)
 	local stored = PedestalMath.GetStored(rate, entry.lastCollect, at, storageSeconds)
 	local full = stored >= rate * storageSeconds
@@ -256,9 +259,12 @@ end
 local function getMemelingLabel(entry: ShowcaseEntry, data: PlayerData.Data?): string
 	local name = TextConfig.MemelingNames[entry.memelingId] or entry.memelingId
 	-- Доход показываем целым, округлённым вниз (с бонусом rebirth он бывает дробным)
-	local text = string.format(TextConfig.PedestalMemeling, name, math.floor(getRate(entry.memelingId, data, entry.squadBonus)))
+	local text = string.format(TextConfig.PedestalMemeling, name, math.floor(getRate(entry.memelingId, data, entry.squadBonus, entry.bounty)))
 	if entry.squadBonus then
 		text ..= string.format(TextConfig.SquadTag, EconomyConfig.SquadBonus.IncomeBonusPercent)
+	end
+	if entry.bounty then
+		text ..= string.format(TextConfig.BountyTag, EconomyConfig.Bounty.IncomeMultiplier)
 	end
 	return text
 end
@@ -338,7 +344,8 @@ local function reflowShowcase(player: Player, data: PlayerData.Data)
 			table.insert(candidates, {
 				memelingId = entry.memelingId,
 				squadBonus = entry.squadBonus,
-				rate = getRate(entry.memelingId, data, entry.squadBonus),
+				bounty = entry.bounty,
+				rate = getRate(entry.memelingId, data, entry.squadBonus, entry.bounty),
 			})
 		end
 	end
@@ -350,6 +357,7 @@ local function reflowShowcase(player: Player, data: PlayerData.Data)
 			memelingId = candidate.memelingId,
 			lastCollect = now(),
 			squadBonus = candidate.squadBonus,
+			bounty = candidate.bounty,
 		}
 		table.insert(data.showcase, entry)
 		if plotIndex then
@@ -358,7 +366,7 @@ local function reflowShowcase(player: Player, data: PlayerData.Data)
 	end
 	data.reserve = {}
 	for _, candidate in ipairs(rest) do
-		table.insert(data.reserve, { memelingId = candidate.memelingId, squadBonus = candidate.squadBonus })
+		table.insert(data.reserve, { memelingId = candidate.memelingId, squadBonus = candidate.squadBonus, bounty = candidate.bounty })
 	end
 	print(string.format("[Studio] %s: витрина пересобрана — на постаментах %d, в запасе %d", player.Name, #data.showcase, #data.reserve))
 	publishCounts(player)
@@ -423,7 +431,7 @@ local function tryCollect(player: Player, plotIndex: number, pedestalIndex: numb
 	local at = now()
 	local entry = slot.Entry
 	local amount, newLastCollect =
-		PedestalMath.Collect(getRate(entry.memelingId, data, entry.squadBonus), entry.lastCollect, at, getStorageSeconds(data))
+		PedestalMath.Collect(getRate(entry.memelingId, data, entry.squadBonus, entry.bounty), entry.lastCollect, at, getStorageSeconds(data))
 	if amount < 1 then
 		return
 	end
@@ -534,8 +542,9 @@ export type BroughtEntry = { squadBonus: boolean? }
 local movedFromReserve: { [any]: ShowcaseEntry } = setmetatable({}, { __mode = "k" }) :: any
 
 -- Вынесенные мемлинги: на свободные постаменты, остальные — в запас (вызывает Extraction).
+-- bounty[i] = true — мемлинг memelingIds[i] вынесен, пока был BOUNTY: флаг в профиле навсегда (доход ×2).
 -- Вернёт созданные записи профиля: по ним Extraction может позже поставить бонус отряда
-function Studio.AddToShowcase(player: Player, memelingIds: { string }): { BroughtEntry }
+function Studio.AddToShowcase(player: Player, memelingIds: { string }, bounty: { boolean }?): { BroughtEntry }
 	local brought: { BroughtEntry } = {}
 	local data = PlayerData.GetData(player)
 	if data == nil then
@@ -544,10 +553,11 @@ function Studio.AddToShowcase(player: Player, memelingIds: { string }): { Brough
 	end
 	local plotIndex = playerPlots[player]
 
-	for _, memelingId in ipairs(memelingIds) do
+	for i, memelingId in ipairs(memelingIds) do
+		local isBounty = if bounty and bounty[i] then true else nil
 		local freeIndex = findFreePedestal(data)
 		if freeIndex then
-			local entry: ShowcaseEntry = { pedestal = freeIndex, memelingId = memelingId, lastCollect = now() }
+			local entry: ShowcaseEntry = { pedestal = freeIndex, memelingId = memelingId, lastCollect = now(), bounty = isBounty }
 			table.insert(data.showcase, entry)
 			table.insert(brought, entry)
 			if plotIndex then
@@ -555,7 +565,7 @@ function Studio.AddToShowcase(player: Player, memelingIds: { string }): { Brough
 			end
 			print(string.format("[Studio] %s: %s на постаменте %d", player.Name, memelingId, freeIndex))
 		else
-			local reserveEntry: PlayerData.ReserveEntry = { memelingId = memelingId }
+			local reserveEntry: PlayerData.ReserveEntry = { memelingId = memelingId, bounty = isBounty }
 			table.insert(data.reserve, reserveEntry)
 			table.insert(brought, reserveEntry)
 			print(string.format("[Studio] %s: %s в запасе (нет свободного постамента)", player.Name, memelingId))
@@ -610,6 +620,7 @@ local function fillFromReserve(player: Player, data: PlayerData.Data)
 			memelingId = reserveEntry.memelingId,
 			lastCollect = now(),
 			squadBonus = reserveEntry.squadBonus,
+			bounty = reserveEntry.bounty,
 		}
 		table.insert(data.showcase, entry)
 		movedFromReserve[reserveEntry] = entry
@@ -662,7 +673,7 @@ local function trySellFromPedestal(player: Player, plotIndex: number, pedestalIn
 
 	local price = getSellPrice(entry.memelingId)
 	local collected =
-		PedestalMath.Collect(getRate(entry.memelingId, data, entry.squadBonus), entry.lastCollect, now(), getStorageSeconds(data))
+		PedestalMath.Collect(getRate(entry.memelingId, data, entry.squadBonus, entry.bounty), entry.lastCollect, now(), getStorageSeconds(data))
 
 	-- Сначала мемлинг уходит из профиля, потом начисление: повторное нажатие уже ничего не найдёт
 	table.remove(data.showcase, position)

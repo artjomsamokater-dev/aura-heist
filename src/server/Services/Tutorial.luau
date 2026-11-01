@@ -44,6 +44,12 @@ function Tutorial.Notify(player: Player, action: string)
 	end
 end
 
+-- Туториал ещё идёт (не пройден и не пропущен) — тогда смерть в зоне не отнимает добычу (Raid)
+function Tutorial.IsActive(player: Player): boolean
+	local data = PlayerData.GetData(player)
+	return data ~= nil and not data.tutorial.completed
+end
+
 -- Кто проверяет «игрок стоит у своего постамента с мемлингом» (задаёт Studio)
 function Tutorial.SetPedestalCheck(check: (player: Player) -> boolean)
 	pedestalCheck = check

@@ -48,6 +48,9 @@ type Run = {
 }
 local runs: { [Player]: Run } = {}
 
+-- Погиб в туториале с добычей: зона, куда вернуть новый персонажа с тем же, что было в руках (задача 7.5)
+local tutorialKeep: { [Player]: string } = {}
+
 -- Кто хочет знать о подборе (Enemy: охрана). Подписываются через Raid.OnPickup — Raid не знает, кто это
 local pickupListeners: { (player: Player, position: Vector3) -> () } = {}
 
@@ -486,14 +489,26 @@ end
 -- Смерть (ловушка, враг, Reset): вылазка закрыта — награду за неё уже не выдать.
 -- В зоне всё из рук выпадает лутом на месте смерти (deathPosition); без позиции — всё теряется.
 -- Падение из зоны — не смерть (checkFallenPlayers). Витрину и Aura смерть не трогает. Считаем в stats.deaths.
+-- Туториал (задача 7.5): пока он идёт, смерть в зоне ничего не отнимает — новый персонаж появится у входа
+-- той же зоны с тем же в руках, вылазка продолжается (onCharacterAdded → restoreTutorialCarry).
 local function onDeath(player: Player, cause: string, deathPosition: Vector3?)
-	Analytics.PlayerDied(player, #(carried[player] or {}), cause) -- до потери: сколько было в руках
-	if deathPosition and states[player] == Raid.State.InRaid then
+	local keep = deathPosition ~= nil
+		and states[player] == Raid.State.InRaid
+		and inTutorialZone(player)
+		and Tutorial.IsActive(player)
+		and #(carried[player] or {}) > 0
+	Analytics.PlayerDied(player, if keep then 0 else #(carried[player] or {}), cause) -- до потери: сколько теряет
+	if keep then
+		tutorialKeep[player] = zones[player]
+		print(string.format("[Raid] %s погиб в туториале — добыча остаётся в руках (%d)", player.Name, #(carried[player] or {})))
+	elseif deathPosition and states[player] == Raid.State.InRaid then
 		dropCarriedAsLoot(player, deathPosition)
 	else
 		loseCarried(player, "смерть: " .. cause)
 	end
-	runs[player] = nil
+	if not keep then
+		runs[player] = nil
+	end
 	local data = PlayerData.GetData(player)
 	if data then
 		data.stats.deaths += 1
@@ -539,11 +554,44 @@ local function checkFallenPlayers()
 	end
 end
 
+-- Туториал: новый персонаж погибшего новичка — у входа той же зоны, с теми же мемлингами в руках
+local function restoreTutorialCarry(player: Player, character: Model, zoneId: string)
+	local root = character:WaitForChild("HumanoidRootPart", 10)
+	if root == nil or not root:IsA("BasePart") or player.Character ~= character then
+		loseCarried(player, "туториал: новый персонаж не появился")
+		return
+	end
+	task.wait() -- Roblox сначала ставит персонажа на SpawnLocation — переносим после этого
+	character:PivotTo(MapBuilder.GetZoneEntryCFrame(zoneId))
+	local list = getCarried(player)
+	for i = #list, 1, -1 do
+		if Spawn.Get(list[i]) == nil then
+			table.remove(list, i)
+		end
+	end
+	for i, instanceId in ipairs(list) do
+		local part = Spawn.RebuildCarried(instanceId)
+		if part then
+			attachToCharacter(part, character, root, list, i)
+		end
+	end
+	player:SetAttribute("CarriedCount", #list)
+	updateCarrySpeed(player)
+	print(string.format("[Raid] %s (туториал) снова в зоне %s с добычей: %d", player.Name, zoneId, #list))
+end
+
 local function onCharacterAdded(player: Player, character: Model)
-	-- Новый персонаж всегда появляется на SpawnLocation в хабе и ничего не несёт
-	loseCarried(player, "новый персонаж")
-	runs[player] = nil
-	setState(player, Raid.State.InHub)
+	local keepZone: string? = tutorialKeep[player]
+	tutorialKeep[player] = nil
+	if keepZone and #(carried[player] or {}) > 0 then
+		setState(player, Raid.State.InRaid, keepZone)
+	else
+		-- Новый персонаж всегда появляется на SpawnLocation в хабе и ничего не несёт
+		keepZone = nil
+		loseCarried(player, "новый персонаж")
+		runs[player] = nil
+		setState(player, Raid.State.InHub)
+	end
 
 	local humanoid = character:WaitForChild("Humanoid", 10)
 	if humanoid and humanoid:IsA("Humanoid") then
@@ -558,6 +606,9 @@ local function onCharacterAdded(player: Player, character: Model)
 			local position = if root and root:IsA("BasePart") then root.Position else nil
 			onDeath(player, if type(source) == "string" then source else "Reset", position)
 		end)
+	end
+	if keepZone then
+		restoreTutorialCarry(player, character, keepZone)
 	end
 end
 
@@ -574,6 +625,7 @@ end
 
 local function onPlayerRemoving(player: Player)
 	loseCarried(player, "выход из игры")
+	tutorialKeep[player] = nil
 	Spawn.LoseLootOf(player)
 	states[player] = nil
 	zones[player] = nil

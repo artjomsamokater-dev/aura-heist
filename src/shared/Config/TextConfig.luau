@@ -138,6 +138,13 @@ TextConfig.RestockTimer = "New memelings in %s" -- %s — сколько ост�
 TextConfig.SquadBonusBanner = "SQUAD BONUS! +%d%% income forever"
 TextConfig.SquadTag = "\nSQUAD +%d%% income"
 
+-- «Охота»: мемлинг-BOUNTY (%s — имя, %d — множитель дохода, второе %s — сколько осталось, например 7:32)
+TextConfig.BountyPortal = "BOUNTY: %s\nx%d income · %s"
+TextConfig.BountyHud = "BOUNTY %s x%d · %s"
+TextConfig.BountyMarker = "BOUNTY x%d" -- метка над таким мемлингом в зоне
+TextConfig.BountyTag = "\nBOUNTY x%d income" -- на постаменте
+TextConfig.ResultBounty = " · BOUNTY x%d" -- в строке экрана результата
+
 -- Объявление о редком спавне всем игрокам: «A LEGENDARY appeared in the DANGER zone!»
 TextConfig.AnnounceSpawn = "A %s appeared in the %s · %s!" -- редкость, название зоны, часть зоны
 TextConfig.RarityNames = { Common = "COMMON", Rare = "RARE", Epic = "EPIC", Legendary = "LEGENDARY", Secret = "SECRET" } :: { [string]: string }
@@ -160,7 +167,7 @@ TextConfig.KeyHint = "[%s]" -- клавиша на компьютере, нап�
 
 -- Экран результата эвакуации
 TextConfig.ResultTitle = "EXTRACTED!"
-TextConfig.ResultRow = "%s · %s · +%d/s" -- имя · редкость · доход в секунду
+TextConfig.ResultRow = "%s · %s · +%d/s%s" -- имя · редкость · доход в секунду · отметка BOUNTY (или пусто)
 TextConfig.ResultEmpty = "Empty hands this time"
 TextConfig.ResultTime = "Raid time %s" -- %s — например 1:23
 TextConfig.ResultSquad = "SQUAD BONUS +%d%% income"

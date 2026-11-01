@@ -6,7 +6,8 @@
 -- • Палитра — 5 основных цветов (крем, коралл, солнце, мята, слива) и их оттенки: мир и интерфейс.
 --   Исключение (задача 5.4): у мемлингов и врага свои цвета персонажа — StyleConfig.Characters.
 -- • У цвета есть смысл, и он не нарушается:
---   солнце (жёлтый) — ВСЁ, с чем можно что-то сделать: кнопки, рамка портала, SLOW EXIT, точки покупки и продажи;
+--   солнце (жёлтый) — ВСЁ, с чем можно что-то сделать: кнопки, рамка портала, EXTRACT (золото), точки покупки и продажи;
+--   в зоне (задача 7.5): SAFE — бирюза + зелёный, DANGER — красный + фиолетовый, EXTRACT — золото;
 --   коралл (красный) + чернила (чёрные полосы) — ТОЛЬКО опасность: ловушки, граница и ворота опасной части;
 --   мята и светлая слива — фон мира (полы, ограды, декор); крем — мелкие нейтральные детали.
 --   Цвета редкостей (Memeling.Rarities) — только у редкости: кольцо, плашки объявлений, строки результата.
@@ -344,7 +345,7 @@ StyleConfig.Prompts = {
 -- Meme Zone: спокойный тёмный пол с узором; опасная часть — тёмная слива, граница — коралл
 StyleConfig.Zone = {
 	SafeFloor = Palette.MintDark,
-	DangerFloor = Color3.fromRGB(44, 22, 40), -- темнее прежнего: почти чёрно-фиолетовый с красным
+	DangerFloor = Color3.fromRGB(58, 18, 40), -- красно-фиолетовый: опасная часть — красный + фиолетовый
 	DangerStripes = { Palette.Coral, Palette.Ink }, -- лента и полосы на воротах: красный + чёрный = опасно
 	-- Туман и свет опасной части — локально (частицы и PointLight), общий Lighting не трогаем
 	DangerFog = {
@@ -375,6 +376,13 @@ StyleConfig.Zone = {
 	FloorTextureStuds = 8, -- размер одной плитки
 	FloorTextureTransparency = 0.8,
 	FloorTextureColor = Palette.CreamLight,
+	-- Безопасная часть (задача 7.5): невысокие зелёные холмы, грибы-укрытия, тропинки к мемлингам
+	Hill = Palette.MintGrass,
+	ShelterStem = Palette.CreamLight,
+	ShelterCap = Palette.Mint,
+	ShelterDots = Palette.CreamLight,
+	MemelingPath = Palette.MintLight,
+	MemelingPathTransparency = 0.35,
 	-- Край парящего острова (задача 7.5): дно, уступ, забор, камни, кристаллы, мемные великаны, облака
 	EdgeRim = Palette.MintGrass, -- уступ вокруг пола
 	EdgeRock = Palette.Plum,
@@ -411,6 +419,9 @@ StyleConfig.ZoneThemes = {
 		GateCaps = Palette.CreamLight,
 		MushroomCap = Color3.fromRGB(196, 150, 84),
 		Crystal = Palette.CreamLight,
+		Hill = Color3.fromRGB(176, 140, 84),
+		ShelterCap = Color3.fromRGB(196, 150, 84),
+		MemelingPath = Palette.CreamLight,
 		EdgeRim = Color3.fromRGB(176, 140, 84),
 		EdgeRock = Color3.fromRGB(120, 86, 60),
 		EdgeRockDark = Color3.fromRGB(80, 54, 40),
@@ -479,12 +490,13 @@ StyleConfig.Event = {
 
 -- Площадка EXTRACT: неон, искры вверх и столб света — видно из любого места зоны
 StyleConfig.Extraction = {
-	Color = Palette.Mint,
-	SideColor = Palette.Sun, -- вторая, медленная точка у входа — солнце, чтобы не спутать с главной
+	Color = Palette.Sun, -- золото (задача 7.5)
+	SideColor = Palette.PlumLight, -- вторая, медленная точка у входа — светлая слива, чтобы не спутать с главной
+	Light = { Brightness = 1.6, Range = 26 }, -- золотой свет над EXTRACT (локальный PointLight, Lighting не трогаем)
 	Transparency = 0.1,
 	BeaconTransparency = 0.35, -- плотнее: столб виден сквозь дымку с другого конца зоны
 	Particles = {
-		Color = Palette.MintLight,
+		Color = Palette.SunLight,
 		Rate = 8,
 		Lifetime = NumberRange.new(1.2, 2),
 		Speed = NumberRange.new(4, 7),
@@ -996,6 +1008,14 @@ StyleConfig.Hud = {
 	TimerHeight = 36,
 	TimerTextSize = 20,
 	TimerTop = 8, -- отступ от панели Roblox сверху, в пикселях
+	-- «Охота»: плашка BOUNTY под таймером рестока (только в зоне), табличка у портала, метка над мемлингом
+	BountyPanel = Palette.SunLight,
+	BountyText = Palette.Ink,
+	BountyGap = 6, -- от таймера рестока вниз
+	BountyWidth = 340,
+	BountyMarkerMaxDistance = 140,
+	BountyPortalOffset = 5, -- табличка у портала: на столько студов выше вывески зоны
+	BountyPortalMaxDistance = 120,
 
 	-- Объявление о редком спавне: плашка цвета редкости у самого верха экрана
 	-- (в зоне — сразу под таймером рестока, в хабе таймера нет — на его месте)

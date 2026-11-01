@@ -2,7 +2,7 @@
 -- ResultController: короткий экран результата после эвакуации.
 -- Кто принесён (кружок цвета редкости, имя, редкость, доход в секунду), время вылазки, бонус отряда,
 -- кнопка «Back to base». Закрывается сам через StyleConfig.Hud.ResultSeconds.
--- Сервер присылает только Id мемлингов, секунды и флаг бонуса (Remotes.ExtractionResult);
+-- Сервер присылает только Id мемлингов, секунды, флаг бонуса и флаги BOUNTY (Remotes.ExtractionResult);
 -- имена, редкость и доход — из TextConfig и MemelingConfig.
 -- Бонус отряда первому в отряде приходит позже (Remotes.SquadBonus) — тогда строка бонуса появляется сама.
 
@@ -13,6 +13,7 @@ local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
 local ZoneRule = require(ReplicatedStorage.Shared.Util.ZoneRule)
+local BountyRule = require(ReplicatedStorage.Shared.Util.BountyRule)
 local EconomyConfig = require(ReplicatedStorage.Shared.Config.EconomyConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -53,8 +54,8 @@ local function formatClock(seconds: number): string
 	return string.format("%d:%02d", whole // 60, whole % 60)
 end
 
--- Строка мемлинга: кружок цвета редкости и «имя · редкость · +N/s»
-local function makeRow(parent: Instance, memelingId: string, order: number)
+-- Строка мемлинга: кружок цвета редкости и «имя · редкость · +N/s», у вынесенного во время охоты — «BOUNTY xN»
+local function makeRow(parent: Instance, memelingId: string, order: number, bounty: boolean)
 	local memeling = MemelingConfig.Memelings[memelingId]
 	if memeling == nil then
 		return
@@ -84,7 +85,10 @@ local function makeRow(parent: Instance, memelingId: string, order: number)
 			TextConfig.ResultRow,
 			TextConfig.MemelingNames[memelingId] or memelingId,
 			TextConfig.RarityNames[memeling.Rarity] or memeling.Rarity,
-			(if rarity then rarity.AuraPerSecond else 0) * ZoneRule.IncomeMultiplier(memeling)
+			(if rarity then rarity.AuraPerSecond else 0)
+				* ZoneRule.IncomeMultiplier(memeling)
+				* BountyRule.IncomeMultiplier(EconomyConfig.Bounty.IncomeMultiplier, bounty),
+			if bounty then string.format(TextConfig.ResultBounty, EconomyConfig.Bounty.IncomeMultiplier) else ""
 		),
 		HUD.ResultRowSize,
 		HUD.TextDark,
@@ -125,7 +129,7 @@ function ResultController.Start()
 		end
 	end
 
-	local function open(memelingIds: { string }, raidSeconds: number, squad: boolean)
+	local function open(memelingIds: { string }, raidSeconds: number, squad: boolean, bounty: { boolean })
 		close()
 		showToken += 1
 		local token = showToken
@@ -160,7 +164,7 @@ function ResultController.Start()
 			makeText(frame, TextConfig.ResultEmpty, HUD.ResultRowSize, HUD.TextDark, 2)
 		end
 		for i, memelingId in ipairs(memelingIds) do
-			makeRow(frame, memelingId, 1 + i)
+			makeRow(frame, memelingId, 1 + i, bounty[i] == true)
 		end
 		makeText(frame, string.format(TextConfig.ResultTime, formatClock(raidSeconds)), HUD.ResultRowSize - 4, HUD.TextDark, 50).TextTransparency = 0.25
 		local squadText = makeText(
@@ -199,7 +203,7 @@ function ResultController.Start()
 	local folder = ReplicatedStorage:WaitForChild(Remotes.Folder)
 	local result = folder:WaitForChild(Remotes.ExtractionResult)
 	if result:IsA("RemoteEvent") then
-		result.OnClientEvent:Connect(function(memelingIds: unknown, raidSeconds: unknown, squad: unknown)
+		result.OnClientEvent:Connect(function(memelingIds: unknown, raidSeconds: unknown, squad: unknown, bountyFlags: unknown)
 			if type(memelingIds) ~= "table" or type(raidSeconds) ~= "number" then
 				return
 			end
@@ -209,7 +213,13 @@ function ResultController.Start()
 					table.insert(ids, id)
 				end
 			end
-			open(ids, raidSeconds, squad == true)
+			local bounty: { boolean } = {}
+			if type(bountyFlags) == "table" then
+				for i, flag in ipairs(bountyFlags :: { any }) do
+					bounty[i] = flag == true
+				end
+			end
+			open(ids, raidSeconds, squad == true, bounty)
 		end)
 	end
 

@@ -52,7 +52,8 @@ Extraction, Enemy, Event, Analytics. Защита: RemoteGuard, RateLimiter.
 16. Потерянный мемлинг (выход, падение) возвращается на свою точку спавна через
     `ZoneConfig.LostRespawnSeconds` (10 с). Вынесенный через эвакуацию в зону не возвращается.
     Смерть в зоне (с 6.0): мемлинги выпадают на месте, `ZoneConfig.LootSeconds` (20 с) их может поднять
-    только погибший, потом они возвращаются на точки спавна так же.
+    только погибший, потом они возвращаются на точки спавна так же. Пока идёт туториал (с 7.5), смерть в зоне
+    ничего не отнимает: новый персонаж появляется у входа той же зоны с тем же в руках.
 
 ## Стартовые числа (раздел 3 документации)
 
@@ -376,6 +377,21 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   Невидимые стены остались. Всё без теней. Падение (shared/Util/FallRule + тест): в хабе — сервис FallRescue
   (MapConfig.FallRescue; с паркура — SecretObby.RescueOnRoute на чекпоинт, иначе дорожка у мостика или вход участка),
   в зоне — Raid.checkFallenPlayers (ближайшая точка спавна или вход, из рук теряется, это не смерть).
+  7.5, вторая часть:
+  4) Безопасная часть зоны не плоская (MapBuilder.buildSafeTerrain, MapConfig Decor.Hills / Shelters / MemelingPath*):
+     9 невысоких холмов (верхушки больших шаров, по ним ходят), 4 гриба-укрытия, тропинки «ёлочкой» от дорожки к
+     точкам спавна; при старте проверка, что холмы не налезают на точки и тропинки. Цвета: SAFE — бирюза + зелёный,
+     DANGER — красно-фиолетовый пол, EXTRACT — золото (Palette.Sun, золотой PointLight над площадкой), SLOW EXIT —
+     светлая слива. Lighting не менялся.
+  5) «Охота» — сервис Bounty: раз в EconomyConfig.Bounty.IntervalSeconds (600) случайный мемлинг зон, не Secret и не тот
+     же подряд (shared/Util/BountyRule + тест); атрибуты BountyMemelingId / BountyEndsAt на ReplicatedStorage.
+     Вынесенный, пока он BOUNTY (решает Extraction в момент эвакуации), получает флаг bounty в профиле (showcase и
+     reserve; переходит при пересборке и из запаса) — доход × IncomeMultiplier (2) в Studio.getRate, «BOUNTY x2» на
+     постаменте и на экране результата (Remotes.ExtractionResult — пятый аргумент, флаги). Клиент
+     (client/Controllers/BountyController): табличка над вывеской портала зоны этого мемлинга, плашка под таймером
+     рестока в зоне, метка «BOUNTY x2» над такими мемлингами на полу.
+  6) Туториал: Tutorial.IsActive; смерть в стартовой зоне с добычей → Raid.tutorialKeep, вылазка не закрывается,
+     новый персонаж у входа зоны, модели пересоздаёт Spawn.RebuildCarried и Raid приваривает их снова.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),

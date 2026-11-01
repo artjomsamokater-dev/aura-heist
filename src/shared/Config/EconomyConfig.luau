@@ -23,6 +23,13 @@ EconomyConfig.SquadBonus = {
 	WindowSeconds = 5, -- с разницей не больше 5 секунд
 }
 
+-- «Охота» (задача 7.5): раз в IntervalSeconds сервер выбирает одного мемлинга из зон (не Secret) — BOUNTY.
+-- Вынесенный через эвакуацию, пока он BOUNTY, навсегда приносит больше Aura (флаг bounty на мемлинге в профиле)
+EconomyConfig.Bounty = {
+	IntervalSeconds = 600, -- 10 минут на одну охоту
+	IncomeMultiplier = 2, -- ×2 к доходу на постаменте
+}
+
 EconomyConfig.AutosaveSeconds = 90 -- как часто сохраняем профиль игрока
 
 -- Rebirth: когда куплены ВСЕ улучшения и есть Cost Aura — Aura и улучшения сбрасываются,

@@ -283,6 +283,23 @@ function Spawn.DropAsLoot(instanceId: string, owner: Player, floorPosition: Vect
 	end)
 end
 
+-- Туториал: погибший новичок не теряет то, что в руках. Старая модель была приварена к погибшему
+-- персонажу — ставим новую (без кнопки подбора), Raid приварит её к новому персонажу. Нет записи — nil
+function Spawn.RebuildCarried(instanceId: string): Part?
+	local record = memelings[instanceId]
+	if record == nil or record.State ~= Spawn.State.Carried then
+		return nil
+	end
+	record.Part:Destroy()
+	local part = placeInWorld(record.ZoneId, instanceId, record.MemelingId, MapConfig.Zones[record.ZoneId].EntryPosition)
+	local prompt = part:FindFirstChild("PickupPrompt")
+	if prompt then
+		prompt:Destroy()
+	end
+	record.Part = part
+	return part
+end
+
 -- Игрок вышел: его выпавший лут сразу возвращается на точки спавна
 function Spawn.LoseLootOf(player: Player)
 	local ids: { string } = {}

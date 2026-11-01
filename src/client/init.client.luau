@@ -17,6 +17,7 @@ local WandererController = require(script.Controllers.WandererController)
 local RainbowController = require(script.Controllers.RainbowController)
 local ShopController = require(script.Controllers.ShopController)
 local FireworksController = require(script.Controllers.FireworksController)
+local BountyController = require(script.Controllers.BountyController)
 
 HudController.Start()
 HazardController.Start()
@@ -35,3 +36,4 @@ task.spawn(HitFxController.Start) -- ждёт RemoteEvent Knockback
 task.spawn(WandererController.Start) -- ждёт, пока хаб появится на клиенте
 task.spawn(ShopController.Start) -- ждёт RemoteEvent магазина
 task.spawn(FireworksController.Start) -- свой бесконечный цикл салюта
+task.spawn(BountyController.Start) -- «Охота»: табличка у портала, плашка в зоне, метки

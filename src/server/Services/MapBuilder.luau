@@ -1609,6 +1609,102 @@ local function buildLandmarks(zone: ZoneMap, style: ZoneTheme, parent: Instance)
 	end
 end
 
+-- Расстояние по полу от точки p до отрезка a–b (всё — смещения X/Z от центра зоны)
+local function distanceToSegment(p: Vector2, a: Vector2, b: Vector2): number
+	local ab = b - a
+	local lengthSquared = ab:Dot(ab)
+	local t = if lengthSquared > 0 then math.clamp((p - a):Dot(ab) / lengthSquared, 0, 1) else 0
+	return (p - (a + ab * t)).Magnitude
+end
+
+-- Безопасная часть — не плоский пол (задача 7.5): тропинки от дорожки к точкам спавна, невысокие холмы
+-- (верхушки больших шаров — по ним можно ходить) и грибы-укрытия. Всё без теней. Если холм налез на точку
+-- спавна, вход, SLOW EXIT, ворота, ориентир или тропинку — предупреждение в Output (места — в MapConfig)
+local function buildSafeTerrain(zone: ZoneMap, style: ZoneTheme, parent: Instance)
+	local decor = zone.Decor
+	local top = zone.Center.Y + zone.Size.Y / 2
+	local center = Vector2.new(zone.Center.X, zone.Center.Z)
+	local function flat(position: Vector3): Vector2
+		return Vector2.new(position.X, position.Z) - center
+	end
+	local function world(point: Vector2, height: number): Vector3
+		return Vector3.new(zone.Center.X + point.X, top + height, zone.Center.Z + point.Y)
+	end
+
+	-- Тропинки «ёлочкой»: начало на главной дорожке, ближе к EXTRACT; до самой точки не доходят
+	local paths: { { Vector2 } } = { { Vector2.new(decor.PathFromX, 0), Vector2.new(decor.PathToX, 0) } }
+	for i, spawnPoint in ipairs(zone.SpawnPoints) do
+		local target = flat(spawnPoint)
+		if target.X < zone.DangerFromX then
+			local startX = math.min(target.X + math.abs(target.Y) * decor.MemelingPathLean, zone.DangerFromX - decor.PathWidth)
+			local from = Vector2.new(startX, 0)
+			local length = (target - from).Magnitude - decor.MemelingPathStopShort
+			if length > 1 then
+				local to = from + (target - from).Unit * length
+				table.insert(paths, { from, to })
+				local strip = makePart(
+					"MemelingPath" .. i,
+					Vector3.new(decor.MemelingPathWidth, 0.05, length),
+					CFrame.lookAt(world((from + to) / 2, 0.03), world(to, 0.03)),
+					style.MemelingPath,
+					parent
+				)
+				strip.Transparency = style.MemelingPathTransparency
+				strip.CanCollide = false
+				decorate(strip, false)
+			end
+		end
+	end
+
+	-- Что холм не должен задевать
+	local keep: { Vector2 } = { flat(zone.EntryPosition), flat(zone.SideExtractionPosition) }
+	for _, spawnPoint in ipairs(zone.SpawnPoints) do
+		table.insert(keep, flat(spawnPoint))
+	end
+	for _, mushroom in ipairs(decor.Mushrooms) do
+		table.insert(keep, mushroom.Position)
+	end
+	for _, shelter in ipairs(decor.Shelters) do
+		table.insert(keep, shelter.Position)
+	end
+	table.insert(keep, Vector2.new(decor.EntryGateX, decor.GatePillarZ))
+	table.insert(keep, Vector2.new(decor.EntryGateX, -decor.GatePillarZ))
+
+	for h, hill in ipairs(decor.Hills) do
+		for _, point in ipairs(keep) do
+			if (point - hill.Position).Magnitude < hill.Radius + decor.HillClearance then
+				warn(string.format("[MapBuilder] Холм %d налезает на точку (%d, %d) — поправь MapConfig Decor.Hills", h, point.X, point.Y))
+			end
+		end
+		for _, path in ipairs(paths) do
+			if distanceToSegment(hill.Position, path[1], path[2]) < hill.Radius + decor.HillClearance then
+				warn(string.format("[MapBuilder] Холм %d налезает на тропинку — поправь MapConfig Decor.Hills", h))
+			end
+		end
+		-- Шар, у которого над полом торчит «шапка» радиуса Radius и высоты Height
+		local ballRadius = (hill.Radius * hill.Radius + hill.Height * hill.Height) / (2 * hill.Height)
+		local ball = makeShape("Hill" .. h, "Ball", Vector3.one * ballRadius * 2, CFrame.new(world(hill.Position, hill.Height - ballRadius)), style.Hill, parent)
+		decorate(ball, false)
+	end
+
+	-- Грибы-укрытия: ножка, плоская шляпка выше головы и купол с пятнами
+	for s, shelter in ipairs(decor.Shelters) do
+		local stem = makeColumn("ShelterStem" .. s, CFrame.new(world(shelter.Position, shelter.Height / 2)), shelter.Height, decor.ShelterStemDiameter, style.ShelterStem, parent)
+		decorate(stem, false)
+		local capCenter = world(shelter.Position, shelter.Height)
+		local brim = makeColumn("ShelterBrim" .. s, CFrame.new(capCenter), 1.4, shelter.CapDiameter, style.ShelterCap, parent)
+		decorate(brim, false)
+		local domeSize = shelter.CapDiameter * 0.75
+		local dome = makeShape("ShelterDome" .. s, "Ball", Vector3.new(domeSize, domeSize, domeSize), CFrame.new(capCenter + Vector3.new(0, 0.7, 0)), style.ShelterCap, parent)
+		decorate(dome, false)
+		for d, offset in ipairs({ Vector3.new(0.22, 0.42, 0.1), Vector3.new(-0.25, 0.38, -0.15) }) do
+			local dot = makeShape("ShelterDot" .. s .. "_" .. d, "Ball", Vector3.one * domeSize * 0.2, CFrame.new(capCenter + Vector3.new(0, 0.7, 0) + offset * domeSize), style.ShelterDots, parent)
+			dot.CanCollide = false
+			decorate(dot, false)
+		end
+	end
+end
+
 -- Зона вылазки zoneId: Workspace.RaidZone_<Id>. Геометрия — MapConfig.Zones[Id], оформление — zoneTheme(Id)
 local function buildZone(zoneId: string)
 	local folder = makeFolder("RaidZone_" .. zoneId)
@@ -1663,6 +1759,7 @@ local function buildZone(zoneId: string)
 	buildGate(zone, style, "EntryGate", decor.EntryGateX, style.EntryGate, decorFolder)
 	buildGate(zone, style, "DangerGate", zone.DangerFromX, style.DangerGate, decorFolder)
 	buildLandmarks(zone, style, decorFolder)
+	buildSafeTerrain(zone, style, decorFolder)
 
 	-- Плоская плитка на полу: сюда портал переносит игрока
 	local entry = makePart(
@@ -1696,6 +1793,11 @@ local function buildZone(zoneId: string)
 		sparks.Color = ColorSequence.new(color)
 		sparks.EmissionDirection = Enum.NormalId.Right -- после поворота «право» цилиндра смотрит вверх
 		addLabel(pad, text, { Height = StyleConfig.Label.HeightStuds })
+		if name == "ExtractionPoint" then
+			-- Золотой свет над главной точкой — только локальный PointLight, общий Lighting не трогаем
+			local light = StyleConfig.Extraction.Light
+			addLight(pad, color, light.Brightness, light.Range)
+		end
 
 		local beacon = makeColumn(
 			name .. "Beacon",

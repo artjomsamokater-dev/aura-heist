@@ -480,6 +480,34 @@ local function zoneLayout(ZONE_TOP: Vector3)
 			{ Position = Vector2.new(100, -100), Heights = { 14, 9, 6 } },
 			{ Position = Vector2.new(100, 100), Heights = { 12, 8, 5 } },
 		},
+		-- Безопасная часть — не плоский пол (задача 7.5). Холмы: верхушка шара над полом (X, Z, радиус по полу,
+		-- высота) — по ним можно ходить. Места подобраны так, что холмы не задевают точки спавна, вход,
+		-- SLOW EXIT, ворота, грибы и тропинки (MapBuilder при старте проверяет и пишет в Output, если налезло)
+		Hills = {
+			{ Position = Vector2.new(-4, 90), Radius = 10, Height = 3.5 },
+			{ Position = Vector2.new(-4, -90), Radius = 10, Height = 3.5 },
+			{ Position = Vector2.new(-30, 92), Radius = 8, Height = 3 },
+			{ Position = Vector2.new(-92, 80), Radius = 8, Height = 3 },
+			{ Position = Vector2.new(-92, -80), Radius = 8, Height = 3 },
+			{ Position = Vector2.new(-76, 56), Radius = 7, Height = 2.5 },
+			{ Position = Vector2.new(-76, -56), Radius = 7, Height = 2.5 },
+			{ Position = Vector2.new(-16, 68), Radius = 7, Height = 2.5 },
+			{ Position = Vector2.new(-16, -68), Radius = 7, Height = 2.5 },
+		},
+		-- Укрытия — грибы со шляпкой выше головы: под ними можно стоять (сквозь ножку не пройти)
+		Shelters = {
+			{ Position = Vector2.new(-55, 18), CapDiameter = 16, Height = 8 },
+			{ Position = Vector2.new(-55, -18), CapDiameter = 16, Height = 8 },
+			{ Position = Vector2.new(-12, 40), CapDiameter = 14, Height = 7 },
+			{ Position = Vector2.new(-12, -40), CapDiameter = 14, Height = 7 },
+		},
+		ShelterStemDiameter = 3,
+		-- Тропинки от главной дорожки к каждой точке спавна безопасной части: начало — на дорожке, сдвинуто
+		-- к EXTRACT на половину расстояния точки от дорожки (тропинки расходятся «ёлочкой»)
+		MemelingPathWidth = 3,
+		MemelingPathLean = 0.5,
+		MemelingPathStopShort = 2, -- не доходит до самой точки на столько студов
+		HillClearance = 3, -- проверка: холм не ближе этого к точкам, тропинкам и ориентирам
 	},
 
 	-- Точки спавна мемлингов на полу зоны: на каждой появляется один мемлинг.

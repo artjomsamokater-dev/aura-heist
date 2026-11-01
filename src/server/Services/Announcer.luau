@@ -19,11 +19,11 @@ local announcement: RemoteEvent? = nil
 local squadBonus: RemoteEvent? = nil
 local extractionResult: RemoteEvent? = nil
 
--- Экран результата эвакуации этому игроку: Id принесённых, длительность вылазки, бонус отряда
-function Announcer.ExtractionResult(player: Player, memelingIds: { string }, raidSeconds: number, squad: boolean)
+-- Экран результата эвакуации этому игроку: Id принесённых, длительность вылазки, бонус отряда, флаги BOUNTY
+function Announcer.ExtractionResult(player: Player, memelingIds: { string }, raidSeconds: number, squad: boolean, bounty: { boolean })
 	local event = extractionResult
 	if event and player.Parent then
-		event:FireClient(player, memelingIds, math.floor(raidSeconds), squad)
+		event:FireClient(player, memelingIds, math.floor(raidSeconds), squad, bounty)
 	end
 end
 
