@@ -1270,6 +1270,8 @@ StyleConfig.Hud = {
 	PromptWidth = 180,
 	PromptHeight = 64,
 	PromptTouchScale = 1.25, -- на телефоне ещё крупнее
+	-- Запасной путь: true — на телефоне (касание без клавиатуры) стандартные кнопки Roblox вместо своих плашек
+	PromptDefaultOnTouch = false,
 	PromptPanel = Palette.CreamLight,
 	PromptFill = Palette.Mint, -- полоска удержания
 	PromptActionSize = 26,

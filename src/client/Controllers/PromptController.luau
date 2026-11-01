@@ -1,14 +1,19 @@
 --!strict
--- PromptController: крупные кнопки вместо стандартных ProximityPrompt (Pick up, Collect, Buy, Sell).
--- Все кнопки игры переводятся в стиль Custom, и клиент рисует свою: скруглённая плашка в мире
--- с действием крупно, предметом мелко и полоской удержания. На телефоне — ещё крупнее.
--- Нажатие пальцем или мышью передаётся самой кнопке (InputHoldBegin/End), клавиша E/F работает как раньше —
--- то есть всё по-прежнему проверяет сервер (RemoteGuard и обработчики), меняется только вид.
+-- PromptController: крупные кнопки вместо стандартных ProximityPrompt — все кнопки игры (Pick up, Collect, Sell,
+-- Buy, Unlock у ворот зон, Rebirth, Reserve, Open shop у киоска). Все ProximityPrompt переводятся в стиль Custom,
+-- и клиент рисует свою: скруглённая плашка над деталью с действием крупно, предметом мелко и полоской удержания.
+-- На телефоне — ещё крупнее.
+-- Нажатие: плашка — BillboardGui в PlayerGui с Adornee = деталь и Active = true (без Active касания до кнопки
+-- не доходят — баг на телефоне после 5.3). Палец или мышь на кнопке → prompt:InputHoldBegin(), отпустил где угодно
+-- (в том числе сдвинув палец с кнопки) → InputHoldEnd(). Клавиша E/F работает как раньше. Всё по-прежнему
+-- проверяет сервер (RemoteGuard и обработчики), меняется только вид.
+-- Запасной путь: StyleConfig.Hud.PromptDefaultOnTouch = true — на телефоне стандартные кнопки Roblox.
 
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
@@ -24,10 +29,20 @@ local function addCorner(frame: GuiObject, radius: UDim)
 	corner.Parent = frame
 end
 
+-- Телефон без клавиатуры и включён запасной путь — оставляем стандартные кнопки Roblox
+local function useDefaultPrompts(): boolean
+	return HUD.PromptDefaultOnTouch and UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
 local function makeCustom(instance: Instance)
 	if instance:IsA("ProximityPrompt") then
-		instance.Style = Enum.ProximityPromptStyle.Custom
+		instance.Style = if useDefaultPrompts() then Enum.ProximityPromptStyle.Default else Enum.ProximityPromptStyle.Custom
 	end
+end
+
+local function isPress(input: InputObject): boolean
+	local kind = input.UserInputType
+	return kind == Enum.UserInputType.Touch or kind == Enum.UserInputType.MouseButton1
 end
 
 -- Название клавиши для подсказки на компьютере: E, F, ...
@@ -49,6 +64,7 @@ local function buildButton(prompt: ProximityPrompt, inputType: Enum.ProximityPro
 	billboard.StudsOffset = Vector3.new(0, 2, 0)
 	billboard.Adornee = prompt.Parent :: any
 	billboard.ResetOnSpawn = false
+	billboard.Active = true -- иначе кнопка внутри не получает касания и клики
 	billboard.Parent = playerGui
 
 	local button = Instance.new("TextButton")
@@ -59,6 +75,7 @@ local function buildButton(prompt: ProximityPrompt, inputType: Enum.ProximityPro
 	button.BackgroundColor3 = HUD.PromptPanel
 	button.BorderSizePixel = 0
 	button.AutoButtonColor = false
+	button.Active = true
 	button.Text = ""
 	button.Parent = billboard
 	addCorner(button, UDim.new(0, HUD.CornerRadius))
@@ -98,20 +115,32 @@ local function buildButton(prompt: ProximityPrompt, inputType: Enum.ProximityPro
 	object.Size = UDim2.new(1, 0, 0.38, 0)
 	object.Parent = button
 
-	-- Палец или мышь: держим кнопку — держим ProximityPrompt
+	-- Палец или мышь: держим кнопку — держим ProximityPrompt. Отпустить можно где угодно: конец касания
+	-- ловим и на самой кнопке, и во всей игре (палец часто съезжает с кнопки во время удержания)
 	local holding = false
+	local holdInput: InputObject? = nil
+	local function release()
+		if holding then
+			holding = false
+			holdInput = nil
+			prompt:InputHoldEnd()
+		end
+	end
 	button.InputBegan:Connect(function(input: InputObject)
-		local kind = input.UserInputType
-		if kind == Enum.UserInputType.Touch or kind == Enum.UserInputType.MouseButton1 then
+		if isPress(input) and not holding then
 			holding = true
+			holdInput = input
 			prompt:InputHoldBegin()
 		end
 	end)
 	button.InputEnded:Connect(function(input: InputObject)
-		local kind = input.UserInputType
-		if holding and (kind == Enum.UserInputType.Touch or kind == Enum.UserInputType.MouseButton1) then
-			holding = false
-			prompt:InputHoldEnd()
+		if isPress(input) then
+			release()
+		end
+	end)
+	local globalEnded = UserInputService.InputEnded:Connect(function(input: InputObject)
+		if holding and (input == holdInput or input.UserInputType == Enum.UserInputType.MouseButton1) then
+			release()
 		end
 	end)
 
@@ -139,6 +168,7 @@ local function buildButton(prompt: ProximityPrompt, inputType: Enum.ProximityPro
 		holdBegan:Disconnect()
 		holdEnded:Disconnect()
 		changed:Disconnect()
+		globalEnded:Disconnect()
 		if holding then
 			prompt:InputHoldEnd()
 		end
