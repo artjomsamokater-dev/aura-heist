@@ -190,7 +190,8 @@ local function addStackLabel(part: BasePart, text: string, height: number, half:
 	gui.Size = UDim2.fromOffset(style.PedestalLabelWidthPx, style.PedestalLabelHeightPx)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, height, 0)
 	gui.MaxDistance = style.PedestalLabelMaxDistance
-	gui.AlwaysOnTop = false
+	-- Поверх всего: подпись не прячется за стеклом колпака и соседними мемлингами (видна только вблизи — MaxDistance)
+	gui.AlwaysOnTop = true
 	gui.Parent = part
 	local label = Instance.new("TextLabel")
 	label.Name = "Text"
@@ -2104,15 +2105,27 @@ end
 -- Стеклянный колпак над мемлингом на постаменте (задача 7.8): подставка с неоновым кольцом и свечением
 -- цвета редкости, стеклянные стенки и купол. Детали лежат внутри ядра мемлинга (уйдёт мемлинг — уйдёт и колпак)
 -- и ничему не мешают: без столкновений, касаний и лучей — кнопки постамента видят игрока сквозь стекло
+-- Размеры колпака для мемлинга (с учётом размера редкости): диаметр, высота стенок, высота купола
+local function domeSize(memelingId: string): (number, number, number)
+	local style = StyleConfig.Showcase
+	local scale = getMemelingScale(memelingId)
+	local size = StyleConfig.Memeling.Size
+	local diameter = math.min(style.MaxDiameter, size.X * scale * style.WidthShare)
+	return diameter, size.Y * scale + style.Headroom, diameter * style.CapHeightShare
+end
+
+-- Высота верха колпака (с шариком на макушке) над верхом постамента: подписи постамента — выше этого
+function MapBuilder.GetDomeHeight(memelingId: string): number
+	local _, wallHeight, capHeight = domeSize(memelingId)
+	return 0.2 + wallHeight + capHeight / 2 + 0.4
+end
+
 function MapBuilder.AddGlassDome(core: BasePart, pedestal: BasePart, memelingId: string)
 	local style = StyleConfig.Showcase
 	local memeling = MemelingConfig.Memelings[memelingId]
 	local rarity = StyleConfig.Memeling.Rarities[if memeling then memeling.Rarity else "Common"]
 	local rarityColor = if rarity then rarity.Color else style.Knob
-	local scale = getMemelingScale(memelingId)
-	local size = StyleConfig.Memeling.Size
-	local diameter = math.min(style.MaxDiameter, size.X * scale * style.WidthShare)
-	local wallHeight = size.Y * scale + style.Headroom
+	local diameter, wallHeight, _ = domeSize(memelingId)
 	local top = pedestal.CFrame * CFrame.new(0, pedestal.Size.Y / 2, 0)
 	local folder = Instance.new("Folder")
 	folder.Name = "GlassDome"
@@ -2132,7 +2145,7 @@ function MapBuilder.AddGlassDome(core: BasePart, pedestal: BasePart, memelingId:
 	wall.Material = style.GlassMaterial
 	wall.Transparency = style.GlassTransparency
 	finish(wall)
-	local capHeight = diameter * style.CapHeightShare
+	local _, _, capHeight = domeSize(memelingId)
 	local cap = makeShape("Cap", "Ball", Vector3.one * diameter, top * CFrame.new(0, 0.2 + wallHeight, 0), style.GlassColor, folder)
 	local mesh = Instance.new("SpecialMesh")
 	mesh.MeshType = Enum.MeshType.Sphere

@@ -314,6 +314,15 @@ local function updateSellPrompt(pedestal: Part, entry: ShowcaseEntry)
 	end
 end
 
+-- Убирает все подписи «N Aura» с постамента (при перестройке не должно остаться старых)
+local function removePedestalLabels(pedestal: Part)
+	for _, child in ipairs(pedestal:GetChildren()) do
+		if child.Name == "Label" and child:IsA("BillboardGui") then
+			child:Destroy()
+		end
+	end
+end
+
 -- Рисует мемлинга на постаменте: мемлинг с именем и доходом, над ним — накоплено
 local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEntry, data: PlayerData.Data)
 	local pedestal = getPedestal(plotIndex, entry.pedestal)
@@ -333,11 +342,13 @@ local function renderEntry(player: Player, plotIndex: number, entry: ShowcaseEnt
 	body:SetAttribute("MemelingId", entry.memelingId)
 	body:SetAttribute("OwnerUserId", player.UserId) -- клиент рисует контур своим мемлингам на постаментах
 	MapBuilder.AddGlassDome(body, pedestal, entry.memelingId) -- витрина: стеклянный колпак и свечение редкости
-	-- Одна плашка прямо над макушкой мемлинга (крупный — выше): сверху имя и доход, снизу «N Aura».
-	-- Обе подписи у одной точки и одного размера в пикселях — не налезают и не растут с расстоянием
-	local height = size.Y * MapBuilder.GetMemelingScale(entry.memelingId)
-	MapBuilder.AddStackLabel(body, getMemelingLabel(entry, data), height / 2 + labelStyle.PedestalLabelGap, "Top")
-	MapBuilder.AddStackLabel(pedestal, "", pedestal.Size.Y / 2 + height + labelStyle.PedestalLabelGap, "Bottom")
+	-- Одна плашка над стеклянным колпаком (у крупного мемлинга колпак выше — и плашка выше): сверху имя и доход,
+	-- снизу «N Aura». Обе подписи у одной точки мира и одного размера в пикселях — не налезают и не растут
+	-- с расстоянием. Высота — от верха постамента (ядро мемлинга после увеличения по редкости бывает выше)
+	local labelY = pedestal.Position.Y + pedestal.Size.Y / 2 + MapBuilder.GetDomeHeight(entry.memelingId) + labelStyle.PedestalLabelGap
+	MapBuilder.AddStackLabel(body, getMemelingLabel(entry, data), labelY - body.Position.Y, "Top")
+	removePedestalLabels(pedestal)
+	MapBuilder.AddStackLabel(pedestal, "", labelY - pedestal.Position.Y, "Bottom")
 
 	rendered[player] = rendered[player] or {}
 	rendered[player][entry.pedestal] = { Entry = entry, Body = body }
@@ -357,10 +368,7 @@ local function unrenderPedestal(player: Player, plotIndex: number, pedestalIndex
 	end
 	local pedestal = getPedestal(plotIndex, pedestalIndex)
 	if pedestal then
-		local label = pedestal:FindFirstChild("Label")
-		if label then
-			label:Destroy()
-		end
+		removePedestalLabels(pedestal)
 		setPromptEnabled(pedestal, "CollectPrompt", false)
 		setPromptEnabled(pedestal, "SellPrompt", false)
 	end
