@@ -71,12 +71,49 @@ Extraction, Enemy, Event, Analytics. Защита: RemoteGuard, RateLimiter.
 продажи), автосохранение 90 с.
 
 MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена — оригинальные, придумай смешные.
-Сейчас (7.6): Meme Zone 13, Golden Zone 8, Secret 1; в каждой зоне есть хотя бы один Legendary.
+Сейчас (7.7): Meme Zone 13, Golden Zone 8, Candy Chaos 5, Secret 1; в каждой зоне есть хотя бы один Legendary.
 
 ## Идеи для фазы 7 (не делать без отдельной задачи)
 
 - Гонка за Legendary: Legendary несут вдвоём (оба игрока рядом держат его, скорость — общая;
   один отпустил — мемлинг падает). Записано в 6.0, пункт 5.
+
+## Как добавить новую зону
+
+Зона целиком описывается конфигами; код сервисов трогать не нужно (кроме новых моделей). `<Id>` — короткий Id зоны
+латиницей (как `Meme`, `Golden`, `Candy`), один и тот же во всех файлах.
+
+1. `src/shared/Config/ZoneConfig.luau`: добавить `<Id>` в конец `ZoneOrder` и запись в `Zones` —
+   `SpawnChances` (Safe и Danger, сумма в каждой = 100), `AccessCost` (nil — бесплатно; число — ворота у портала),
+   `Tutorial = false`.
+2. `src/shared/Config/MemelingConfig.luau`: мемлинги с `Zone = "<Id>"` и `IncomeMultiplier` (константа зоны, как
+   `CANDY_INCOME`). Обязательно хотя бы один Legendary (тест и предупреждение при старте); на каждую редкость с шансом
+   > 0 нужен хотя бы один мемлинг.
+3. `src/server/Visual/MemelingBuilders.luau` — строитель `Builders.<MemelingId>` на каждого нового мемлинга
+   (стиль D: глаза разного размера с бликом, румянец, глянец, тень, деталь сзади, одна яркая черта).
+4. `src/shared/Config/StyleConfig.luau`: `Characters.<MemelingId>` — цвета мемлингов; `ZoneThemes.<Id>` — тема зоны
+   через `themeFrom({...})` (полы, холмы, грибы, край, облака, великаны, туман и свет опасной части);
+   `PortalThemes.<Id>` — цвета воронки и кольца портала.
+5. `src/shared/Config/TextConfig.luau`: `ZoneNames.<Id>` (вывеска портала, указатели, пол зоны),
+   `PortalInfos.<Id>` (табличка у портала), `MemelingNames.<MemelingId>`.
+6. `src/shared/Config/MapConfig.luau`:
+   - `Zones.<Id> = zoneLayout(Vector3.new(X, ZONE_FLOOR_Y + 1, Z), edgeKinds?)` — центр верха пола; зоны держать
+     в 500 студах друг от друга и от хаба; `edgeKinds` — великаны по краю (`Rocks`, `Crystal`, `Can`, `Popsicle`,
+     `Donut`, `Lollipop`; новые виды — в `server/Visual/IslandEdges`);
+   - `PortalRotations.<Id>` — угол портала в хабе (+90 — на 90° против часовой: 90° → 0°). Заняты: 90° Meme,
+     270° Golden, 0° Candy; 180° — киоск, кружка и вход в паркур. Для четвёртого портала нужна перестановка хаба
+     (BEST HAUL, Props, Decor.Bushes — проверить, что не налезают на подиум шириной 26);
+   - `Portal.Statues.Ids.<Id>` — 4 мемлинга этой зоны для статуй у портала.
+7. `src/shared/Config/HazardConfig.luau`: `Zones.<Id>` — планки (`Lasers`) и плиты (`Plates`) в опасной части.
+8. `src/shared/Config/EnemyConfig.luau`: `Zones.<Id>` — `Kind` (Id из `Kinds`), `Count`, `SpawnPoints`. Новый вид
+   врага — запись в `Kinds` (скорость, урон, замах, размер), `EnemyBuilders.<Kind>` в MemelingBuilders и
+   `StyleConfig.Characters.<Kind>` (поле `Body` обязательно).
+9. Тесты: в `tests/RarityRoll.spec.luau` — тест зоны (число мемлингов по редкостям, доход, шансы, цена входа);
+   в `tests/BountyRule.spec.luau` — общее число кандидатов. Потом `scripts/check.ps1`.
+
+Что подхватится само: портал с воротами и кнопкой Unlock (ZoneAccess, профиль `zoneAccess`), стрелка на указателях
+хаба, спавн и ресток, эвакуация (EXTRACT и SLOW EXIT), враги, ловушки, холмы и тропинки, край острова и облака,
+падение из зоны, BOUNTY, экран результата, /memelings. Колесо сыра и туториал — только в `ZoneConfig.FirstZone`.
 
 ## Где остановились
 
@@ -399,6 +436,18 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   яркая черта: ложка, пар, пламя, корона с мантией, шлем-пузырь, бриллиант, кубок-панцирь, цилиндр с моноклем),
   цвета — StyleConfig.Characters, имена — TextConfig.MemelingNames. Правило «в каждой зоне хотя бы один Legendary»:
   тест в RarityRoll.spec и предупреждение сервера при старте. /memelings — по ряду на зону, последний ряд — Secret.
+- 7.7 (третья зона CANDY CHAOS, коммиты по частям):
+  1) Виды врагов: EnemyConfig.Kinds (скорость, урон, замах, размер; общее поведение — Chaser), EnemyConfig.Zones[Id].Kind;
+     Enemy хранит статы вида у каждого врага, MemelingBuilders.BuildEnemy(kindId, …); клиент берёт длительность замаха
+     и размер из атрибутов врага (WindupSeconds, BodySize). Новый враг GummyBrute — мармеладный громила: скорость 7
+     (патруль 4), урон 40, замах 0,8 с, тело 7.
+  2) Зона Candy (Z = 500): вход 250 000 Aura (ворота у портала), шансы Rare 50 / Epic 38 / Legendary 12 в обеих частях,
+     6 GummyBrute, ловушки как в Golden, но быстрее; тема розово-голубая (ZoneThemes.Candy), по краю гигантские
+     леденцы (IslandEdges, zoneLayout(top, edgeKinds)). 5 мемлингов, доход ×20 (MemelingConfig.CandyIncomeMultiplier):
+     CottonCandyCloud, LollipopLlama (Rare), GummyWormGang, MarshmallowMage (Epic), ChocoKing (Legendary).
+     Портал на 0° (PortalRotations.Candy = 90, розовая воронка); BEST HAUL переехал на 45° r 34 вместо гигантского
+     телефона, кусты 14°/346° → 24°/336°.
+  3) Раздел «Как добавить новую зону» в этом файле.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
@@ -408,5 +457,5 @@ luau-lsp analyze с типами Roblox, проверка кодировки (.l
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
 Фазы 1–5 закрыты (в 5.4 сделаны модели; звуков мемлингов пока нет), правки 6.0 и визуальный проход 6.1 перед тестом сделаны,
-7.1 (агрессия врагов), 7.2 (Golden Zone), 7.3 (секретный паркур), 7.4 (магазин косметики), 7.5 (края островов, холмы, BOUNTY) и 7.6 (8 новых мемлингов) готовы.
+7.1 (агрессия врагов), 7.2 (Golden Zone), 7.3 (секретный паркур), 7.4 (магазин косметики), 7.5 (края островов, холмы, BOUNTY), 7.6 (8 новых мемлингов) и 7.7 (зона Candy Chaos) готовы.
 Дальше по документации — «Ворота B»: закрытый тест (раздел 7, шаг 3).
