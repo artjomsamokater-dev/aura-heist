@@ -21,6 +21,21 @@ MapConfig.Hub = {
 	Size = Vector3.new(80, 1, 80),
 }
 
+-- Фон вокруг хаба и участков: «море» (Baseplate из default.project.json, растянутый до 2048 — предел Roblox),
+-- мостики от хаба к участкам и парящие острова-декорации вдали (по ним не ходят)
+MapConfig.Background = {
+	SeaSize = 2048,
+	BridgeWidth = 8,
+	BridgeThickness = 0.6,
+	-- Острова: центр верхней грани (травы), радиус, высота «земли» под травой и что растёт сверху
+	Islands = {
+		{ Position = Vector3.new(-290, 55, -160), Radius = 24, Depth = 30, Decor = "Tree" },
+		{ Position = Vector3.new(-170, 115, 280), Radius = 18, Depth = 24, Decor = "Mushroom" },
+		{ Position = Vector3.new(250, 75, -270), Radius = 20, Depth = 26, Decor = "Crystal" },
+		{ Position = Vector3.new(60, 150, -360), Radius = 15, Depth = 20, Decor = "Tree" },
+	},
+}
+
 -- Точка появления в центре хаба
 MapConfig.Spawn = {
 	Position = Vector3.new(0, 1.5, 0),

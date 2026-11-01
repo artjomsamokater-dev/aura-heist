@@ -66,7 +66,7 @@ function LightingSetup.Apply()
 	sky.CelestialBodiesShown = true
 	sky.Parent = Lighting
 
-	print("[LightingSetup] Свет настроен: яркий день")
+	print("[LightingSetup] Свет настроен: день, розово-фиолетовая дымка")
 end
 
 return LightingSetup

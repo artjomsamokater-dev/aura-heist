@@ -108,8 +108,22 @@ StyleConfig.Label = {
 	EntryScale = 0.5, -- подпись «Entry» вдвое меньше обычной
 }
 
--- Земля вокруг (Baseplate)
-StyleConfig.Ground = Palette.MintGrass
+-- Фон: лавандовое «море» вместо земли, светлая пена по краю хаба и участков, мостики, парящие острова
+StyleConfig.Background = {
+	Sea = Color3.fromRGB(150, 140, 214), -- голубовато-лавандовое море
+	Foam = Palette.CreamLight, -- кайма по краю хаба и участков
+	FoamWidth = 3, -- на сколько студов пена шире площадки с каждой стороны
+	Bridge = Palette.PlumLight,
+	BridgeRail = Palette.Plum, -- бортики мостика
+	IslandGrass = Palette.MintLight,
+	IslandEarth = Palette.Plum,
+	IslandEarthDark = Palette.PlumDark,
+	TreeTrunk = Palette.CreamDark,
+	TreeCrown = Palette.Mint,
+	MushroomStem = Palette.CreamLight,
+	MushroomCap = Palette.PlumLight,
+	Crystal = Palette.MintLight,
+}
 
 -- Хаб: светлый мятный пол (фон); портал — самое яркое в хабе
 StyleConfig.Hub = {
@@ -454,30 +468,31 @@ StyleConfig.Memeling = {
 -- ── Свет ───────────────────────────────────────────────────────────────────
 -- Солнце под углом (широта + время дня дают длинные мягкие тени), мягкая цветокоррекция.
 -- Тени включены в default.project.json: Lighting.Technology = ShadowMap (скриптом её не поменять).
+-- Небо — стандартное Roblox (своих картинок нет), розово-фиолетовый тон дают Atmosphere и ColorCorrection.
 StyleConfig.Lighting = {
-	ClockTime = 15.3, -- вторая половина дня: солнце сбоку, тени видны
+	ClockTime = 16, -- вторая половина дня: солнце сбоку, тени видны, свет теплее
 	GeographicLatitude = 38, -- наклон пути солнца
 	Brightness = 2.2,
-	Ambient = rgb(112, 100, 116),
-	OutdoorAmbient = rgb(132, 122, 134),
+	Ambient = rgb(120, 100, 132),
+	OutdoorAmbient = rgb(150, 128, 162),
 	ExposureCompensation = -0.1,
 	EnvironmentDiffuseScale = 0.4,
 	EnvironmentSpecularScale = 0.3,
 	ShadowSoftness = 0.35,
-	Atmosphere = {
-		Density = 0.3,
-		Offset = 0.25,
-		Color = rgb(214, 222, 238),
-		Decay = rgb(248, 210, 182),
-		Glare = 0.1,
-		Haze = 1,
+	Atmosphere = { -- мягкая розово-фиолетовая дымка у горизонта
+		Density = 0.32,
+		Offset = 0.2,
+		Color = rgb(236, 206, 240),
+		Decay = rgb(255, 172, 206),
+		Glare = 0.15,
+		Haze = 1.6,
 	},
 	Bloom = { Intensity = 0.2, Size = 16, Threshold = 1.4 },
 	ColorCorrection = {
-		Saturation = 0.08,
-		Contrast = 0.06,
+		Saturation = 0.1,
+		Contrast = 0.05,
 		Brightness = 0,
-		TintColor = rgb(255, 245, 232), -- чуть тёплый оттенок
+		TintColor = rgb(255, 238, 250), -- лёгкий розово-сиреневый оттенок
 	},
 	Sky = { SunAngularSize = 16, StarCount = 0 },
 }

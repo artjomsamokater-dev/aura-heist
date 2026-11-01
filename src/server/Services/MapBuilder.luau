@@ -330,13 +330,132 @@ end
 
 -- ── Хаб ────────────────────────────────────────────────────────────────────
 
-local function paintGround()
-	-- Baseplate из default.project.json: формы не трогаем, только цвет
+-- Фон: Baseplate из default.project.json становится «морем» (растягиваем до SeaSize, верх остаётся на Y = 0).
+-- Стилизованное море из одной детали, а не Terrain Water: дешевле для телефонов, по нему можно ходить
+local function buildSea()
 	local baseplate = Workspace:FindFirstChild("Baseplate")
 	if baseplate and baseplate:IsA("BasePart") then
-		baseplate.Color = StyleConfig.Ground
+		local size = MapConfig.Background.SeaSize
+		local top = baseplate.Position.Y + baseplate.Size.Y / 2
+		baseplate.Size = Vector3.new(size, baseplate.Size.Y, size)
+		baseplate.Position = Vector3.new(0, top - baseplate.Size.Y / 2, 0)
+		baseplate.Color = StyleConfig.Background.Sea
 		baseplate.Material = StyleConfig.Material
 	end
+end
+
+-- Светлая кайма-«пена» под краем площадки (хаба или участка): тонкая плита чуть шире площадки
+local function addFoam(name: string, floor: BasePart, parent: Instance)
+	local grow = StyleConfig.Background.FoamWidth * 2
+	local foam = makePart(
+		name,
+		Vector3.new(floor.Size.X + grow, 0.2, floor.Size.Z + grow),
+		floor.CFrame * CFrame.new(0, -floor.Size.Y / 2 + 0.1, 0),
+		StyleConfig.Background.Foam,
+		parent
+	)
+	decorate(foam, false)
+end
+
+-- Мостики от хаба к участкам: лежат «под» полами (там их не видно), видна только часть над морем.
+-- Бортики — только на видимой части: от края хаба до края участка
+local function buildBridges(parent: Instance)
+	local cfg = MapConfig.Background
+	local hub = MapConfig.Hub
+	local style = StyleConfig.Background
+	local floorTop = hub.Center.Y + hub.Size.Y / 2
+	for i = 1, MapConfig.Plots.Count do
+		local plotCFrame = PlotLayout.PlotCFrame(i)
+		local flat = Vector3.new(plotCFrame.Position.X - hub.Center.X, 0, plotCFrame.Position.Z - hub.Center.Z)
+		local length = flat.Magnitude
+		local direction = flat.Unit
+		local along = CFrame.lookAt(Vector3.zero, direction) -- −Z смотрит от хаба к участку
+		local bridge = makePart(
+			"Bridge" .. i,
+			Vector3.new(cfg.BridgeWidth, cfg.BridgeThickness, length),
+			CFrame.new(hub.Center.X, floorTop - 0.1 - cfg.BridgeThickness / 2, hub.Center.Z) * along * CFrame.new(0, 0, -length / 2),
+			style.Bridge,
+			parent
+		)
+		bridge.CastShadow = false
+
+		-- Видимая часть: от края квадратного хаба до переднего края участка
+		local fromDistance = (hub.Size.X / 2) / math.max(math.abs(direction.X), math.abs(direction.Z))
+		local toDistance = length - MapConfig.Plots.Size.Z / 2
+		local visible = toDistance - fromDistance
+		if visible > 0 then
+			for s, side in ipairs({ -1, 1 }) do
+				local rail = makePart(
+					"BridgeRail" .. i .. "_" .. s,
+					Vector3.new(0.5, 0.8, visible),
+					CFrame.new(hub.Center.X, floorTop + 0.3, hub.Center.Z)
+						* along
+						* CFrame.new(side * (cfg.BridgeWidth / 2 - 0.25), 0, -(fromDistance + visible / 2)),
+					style.BridgeRail,
+					parent
+				)
+				decorate(rail, false)
+			end
+		end
+	end
+end
+
+-- Парящий остров-декорация: трава сверху, под ней «земля» ступенчатым конусом и что-то на макушке
+local function buildIsland(index: number, spec: { Position: Vector3, Radius: number, Depth: number, Decor: string }, parent: Instance)
+	local style = StyleConfig.Background
+	local model = Instance.new("Model")
+	model.Name = "Island" .. index
+	local top = spec.Position
+	local parts: { BasePart } = {}
+	local function add(part: BasePart)
+		part.CanCollide = false
+		decorate(part, false)
+		table.insert(parts, part)
+	end
+
+	add(makeColumn("Grass", CFrame.new(top - Vector3.new(0, 1.5, 0)), 3, spec.Radius * 2, style.IslandGrass, model))
+	-- Земля: три ступени, каждая уже и ниже предыдущей
+	local y = top.Y - 3
+	for step, share in ipairs({ { Height = 0.4, Width = 0.95 }, { Height = 0.35, Width = 0.65 }, { Height = 0.25, Width = 0.35 } }) do
+		local height = spec.Depth * share.Height
+		local color = if step == 3 then style.IslandEarthDark else style.IslandEarth
+		add(makeColumn("Earth" .. step, CFrame.new(top.X, y - height / 2, top.Z), height, spec.Radius * 2 * share.Width, color, model))
+		y -= height
+	end
+
+	if spec.Decor == "Tree" then
+		add(makeColumn("Trunk", CFrame.new(top + Vector3.new(0, 4, 0)), 8, 2, style.TreeTrunk, model))
+		add(makeShape("Crown", "Ball", Vector3.one * 10, CFrame.new(top + Vector3.new(0, 11, 0)), style.TreeCrown, model))
+		add(makeShape("Crown2", "Ball", Vector3.one * 6, CFrame.new(top + Vector3.new(3.5, 9, 2)), style.TreeCrown, model))
+	elseif spec.Decor == "Mushroom" then
+		add(makeColumn("Stem", CFrame.new(top + Vector3.new(0, 3.5, 0)), 7, 3, style.MushroomStem, model))
+		add(makeColumn("Cap", CFrame.new(top + Vector3.new(0, 8, 0)), 2.5, 11, style.MushroomCap, model))
+		add(makeShape("CapTop", "Ball", Vector3.one * 7, CFrame.new(top + Vector3.new(0, 9, 0)), style.MushroomCap, model))
+	elseif spec.Decor == "Crystal" then
+		for c, height in ipairs({ 12, 8, 6 }) do
+			local offset = Vector3.new((c - 2) * 3.5, height / 2, (c % 2) * 2)
+			local crystal = makeShape(
+				"Crystal" .. c,
+				"Block",
+				Vector3.new(2.6, height, 2.6),
+				CFrame.new(top + offset) * CFrame.Angles(0, math.rad(45), math.rad((c - 2) * 12)),
+				style.Crystal,
+				model
+			)
+			crystal.Material = StyleConfig.GlowMaterial
+			add(crystal)
+		end
+	end
+	model.Parent = parent
+end
+
+local function buildBackground()
+	buildSea()
+	local folder = makeFolder("Background")
+	for i, spec in ipairs(MapConfig.Background.Islands) do
+		buildIsland(i, spec, folder)
+	end
+	buildBridges(folder)
 end
 
 local function buildHub()
@@ -345,7 +464,8 @@ local function buildHub()
 	local portalCfg = MapConfig.Portal
 	local style = StyleConfig.Portal
 
-	makePart("Floor", hub.Size, CFrame.new(hub.Center), StyleConfig.Hub.Floor, folder)
+	local hubFloor = makePart("Floor", hub.Size, CFrame.new(hub.Center), StyleConfig.Hub.Floor, folder)
+	addFoam("Foam", hubFloor, folder)
 
 	-- Игрок появляется лицом к порталу: персонаж смотрит туда же, куда точка появления
 	local spawnPosition = MapConfig.Spawn.Position
@@ -584,6 +704,7 @@ local function buildPlots()
 
 		local floor = makePart("Floor", cfg.Size, plotCFrame, StyleConfig.Plot.Floor, model)
 		model.PrimaryPart = floor
+		addFoam("Foam", floor, model)
 
 		local decor = Instance.new("Folder")
 		decor.Name = "Decor"
@@ -942,11 +1063,11 @@ function MapBuilder.Build()
 	built = true
 
 	validatePlotLayout()
-	paintGround()
+	buildBackground()
 	buildHub()
 	buildPlots()
 	buildZone()
-	print(string.format("[MapBuilder] Карта построена: хаб, %d участков, зона", #plots))
+	print(string.format("[MapBuilder] Карта построена: море, хаб, %d участков, зона", #plots))
 end
 
 -- Список участков по порядку (Model)
