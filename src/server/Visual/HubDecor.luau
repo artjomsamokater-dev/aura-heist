@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MapConfig = require(ReplicatedStorage.Shared.Config.MapConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
+local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 
 local HubDecor = {}
 
@@ -94,6 +95,15 @@ local function signText(board: BasePart, face: Enum.NormalId, text: string, colo
 	label.TextColor3 = color
 	label.Text = text
 	label.Parent = gui
+end
+
+-- Где стоит портал зоны zoneId: портал стартовой зоны, повёрнутый вокруг центра площади
+-- на MapConfig.PortalRotations[zoneId]
+local function portalPosition(zoneId: string): Vector3
+	local hub = MapConfig.Hub
+	local pivot = CFrame.new(hub.Center.X, 0, hub.Center.Z)
+	local rotation = pivot * CFrame.Angles(0, math.rad(MapConfig.PortalRotations[zoneId] or 0), 0) * pivot:Inverse()
+	return rotation * MapConfig.Portal.Position
 end
 
 -- ── Мелкий декор ──────────────────────────────────────────────────────────
@@ -203,11 +213,16 @@ local function buildSignpost(index: number, angle: number, radius: number, paren
 	local style = StyleConfig.Hub.Decor
 	local m = model("Signpost" .. index, parent)
 	local base = polar(angle, radius, 0)
-	column("Post", base + Vector3.new(0, 3.5, 0), 7, 0.5, style.SignPost, m, true)
+	column("Post", base + Vector3.new(0, 4.2, 0), 8.4, 0.5, style.SignPost, m, true)
 	local hub = MapConfig.Hub
 	local bestHaul = Vector3.new(hub.Center.X + hub.BestHaul.Offset.X, base.Y, hub.Center.Z + hub.BestHaul.Offset.Y)
-	buildArrow("ToPortal", base, MapConfig.Portal.Position, 6, TextConfig.Portal, m)
-	buildArrow("ToBestHaul", base, bestHaul, 4.6, TextConfig.BestHaulTitle, m)
+	-- Стрелки к порталам всех зон (сверху вниз) и к витрине
+	local height = 7.4
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		buildArrow("To" .. zoneId, base, portalPosition(zoneId), height, TextConfig.ZoneNames[zoneId] or zoneId, m)
+		height -= 1.4
+	end
+	buildArrow("ToBestHaul", base, bestHaul, height, TextConfig.BestHaulTitle, m)
 end
 
 -- Гирлянда над дорожкой: столбы у начала и конца по разные стороны дорожки, нить с провисом,
@@ -365,7 +380,11 @@ function HubDecor.Build(parent: Instance)
 	-- Фонари: по одному у каждой дорожки к мостику — с той стороны, что дальше от портала
 	-- (у портала свой подиум), и пара у дорожки к порталу
 	local plots = MapConfig.Plots
-	local portalFlat = Vector3.new(MapConfig.Portal.Position.X, 0, MapConfig.Portal.Position.Z)
+	local portals: { Vector3 } = {}
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		local p = portalPosition(zoneId)
+		table.insert(portals, Vector3.new(p.X, 0, p.Z))
+	end
 	local lamp = 0
 	for i = 1, plots.Count do
 		local angle = plots.AngleOffsetDegrees + (i - 1) * 360 / plots.Count
@@ -373,8 +392,13 @@ function HubDecor.Build(parent: Instance)
 		local side = Vector3.new(-math.sin(a), 0, math.cos(a)) * decor.LampSide
 		local onPath = polar(angle, decor.LampRadius, 0)
 		local left, right = onPath + side, onPath - side
+		-- Расстояние до ближайшего портала: фонарь ставим с той стороны, где оно больше
 		local function fromPortal(p: Vector3): number
-			return (Vector3.new(p.X, 0, p.Z) - portalFlat).Magnitude
+			local nearest = math.huge
+			for _, portal in ipairs(portals) do
+				nearest = math.min(nearest, (Vector3.new(p.X, 0, p.Z) - portal).Magnitude)
+			end
+			return nearest
 		end
 		lamp += 1
 		buildLamp(lamp, if fromPortal(left) >= fromPortal(right) then left else right, folder)

@@ -625,6 +625,28 @@ StyleConfig.EnemyAlert = {
 	PlaybackSpeed = 0.55,
 }
 
+-- Цвета порталов по зонам (остальное — StyleConfig.Portal). Golden — золотая воронка: в неё можно войти
+-- (жёлтый = интерактивное), ворота перед ней — тоже жёлтые (их покупают)
+StyleConfig.PortalThemes = {
+	Meme = {
+		Color = StyleConfig.Portal.Color,
+		Core = StyleConfig.Portal.Core,
+		RingColors = StyleConfig.Portal.Ring.Colors,
+		VortexColor = StyleConfig.Portal.Vortex.Color,
+	},
+	Golden = {
+		Color = Palette.Sun,
+		Core = Palette.PlumDark,
+		RingColors = { Palette.CreamLight, Palette.SunDark },
+		VortexColor = Palette.SunLight,
+	},
+} :: { [string]: { Color: Color3, Core: Color3, RingColors: { Color3 }, VortexColor: Color3 } }
+
+StyleConfig.ZoneGate = {
+	Bars = Palette.Sun,
+	Lock = Palette.SunDark,
+}
+
 -- Свой выпавший лут (после смерти): золотая подсветка сквозь стены и подпись «YOUR LOOT» с таймером.
 -- Видит только погибший (client/Controllers/LootController и OutlineController)
 StyleConfig.Loot = {

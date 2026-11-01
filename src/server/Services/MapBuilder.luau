@@ -34,6 +34,7 @@ local UPRIGHT = CFrame.Angles(0, 0, math.rad(90)) -- цилиндр Roblox ле�
 local built = false
 local plots: { Model } = {} -- [номер участка] = Model участка
 local portalParts: { [string]: Part } = {} -- триггеры порталов по Id зоны
+local gateLocks: { [string]: Part } = {} -- замки золотых ворот платных зон (на них кнопка покупки)
 -- Детали зон вылазок по Id зоны (ZoneConfig.ZoneOrder)
 local zoneFolders: { [string]: Folder } = {}
 local zoneEntryParts: { [string]: Part } = {}
@@ -861,9 +862,10 @@ local function makeStatue(name: string, memelingId: string, stand: Vector3, pare
 	end
 end
 
--- Оформление портала: подиум со ступенями и жёлтой каймой, колонны с кристаллами, вывеска «MEME ZONE»,
--- статуи, светящаяся стрелка на полу, табличка-подсказка. Крутит, качает и мигает — клиент (PortalController)
-local function buildPortalDecor(parent: Instance)
+-- Оформление портала зоны: подиум со ступенями и жёлтой каймой, колонны с кристаллами, вывеска с названием
+-- зоны, статуи мемлингов этой зоны, светящаяся стрелка на полу, табличка-подсказка.
+-- Крутит, качает и мигает — клиент (PortalController)
+local function buildPortalDecor(zoneId: string, parent: Instance)
 	local portalCfg = MapConfig.Portal
 	local style = StyleConfig.Portal
 	local folder = Instance.new("Folder")
@@ -929,7 +931,7 @@ local function buildPortalDecor(parent: Instance)
 			)
 			board.CanCollide = false
 			decorate(board, false)
-			addBoardText(board, Enum.NormalId.Front, TextConfig.PortalInfo, style.InfoText, style.InfoBoard)
+			addBoardText(board, Enum.NormalId.Front, TextConfig.PortalInfos[zoneId] or "", style.InfoText, style.InfoBoard)
 		end
 	end
 
@@ -938,12 +940,17 @@ local function buildPortalDecor(parent: Instance)
 	local board = makePart("Sign", sign.Size, CFrame.new(hubPoint(Vector2.new(portalCfg.Position.X, sign.Z), sign.Height)), style.SignBoard, folder)
 	board.CanCollide = false
 	decorate(board, false)
-	addBoardText(board, Enum.NormalId.Front, TextConfig.Portal, style.SignText, style.SignTextStroke, style.SignBorder)
-	addBoardText(board, Enum.NormalId.Back, TextConfig.Portal, style.SignText, style.SignTextStroke, style.SignBorder)
+	local title = TextConfig.ZoneNames[zoneId] or zoneId
+	addBoardText(board, Enum.NormalId.Front, title, style.SignText, style.SignTextStroke, style.SignBorder)
+	addBoardText(board, Enum.NormalId.Back, title, style.SignText, style.SignTextStroke, style.SignBorder)
 
-	-- Статуи
-	for i, statue in ipairs(portalCfg.Statues.List) do
-		makeStatue("Statue" .. i, statue.MemelingId, hubPoint(statue.Offset, tierOne), folder)
+	-- Статуи — мемлинги этой зоны
+	local statueIds = portalCfg.Statues.Ids[zoneId] or {}
+	for i, offset in ipairs(portalCfg.Statues.Offsets) do
+		local memelingId = statueIds[(i - 1) % math.max(1, #statueIds) + 1]
+		if memelingId then
+			makeStatue("Statue" .. i, memelingId, hubPoint(offset, tierOne), folder)
+		end
 	end
 
 	-- Светящаяся стрелка на полу: две «галочки» ^, остриём к порталу (+Z). Мигает клиент
@@ -986,41 +993,58 @@ local function buildWanderers(parent: Instance)
 	end
 end
 
-local function buildHub()
-	local folder = makeFolder("Hub")
+-- Золотые ворота перед триггером платной зоны: прутья и замок с ценой (подпись «иконка + цена»).
+-- Сквозь прутья проходят (мир общий): у купивших клиент прячет ворота, не купивших не пускает сервер (Raid).
+-- Кнопку покупки на замок вешает сервис ZoneAccess
+local function buildAccessGate(zoneId: string, parent: Instance)
+	local cfg = MapConfig.Portal.Gate
+	local podium = MapConfig.Portal.Podium
+	local style = StyleConfig.ZoneGate
+	local top = podium.TierHeight * #podium.Tiers -- верх верхней ступени над полом
+	local x0 = MapConfig.Portal.Position.X
+	local gate = Instance.new("Model")
+	gate.Name = "Gate"
+	gate:SetAttribute("ZoneId", zoneId)
+	for i = 1, cfg.BarCount do
+		local x = x0 + (i - (cfg.BarCount + 1) / 2) * cfg.BarSpacing
+		local bar = makeColumn("Bar" .. i, CFrame.new(hubPoint(Vector2.new(x, cfg.Z), top + cfg.BarHeight / 2)), cfg.BarHeight, cfg.BarDiameter, style.Bars, gate)
+		bar.CanCollide = false
+		decorate(bar, false)
+	end
+	local width = (cfg.BarCount - 1) * cfg.BarSpacing + cfg.BarDiameter
+	for c, height in ipairs(cfg.CrossBarHeights) do
+		local cross = makePart("Cross" .. c, Vector3.new(width, cfg.BarDiameter, cfg.BarDiameter), CFrame.new(hubPoint(Vector2.new(x0, cfg.Z), top + height)), style.Bars, gate)
+		cross.CanCollide = false
+		decorate(cross, false)
+	end
+	local lock = makePart("GateLock", cfg.LockSize, CFrame.new(hubPoint(Vector2.new(x0, cfg.Z - cfg.LockSize.Z), top + cfg.LockHeight)), style.Lock, gate)
+	lock.CanCollide = false
+	lock.CastShadow = false
+	addIconLabel(lock, "Aura")
+	gate.Parent = parent
+	gateLocks[zoneId] = lock
+end
+
+-- Портал в зону zoneId: невидимый триггер, воронка, вихрь, кольцо, гул, рамка, столб света, оформление и
+-- (у платной зоны) золотые ворота. Строится как портал на 90° и поворачивается вокруг центра площади
+-- на MapConfig.PortalRotations[zoneId]. Всё — в модели Hub.Portal_<Id>
+local function buildPortal(zoneId: string, parent: Instance)
 	local hub = MapConfig.Hub
 	local portalCfg = MapConfig.Portal
 	local style = StyleConfig.Portal
-
-	buildPlazaFloor(folder)
-	buildBestHaul(folder)
-	buildProps(folder)
-	HubDecor.Build(folder)
-	buildWanderers(folder)
-
-	-- Игрок появляется лицом к порталу: персонаж смотрит туда же, куда точка появления
-	local spawnPosition = MapConfig.Spawn.Position
-	local portalFlat = Vector3.new(portalCfg.Position.X, spawnPosition.Y, portalCfg.Position.Z)
-	local spawn = Instance.new("SpawnLocation")
-	spawn.Name = "HubSpawn"
-	spawn.Size = MapConfig.Spawn.Size
-	spawn.CFrame = CFrame.lookAt(spawnPosition, portalFlat)
-	spawn.Color = StyleConfig.Hub.Spawn
-	spawn.Material = StyleConfig.Material
-	spawn.TopSurface = Enum.SurfaceType.Smooth
-	spawn.Anchored = true
-	spawn.Neutral = true
-	spawn.Duration = StyleConfig.Hub.SpawnForceFieldSeconds -- 0 = без силового поля
-	spawn.Parent = folder
+	local theme = StyleConfig.PortalThemes[zoneId] or StyleConfig.PortalThemes.Meme
+	local model = Instance.new("Model")
+	model.Name = "Portal_" .. zoneId
+	model.WorldPivot = CFrame.new(hub.Center.X, 0, hub.Center.Z)
 
 	-- Портал — самое яркое в хабе. Логическая деталь (её касание = вход в зону) невидима,
 	-- поверх неё — круглая неоновая воронка с тёмной серединой, вихрь искр, кольцо, рамка, столб света и гул
-	local portal = makePart("Portal", portalCfg.Size, CFrame.new(portalCfg.Position), style.Color, folder)
+	local portal = makePart("Portal", portalCfg.Size, CFrame.new(portalCfg.Position), theme.Color, model)
 	portal.Transparency = 1
 	portal.CastShadow = false
 	portal.CanCollide = false -- сквозь портал проходят
 	portal.CanTouch = true -- на касание этой детали подписан Raid; декор поверх неё касаний не ловит
-	portalParts.Meme = portal -- название «MEME ZONE» — на большой вывеске над рамкой (buildPortalDecor)
+	portalParts[zoneId] = portal -- название зоны — на большой вывеске над рамкой (buildPortalDecor)
 
 	local facing = CFrame.new(portalCfg.Position) * CFrame.Angles(0, math.rad(90), 0) -- ось цилиндра — вдоль Z: диск смотрит на хаб
 	local function portalDisc(name: string, thickness: number, diameter: number, color: Color3): Part
@@ -1030,24 +1054,25 @@ local function buildHub()
 		decorate(disc, false)
 		return disc
 	end
-	local disc = portalDisc("PortalDisc", 0.4, portalCfg.DiscDiameter, style.Color)
+	local disc = portalDisc("PortalDisc", 0.4, portalCfg.DiscDiameter, theme.Color)
 	makeGlow(disc, style.Transparency)
 	addParticles(disc, style.Particles)
-	addLight(disc, style.Color, style.Light.Brightness, style.Light.Range)
-	portalDisc("PortalCore", 0.6, portalCfg.CoreDiameter, style.Core)
+	addLight(disc, theme.Color, style.Light.Brightness, style.Light.Range)
+	portalDisc("PortalCore", 0.6, portalCfg.CoreDiameter, theme.Core)
 
 	-- Вихрь: искры с края воронки летят к центру; невидимую плоскую деталь вращает клиент
 	local vortex = makePart(
 		"PortalVortex",
 		Vector3.new(portalCfg.DiscDiameter, portalCfg.DiscDiameter, 0.2),
 		CFrame.new(portalCfg.Position),
-		style.Color,
+		theme.Color,
 		portal
 	)
 	vortex.Transparency = 1
 	vortex.CanCollide = false
 	decorate(vortex, false)
 	local swirl = addParticles(vortex, style.Vortex)
+	swirl.Color = ColorSequence.new(theme.VortexColor)
 	swirl.Shape = Enum.ParticleEmitterShape.Disc
 	swirl.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
 	swirl.ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward
@@ -1064,7 +1089,7 @@ local function buildHub()
 			"Bead" .. i,
 			ringStyle.SegmentSize,
 			CFrame.new(portalCfg.Position) * CFrame.Angles(0, 0, angle) * CFrame.new(ringStyle.Radius, 0, 0),
-			ringStyle.Colors[(i - 1) % #ringStyle.Colors + 1],
+			theme.RingColors[(i - 1) % #theme.RingColors + 1],
 			ring
 		)
 		makeGlow(bead, 0)
@@ -1072,7 +1097,7 @@ local function buildHub()
 		decorate(bead, false)
 	end
 	ring.WorldPivot = CFrame.new(portalCfg.Position)
-	ring.Parent = folder
+	ring.Parent = model
 
 	-- Гул рядом с порталом: звук в мире, громче вблизи
 	local hum = Instance.new("Sound")
@@ -1096,7 +1121,7 @@ local function buildHub()
 			portalCfg.FrameHeight,
 			portalCfg.FramePillarDiameter,
 			style.Frame,
-			folder
+			model
 		)
 		decorate(pillar, true)
 		local cap = makeShape(
@@ -1105,7 +1130,7 @@ local function buildHub()
 			Vector3.one * portalCfg.FrameCapDiameter,
 			CFrame.new(portalCfg.Position.X + side * portalCfg.FramePillarX, floorTop + portalCfg.FrameHeight, portalCfg.Position.Z),
 			style.FrameCaps,
-			folder
+			model
 		)
 		decorate(cap, false)
 	end
@@ -1115,7 +1140,7 @@ local function buildHub()
 		portalCfg.FramePillarX * 2,
 		portalCfg.FramePillarDiameter * 0.8,
 		style.Frame,
-		folder
+		model
 	)
 	decorate(beam, true)
 
@@ -1124,14 +1149,53 @@ local function buildHub()
 		CFrame.new(portalCfg.Position.X, floorTop + portalCfg.FrameHeight + portalCfg.BeaconHeight / 2, portalCfg.Position.Z),
 		portalCfg.BeaconHeight,
 		portalCfg.BeaconDiameter,
-		style.Color,
-		folder
+		theme.Color,
+		model
 	)
 	makeGlow(beacon, style.BeaconTransparency)
 	decorate(beacon, false)
 	beacon.CanCollide = false
 
-	buildPortalDecor(folder)
+
+	buildPortalDecor(zoneId, model)
+	if ZoneConfig.Zones[zoneId].AccessCost ~= nil then
+		buildAccessGate(zoneId, model)
+	end
+	model.Parent = parent
+	local degrees = MapConfig.PortalRotations[zoneId] or 0
+	if degrees ~= 0 then
+		model:PivotTo(model.WorldPivot * CFrame.Angles(0, math.rad(degrees), 0))
+	end
+end
+
+local function buildHub()
+	local folder = makeFolder("Hub")
+	local portalCfg = MapConfig.Portal
+
+	buildPlazaFloor(folder)
+	buildBestHaul(folder)
+	buildProps(folder)
+	HubDecor.Build(folder)
+	buildWanderers(folder)
+
+	-- Игрок появляется лицом к порталу: персонаж смотрит туда же, куда точка появления
+	local spawnPosition = MapConfig.Spawn.Position
+	local portalFlat = Vector3.new(portalCfg.Position.X, spawnPosition.Y, portalCfg.Position.Z)
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "HubSpawn"
+	spawn.Size = MapConfig.Spawn.Size
+	spawn.CFrame = CFrame.lookAt(spawnPosition, portalFlat)
+	spawn.Color = StyleConfig.Hub.Spawn
+	spawn.Material = StyleConfig.Material
+	spawn.TopSurface = Enum.SurfaceType.Smooth
+	spawn.Anchored = true
+	spawn.Neutral = true
+	spawn.Duration = StyleConfig.Hub.SpawnForceFieldSeconds -- 0 = без силового поля
+	spawn.Parent = folder
+
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		buildPortal(zoneId, folder)
+	end
 end
 
 -- ── Участки ────────────────────────────────────────────────────────────────
@@ -1713,6 +1777,11 @@ end
 -- Триггер портала в зону zoneId (касание = вход)
 function MapBuilder.GetPortal(zoneId: string): Part
 	return assert(portalParts[zoneId], "MapBuilder.Build() ещё не вызван или нет портала " .. zoneId)
+end
+
+-- Замок золотых ворот платной зоны (nil — зона бесплатная): на него ZoneAccess вешает кнопку покупки
+function MapBuilder.GetZoneGateLock(zoneId: string): Part?
+	return gateLocks[zoneId]
 end
 
 -- То же, но без ошибки: nil, если у зоны портала нет

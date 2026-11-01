@@ -324,6 +324,25 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   AggroRadius (45) гонятся, «!» на AlertSeconds и звук (StyleConfig.EnemyAlert); погоня до LeashRadius (70),
   безопасной части или EXTRACT (EnemyMath.ChaseBlock / ShouldAggro / PatrolPoint + тесты). Output раз в
   StatusLogSeconds (5): «[Enemy] Grumblob1: патруль — …», «бросил погоню …: причина».
+- 7.2 (вторая зона GOLDEN ZONE, три коммита):
+  1) Рефактор: зоны — конфиг. ZoneConfig.ZoneOrder / Zones[Id] (шансы, AccessCost, Tutorial), геометрия —
+     MapConfig.Zones[Id] (одна раскладка zoneLayout от центра верха пола), ловушки — HazardConfig.Zones[Id],
+     враги — EnemyConfig.Zones[Id], мемлинги — MemelingConfig.Memelings[].Zone (+ IncomeMultiplier).
+     MapBuilder строит Workspace.RaidZone_<Id>, всё по Id (GetZoneFolder / GetZoneEntryCFrame / GetExtractionPad /
+     GetPortal(zoneId)); Spawn — свой журнал точек на зону, ресток всех зон одним таймером; Raid помнит зону
+     (Raid.GetZone, атрибут RaidZone для клиента), порталы по зонам, PortalRule.noAccess; Extraction — точки
+     своей зоны; Enemy/Hazards — по зонам; колесо сыра и туториал — только стартовая зона (ZoneConfig.FirstZone).
+     Чистые правила — shared/Util/ZoneRule (+ тесты: Meme Zone как раньше). Профиль — схема 4, zoneAccess.
+  2) Golden Zone на X = −500 (Y = 300), тема StyleConfig.ZoneThemes.Golden, 3 планки и 8 плит, 7 врагов;
+     шансы без Common (Safe 70/30 Rare/Epic, Danger 40/45/15). 5 мемлингов только там, доход ×5
+     (MemelingConfig.GoldenIncomeMultiplier; Studio.getRate и экран результата): BubbleTeaBandit, CactusCrooner
+     (Rare), PizzaPigeon, RoboDuck (Epic), KingWaffleton (Legendary) — строители в MemelingBuilders.
+  3) Портал Golden в хабе на 270°: MapBuilder.buildPortal(zoneId) строит портал стартовой зоны в модели
+     Hub.Portal_<Id> и поворачивает (MapConfig.PortalRotations); цвета — StyleConfig.PortalThemes, статуи —
+     мемлинги своей зоны. Перед платным порталом — золотые ворота (MapConfig.Portal.Gate) с замком «иконка + цена».
+     Сервис ZoneAccess: «Unlock» удержание 1 с → проверки на сервере → Economy.TrySpend(25 000) → zoneAccess[Id]
+     в профиль навсегда, атрибут ZoneAccess_<Id>; клиент (PortalController) прячет ворота у купивших.
+     На указателях хаба — стрелки к обоим порталам; фонари и кусты отодвинуты от обоих подиумов.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
@@ -332,5 +351,6 @@ luau-lsp analyze с типами Roblox, проверка кодировки (.l
 После 1.4: тексты для игрока вынесены в TextConfig, потерянные мемлинги возвращаются
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
-Фазы 1–5 закрыты (в 5.4 сделаны модели; звуков мемлингов пока нет), правки 6.0 и визуальный проход 6.1 перед тестом сделаны.
+Фазы 1–5 закрыты (в 5.4 сделаны модели; звуков мемлингов пока нет), правки 6.0 и визуальный проход 6.1 перед тестом сделаны,
+7.1 (агрессия врагов) и 7.2 (Golden Zone) готовы.
 Дальше по документации — «Ворота B»: закрытый тест (раздел 7, шаг 3).

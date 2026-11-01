@@ -34,6 +34,7 @@ MapConfig.Hub = {
 	Paths = {
 		{ Angle = 90, To = 27 }, -- к подиуму портала
 		{ Angle = 0, To = 24.5 }, -- к витрине BEST HAUL
+		{ Angle = 270, To = 27 }, -- к подиуму золотого портала
 	},
 	BestHaul = { -- витрина «BEST HAUL»: подиум с копией самого редкого вынесенного за сессию мемлинга
 		Offset = polar(0, 30),
@@ -48,7 +49,6 @@ MapConfig.Hub = {
 		{ Kind = "Phone", Offset = polar(45, 38) },
 		{ Kind = "Banana", Offset = polar(135, 38) },
 		{ Kind = "Duck", Offset = polar(225, 37) },
-		{ Kind = "Headphones", Offset = polar(270, 37) },
 	},
 	-- Декор площади (server/Visual/HubDecor): места — угол (градусы) и расстояние от центра.
 	-- Деревья и кусты — у края между мостиками; клумбы и скамейки — вокруг фонтана в секторах 45°/135°/…
@@ -67,8 +67,8 @@ MapConfig.Hub = {
 		Bushes = {
 			{ Angle = 166, Radius = 44 },
 			{ Angle = 194, Radius = 44 },
-			{ Angle = 256, Radius = 44 },
-			{ Angle = 284, Radius = 44 },
+			{ Angle = 246, Radius = 44 }, -- в стороне от подиума золотого портала (270°)
+			{ Angle = 294, Radius = 44 },
 			{ Angle = 346, Radius = 44 },
 			{ Angle = 14, Radius = 44 },
 		},
@@ -109,8 +109,8 @@ MapConfig.Hub = {
 		List = {
 			{ MemelingId = "ToastPaw", Angle = 30, Radius = 26 },
 			{ MemelingId = "SirWobbleton", Angle = 150, Radius = 26 },
-			{ MemelingId = "Grumbloaf", Angle = 240, Radius = 26 },
-			{ MemelingId = "NoodleNinja", Angle = 300, Radius = 26 },
+			{ MemelingId = "Grumbloaf", Angle = 215, Radius = 26 },
+			{ MemelingId = "NoodleNinja", Angle = 325, Radius = 26 },
 			{ MemelingId = "CaptainSockbeard", Angle = 340, Radius = 22 },
 		},
 	},
@@ -172,18 +172,34 @@ MapConfig.Portal = {
 	Columns = { X = 11.5, Z = 35, Height = 9, Diameter = 1.8, CrystalSize = 2 }, -- колонны по бокам, на нижней ступени
 	Sign = { Size = Vector3.new(18, 4.5, 0.6), Height = 18, Z = 32 }, -- вывеска над рамкой, перед столбом света
 	-- Мемлинги-статуи у основания: уменьшенные тусклые копии Common и Rare в первом ряду нижней ступени
+	-- (у каждой зоны свои: мемлинги этой зоны)
 	Statues = {
 		Scale = 0.6,
-		List = {
-			{ MemelingId = "ToastPaw", Offset = Vector2.new(-10.5, 28.4) },
-			{ MemelingId = "NoodleNinja", Offset = Vector2.new(-6.5, 28.4) },
-			{ MemelingId = "CaptainSockbeard", Offset = Vector2.new(6.5, 28.4) },
-			{ MemelingId = "Grumbloaf", Offset = Vector2.new(10.5, 28.4) },
-		},
+		Offsets = { Vector2.new(-10.5, 28.4), Vector2.new(-6.5, 28.4), Vector2.new(6.5, 28.4), Vector2.new(10.5, 28.4) },
+		Ids = {
+			Meme = { "ToastPaw", "NoodleNinja", "CaptainSockbeard", "Grumbloaf" },
+			Golden = { "BubbleTeaBandit", "PizzaPigeon", "RoboDuck", "CactusCrooner" },
+		} :: { [string]: { string } },
 	},
 	Arrow = { Z = { 22.6, 24.8 }, ArmLength = 2.8, ArmWidth = 0.7 }, -- две «галочки» ^ на полу перед подиумом
 	InfoSign = { Size = Vector3.new(6.4, 3.4, 0.3), Height = 7 }, -- табличка на левой колонне, выше статуй
+	-- Золотые ворота перед триггером платной зоны: прутья (сквозь них проходят — мир общий; у купивших
+	-- клиент их прячет, не купивших не пускает сервер) и замок с ценой и кнопкой покупки
+	Gate = {
+		Z = 32.4, -- перед триггером (он на Z = 34), со стороны хаба
+		BarCount = 7,
+		BarSpacing = 1.6,
+		BarDiameter = 0.5,
+		BarHeight = 10.8, -- от верхней ступени подиума
+		CrossBarHeights = { 2, 9 }, -- поперечины, от верхней ступени
+		LockSize = Vector3.new(2.4, 2.4, 0.6),
+		LockHeight = 4, -- центр замка над верхней ступенью
+	},
 }
+
+-- Порталы зон в хабе: один и тот же портал (всё выше — для стартовой зоны на 90°), повёрнутый вокруг
+-- центра площади на столько градусов. Golden — напротив, на 270°
+MapConfig.PortalRotations = { Meme = 0, Golden = 180 } :: { [string]: number }
 
 -- Участки баз (студии): стоят кольцом вокруг хаба, лицом к нему.
 -- Смещения ниже — относительно центра участка: -Z смотрит на хаб, +Z — от хаба.
