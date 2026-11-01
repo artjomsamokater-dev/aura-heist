@@ -71,6 +71,7 @@ Extraction, Enemy, Event, Analytics. Защита: RemoteGuard, RateLimiter.
 продажи), автосохранение 90 с.
 
 MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена — оригинальные, придумай смешные.
+Сейчас (7.6): Meme Zone 13, Golden Zone 8, Secret 1; в каждой зоне есть хотя бы один Legendary.
 
 ## Идеи для фазы 7 (не делать без отдельной задачи)
 
@@ -392,6 +393,12 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
      рестока в зоне, метка «BOUNTY x2» над такими мемлингами на полу.
   6) Туториал: Tutorial.IsActive; смерть в стартовой зоне с добычей → Raid.tutorialKeep, вылазка не закрывается,
      новый персонаж у входа зоны, модели пересоздаёт Spawn.RebuildCarried и Raid приваривает их снова.
+- 7.6 (новые мемлинги, стиль D, механика не менялась): Meme Zone +5 — SoggyCereal, ChonkyDumpling (Common),
+  SpicyNugget (Rare), ToiletPaperPrince (Epic), CosmicBurrito (Legendary); Golden Zone +3 — DiamondDonut (Rare),
+  TrophyTurtle (Epic), SirMoneybags (Legendary, доход ×5 как у всей Golden). Строители — MemelingBuilders (у каждого
+  яркая черта: ложка, пар, пламя, корона с мантией, шлем-пузырь, бриллиант, кубок-панцирь, цилиндр с моноклем),
+  цвета — StyleConfig.Characters, имена — TextConfig.MemelingNames. Правило «в каждой зоне хотя бы один Legendary»:
+  тест в RarityRoll.spec и предупреждение сервера при старте. /memelings — по ряду на зону, последний ряд — Secret.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
@@ -401,5 +408,5 @@ luau-lsp analyze с типами Roblox, проверка кодировки (.l
 на свою точку спавна через 10 с (решения автора — правила 13–16).
 
 Фазы 1–5 закрыты (в 5.4 сделаны модели; звуков мемлингов пока нет), правки 6.0 и визуальный проход 6.1 перед тестом сделаны,
-7.1 (агрессия врагов), 7.2 (Golden Zone), 7.3 (секретный паркур), 7.4 (магазин косметики) и 7.5 (края островов) готовы.
+7.1 (агрессия врагов), 7.2 (Golden Zone), 7.3 (секретный паркур), 7.4 (магазин косметики), 7.5 (края островов, холмы, BOUNTY) и 7.6 (8 новых мемлингов) готовы.
 Дальше по документации — «Ворота B»: закрытый тест (раздел 7, шаг 3).

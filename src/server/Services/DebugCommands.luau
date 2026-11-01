@@ -2,8 +2,9 @@
 -- DebugCommands: команды для проверки в Studio. В опубликованной игре их НЕТ (RunService:IsStudio()).
 --   /aura <число> — добавить себе столько Aura (через Economy, как любое начисление), чтобы быстро
 --                   проверять дорогие улучшения и Rebirth. Пример: /aura 100000
---   /memelings    — поставить перед собой ряд из всех 8 мемлингов (от Common к Legendary), чтобы
---                   посмотреть модели. Повторная команда убирает ряд. Это только картинка: подобрать нельзя.
+--   /memelings    — поставить перед собой всех мемлингов: по ряду на зону (Meme ближе, Golden дальше),
+--                   последний ряд — те, кого нет в зонах (Secret); в ряду от Common к Legendary. Повторная
+--                   команда убирает ряды. Это только картинка: подобрать нельзя.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +13,7 @@ local TextChatService = game:GetService("TextChatService")
 local Workspace = game:GetService("Workspace")
 
 local MemelingConfig = require(ReplicatedStorage.Shared.Config.MemelingConfig)
+local ZoneConfig = require(ReplicatedStorage.Shared.Config.ZoneConfig)
 local StyleConfig = require(ReplicatedStorage.Shared.Config.StyleConfig)
 local TextConfig = require(ReplicatedStorage.Shared.Config.TextConfig)
 local Economy = require(script.Parent.Economy)
@@ -22,17 +24,20 @@ local DebugCommands = {}
 local MAX_AURA = 10_000_000 -- больше за раз не даём даже в Studio, чтобы не сломать подписи опечаткой
 local LINEUP_NAME = "DebugMemelingLineup"
 local LINEUP_STEP = 9 -- расстояние между мемлингами в ряду, в студах (Legendary ×1,4 — шире 7)
-local LINEUP_DISTANCE = 14 -- на сколько студов перед игроком ряд
+local LINEUP_DISTANCE = 14 -- на сколько студов перед игроком первый ряд
+local LINEUP_ROW_STEP = 11 -- расстояние между рядами (зонами), в студах
 
--- Все Id мемлингов: от Common к Legendary, внутри редкости — по алфавиту
-local function getLineupIds(): { string }
+-- Мемлинги ряда (зона zoneId; nil — те, кого нет в зонах): от Common к Legendary, внутри редкости — по алфавиту
+local function getLineupIds(zoneId: string?): { string }
 	local rank: { [string]: number } = {}
 	for i, rarity in ipairs(MemelingConfig.RarityOrder) do
 		rank[rarity] = i
 	end
 	local ids: { string } = {}
-	for id in MemelingConfig.Memelings do
-		table.insert(ids, id)
+	for id, memeling in MemelingConfig.Memelings do
+		if memeling.Zone == zoneId then
+			table.insert(ids, id)
+		end
 	end
 	table.sort(ids, function(a: string, b: string): boolean
 		local ra = rank[MemelingConfig.Memelings[a].Rarity] or 0
@@ -62,23 +67,32 @@ local function toggleLineup(player: Player)
 	local folder = Instance.new("Folder")
 	folder.Name = LINEUP_NAME
 	folder.Parent = Workspace
-	local ids = getLineupIds()
 	local look = root.CFrame.LookVector * Vector3.new(1, 0, 1)
 	local forward = if look.Magnitude > 0.01 then look.Unit else -Vector3.zAxis
 	local right = forward:Cross(Vector3.yAxis)
-	-- Ряд на уровне ног игрока; мемлинги смотрят лицом на игрока
+	-- Ряды на уровне ног игрока; мемлинги смотрят лицом на игрока
 	local floorY = root.Position.Y - (root.Size.Y / 2 + 2)
-	local middle = Vector3.new(root.Position.X, floorY + StyleConfig.Memeling.Size.Y / 2, root.Position.Z) + forward * LINEUP_DISTANCE
-	for i, id in ipairs(ids) do
-		local position = middle + right * ((i - (#ids + 1) / 2) * LINEUP_STEP)
-		local core = MapBuilder.MakeMemeling("Lineup" .. i, id, CFrame.lookAt(position, position - forward), folder)
-		MapBuilder.AddLabel(core, TextConfig.MemelingNames[id] or id, {
-			MaxDistance = StyleConfig.Label.MaxDistance,
-			Height = MapBuilder.GetMemelingLabelHeight(id),
-			Scale = StyleConfig.Label.MemelingScale,
-		})
+	local rows: { { string } } = {}
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		table.insert(rows, getLineupIds(zoneId))
 	end
-	print(string.format("[Debug] Ряд из %d мемлингов перед %s (повторите /memelings, чтобы убрать)", #ids, player.Name))
+	table.insert(rows, getLineupIds(nil))
+	local total = 0
+	for r, ids in ipairs(rows) do
+		local middle = Vector3.new(root.Position.X, floorY + StyleConfig.Memeling.Size.Y / 2, root.Position.Z)
+			+ forward * (LINEUP_DISTANCE + (r - 1) * LINEUP_ROW_STEP)
+		for i, id in ipairs(ids) do
+			local position = middle + right * ((i - (#ids + 1) / 2) * LINEUP_STEP)
+			local core = MapBuilder.MakeMemeling("Lineup" .. r .. "_" .. i, id, CFrame.lookAt(position, position - forward), folder)
+			MapBuilder.AddLabel(core, TextConfig.MemelingNames[id] or id, {
+				MaxDistance = StyleConfig.Label.MaxDistance,
+				Height = MapBuilder.GetMemelingLabelHeight(id),
+				Scale = StyleConfig.Label.MemelingScale,
+			})
+		end
+		total += #ids
+	end
+	print(string.format("[Debug] %d мемлингов в %d рядах перед %s (повторите /memelings, чтобы убрать)", total, #rows, player.Name))
 end
 
 local function giveAura(player: Player, text: string)

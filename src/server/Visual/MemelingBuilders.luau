@@ -1,5 +1,5 @@
 --!strict
--- MemelingBuilders: модели 8 мемлингов и врага Grumblob в стиле «D · Микс» (задача 5.4).
+-- MemelingBuilders: модели мемлингов и врага Grumblob в стиле «D · Микс» (задача 5.4; ещё 8 — задача 7.6).
 -- У каждого персонажа своя функция-строитель: она добавляет детали к невидимому ядру через MemelingKit.
 -- Цвета — StyleConfig.Characters, общие размеры и цвета лица — StyleConfig.Memeling.
 --
@@ -629,6 +629,340 @@ function Builders.Error404Kitten(kit: Kit)
 	label.TextColor3 = c.Text
 	label.Text = TextConfig.Error404Text
 	label.Parent = gui
+end
+
+-- ── Задача 7.6: ещё 5 мемлингов Meme Zone ──────────────────────────────────
+
+-- 15. Soggy Cereal (Common): миска размокших хлопьев — горка цветных колечек сверху, грустные глаза
+-- с бровями «домиком» и слезинкой; яркая черта — ложка, торчащая из миски
+function Builders.SoggyCereal(kit: Kit)
+	local c = Colors.SoggyCereal
+	local bowl, radius = v3(0, -0.9, 0), 2.5
+	add(kit, "Cylinder", v3(0.6, 3.4, 3.4), v3(0, -2.3, 0), c.Bowl, UP) -- ножка миски
+	add(kit, "Cylinder", v3(2.2, radius * 2, radius * 2), bowl, c.Bowl, UP)
+	shade(kit, "Cylinder", v3(2.16, 4.8, 4.8), v3(-0.25, -0.92, 0.02), c.Bowl, UP)
+	add(kit, "Cylinder", v3(0.3, 5.2, 5.2), v3(0, 0.25, 0), c.Rim, UP)
+	gloss(kit, v3(0.4, 1.4, 0.25), v3(1.4, -0.9, frontRound(bowl, radius, 1.4) - 0.05), v3(0, -35, 0))
+	add(kit, "Cylinder", v3(0.2, 4.6, 4.6), v3(0, 0.35, 0), c.Milk, UP)
+	add(kit, "Oval", v3(3.6, 1.3, 3.4), v3(0, 0.55, 0.2), c.Milk) -- горка размокших хлопьев в молоке
+	-- Колечки хлопьев: цветной диск с «дыркой» цвета молока
+	for i, p in ipairs({ v3(0.9, 1.05, -0.9), v3(-0.8, 1.1, -0.6), v3(0.1, 1.3, 0.1), v3(-1.2, 0.85, 0.9), v3(1.1, 0.9, 0.8) }) do
+		local color = c.Loops[(i - 1) % #c.Loops + 1]
+		add(kit, "Cylinder", v3(0.3, 0.9, 0.9), p, color, v3(i * 17, 0, 90 + i * 11))
+		add(kit, "Cylinder", v3(0.32, 0.35, 0.35), p, c.Milk, v3(i * 17, 0, 90 + i * 11))
+	end
+
+	-- Грустное лицо на миске: зрачки смотрят вниз, брови «домиком», слезинка
+	local eyeY = -0.75
+	eye(kit, v3(0.85, eyeY, frontRound(bowl, radius, 0.85)), 1.0, v2(0, -0.6))
+	eye(kit, v3(-0.85, eyeY, frontRound(bowl, radius, -0.85)), 0.85, v2(0, -0.6))
+	add(kit, "Block", v3(0.9, 0.2, 0.25), v3(0.85, eyeY + 0.7, frontRound(bowl, radius, 0.85) - 0.05), c.Brow, v3(0, 0, -18))
+	add(kit, "Block", v3(0.8, 0.2, 0.25), v3(-0.85, eyeY + 0.62, frontRound(bowl, radius, -0.85) - 0.05), c.Brow, v3(0, 0, 18))
+	mouth(kit, v3(0.6, 0.18, 0.25), v3(0, -1.55, frontRound(bowl, radius, 0)))
+	local tear = add(kit, "Oval", v3(0.3, 0.5, 0.2), v3(-1.15, -1.35, frontRound(bowl, radius, -1.15) - 0.05), c.Tear)
+	tear.Transparency = 0.15
+	blush(kit, v3(0.6, 0.3, 0.2), v3(1.5, -1.2, frontRound(bowl, radius, 1.5) - 0.05))
+
+	-- Ложка торчит из миски наискосок назад-вправо (видна и спереди, и сзади)
+	add(kit, "Cylinder", v3(3.4, 0.3, 0.3), v3(-1.3, 1.6, 0.9), c.Spoon, v3(25, 0, 60))
+	add(kit, "Oval", v3(0.9, 0.3, 1.2), v3(-2.15, 3.05, 1.3), c.Spoon, v3(25, 0, -30))
+end
+
+-- 16. Chonky Dumpling (Common): пельмень-толстяк — широкое приплюснутое тело, гребешок защипов сверху,
+-- огромные румяные щёки и крошечные глазки; яркая черта — пар над макушкой
+function Builders.ChonkyDumpling(kit: Kit)
+	local c = Colors.ChonkyDumpling
+	local center, size = v3(0, -1.0, 0), v3(5.4, 3.2, 4.4)
+	add(kit, "Oval", size, center, c.Dough)
+	shade(kit, "Oval", v3(5.3, 3.1, 4.3), v3(-0.28, -1.02, 0.02), c.Dough)
+	gloss(kit, v3(1.3, 0.4, 0.25), v3(1.3, -0.05, front(center, size, 1.3, -0.05) - 0.03), v3(0, 0, -25))
+	-- Защипы: ряд «гребешков» вдоль макушки
+	for i, x in ipairs({ -1.8, -0.9, 0, 0.9, 1.8 }) do
+		add(kit, "Oval", v3(1.1, 1.1, 0.7), v3(x, 0.55 - math.abs(x) * 0.18, 0), c.Pleat, v3(0, 0, (i - 3) * -10))
+	end
+
+	-- Крошечные глазки и огромные щёки
+	eye(kit, v3(0.75, -0.6, front(center, size, 0.75, -0.6)), 0.7, v2(0, 0.2))
+	eye(kit, v3(-0.75, -0.6, front(center, size, -0.75, -0.6)), 0.6, v2(0, 0.2))
+	mouth(kit, v3(0.45, 0.3, 0.25), v3(0, -1.25, front(center, size, 0, -1.25)))
+	blush(kit, v3(1.3, 0.75, 0.25), v3(1.6, -1.05, front(center, size, 1.6, -1.05) - 0.05))
+	blush(kit, v3(1.3, 0.75, 0.25), v3(-1.6, -1.05, front(center, size, -1.6, -1.05) - 0.12))
+	-- Ручки-коротышки и ножки
+	for _, x in ipairs({ 1, -1 }) do
+		add(kit, "Oval", v3(0.7, 0.9, 0.7), v3(x * 2.65, -1.2, -0.3), c.Dough, v3(0, 0, x * -30))
+		add(kit, "Oval", v3(1.0, 0.5, 1.0), v3(x * 1.2, -2.4, -0.6), c.Pleat)
+	end
+
+	-- Пар: три полупрозрачных облачка над макушкой
+	for _, p in ipairs({ v3(0.4, 1.6, 0), v3(-0.3, 2.4, 0.1), v3(0.5, 3.1, 0.2) }) do
+		local puff = add(kit, "Ball", Vector3.one * (1.1 - (p.Y - 1.6) * 0.2), p, c.Steam)
+		puff.Transparency = 0.35
+	end
+	-- Сзади — капля соевого соуса на «спинке»
+	add(kit, "Oval", v3(0.9, 0.5, 0.3), v3(-0.9, -0.7, back(center, size, -0.9, -0.7)), c.Soy)
+end
+
+-- 17. Spicy Nugget (Rare): злой наггетс в панировке — бугристое тело, сердитые брови, оскал с зубами,
+-- сжатые кулаки; яркая черта — светящееся пламя на голове
+function Builders.SpicyNugget(kit: Kit)
+	local c = Colors.SpicyNugget
+	local center, size = v3(0, -0.6, 0), v3(4.2, 3.8, 3.4)
+	add(kit, "Oval", size, center, c.Breading)
+	shade(kit, "Oval", v3(4.1, 3.7, 3.3), v3(-0.25, -0.62, 0.02), c.Breading)
+	add(kit, "Oval", v3(2.2, 1.8, 2.2), v3(1.3, 0.6, 0.2), c.Breading) -- бугор сверху-слева: силуэт неровный
+	add(kit, "Oval", v3(2, 1.6, 2), v3(-1.4, -1.6, 0.2), c.Breading) -- и снизу-справа
+	gloss(kit, v3(0.9, 0.3, 0.2), v3(1.1, 0.7, front(center, size, 1.1, 0.7) - 0.02), v3(0, 0, -30))
+	for _, p in ipairs({ v2(1.5, -1.0), v2(-1.4, 0.4), v2(0.4, -1.9), v2(-0.6, 0.9) }) do
+		add(kit, "Ball", v3(0.35, 0.35, 0.35), v3(p.X, p.Y, front(center, size, p.X, p.Y)), c.Crumbs)
+	end
+
+	-- Злое лицо: брови внутренними концами вниз, оскал — тёмный рот с белыми зубами
+	eye(kit, v3(0.8, 0, front(center, size, 0.8, 0)), 1.0, v2(-0.2, -0.1))
+	eye(kit, v3(-0.8, 0, front(center, size, -0.8, 0)), 0.85, v2(0.2, -0.1))
+	add(kit, "Block", v3(1.1, 0.3, 0.35), v3(0.8, 0.75, front(center, size, 0.8, 0.75) - 0.05), c.Brow, v3(0, 0, 22))
+	add(kit, "Block", v3(1.0, 0.3, 0.35), v3(-0.8, 0.7, front(center, size, -0.8, 0.7) - 0.05), c.Brow, v3(0, 0, -22))
+	local mouthZ = front(center, size, 0, -1.1)
+	mouth(kit, v3(1.5, 0.55, 0.25), v3(0, -1.1, mouthZ))
+	for _, x in ipairs({ -0.45, 0, 0.45 }) do
+		add(kit, "Block", v3(0.3, 0.25, 0.1), v3(x, -0.95, mouthZ - 0.12), c.Teeth)
+	end
+	-- Сжатые кулаки по бокам и ножки
+	for _, x in ipairs({ 1, -1 }) do
+		add(kit, "Ball", v3(1, 1, 1), v3(x * 2.3, -0.9, -0.4), c.Breading)
+		add(kit, "Oval", v3(0.9, 0.5, 1), v3(x * 0.9, -2.45, -0.4), c.Crumbs)
+	end
+
+	-- Пламя: три слоя неона (красный снаружи, жёлтый в середине), чуть наклонено
+	for _, f in ipairs({
+		{ Size = v3(2.4, 2.8, 1.6), Offset = v3(0, 2.0, 0.1), Color = c.FlameOuter },
+		{ Size = v3(1.6, 2.2, 1.2), Offset = v3(0.15, 2.05, -0.05), Color = c.FlameMiddle },
+		{ Size = v3(0.8, 1.4, 0.8), Offset = v3(0.2, 1.95, -0.25), Color = c.FlameCore },
+	}) do
+		local flame = add(kit, "Oval", f.Size, f.Offset, f.Color, v3(0, 0, -8))
+		flame.Material = StyleConfig.GlowMaterial
+	end
+	-- Сзади — ещё два язычка пламени поменьше
+	for _, x in ipairs({ 1.2, -1.1 }) do
+		local tongue = add(kit, "Oval", v3(0.7, 1.4, 0.6), v3(x, 1.3, 1.0), c.FlameOuter, v3(0, 0, x * -15))
+		tongue.Material = StyleConfig.GlowMaterial
+	end
+end
+
+-- 18. Toilet Paper Prince (Epic): рулон бумаги — дырка-втулка сверху, бумажный «язык» спадает спереди,
+-- гордые полуприкрытые глаза; яркая черта — золотая корона и фиолетовая мантия с горностаевым воротником
+function Builders.ToiletPaperPrince(kit: Kit)
+	local c = Colors.ToiletPaperPrince
+	local roll, radius = v3(0, -0.6, 0), 1.8
+	add(kit, "Cylinder", v3(3.8, radius * 2, radius * 2), roll, c.Paper, UP)
+	shade(kit, "Cylinder", v3(3.76, 3.4, 3.4), v3(-0.22, -0.62, 0.02), c.Paper, UP)
+	gloss(kit, v3(0.4, 2, 0.25), v3(1, -0.6, frontRound(roll, radius, 1) - 0.05), v3(0, -35, 0))
+	add(kit, "Cylinder", v3(0.12, 1.3, 1.3), v3(0, 1.33, 0), c.Tube, UP)
+	-- Бумажный «язык» спереди с линией перфорации
+	add(kit, "Block", v3(1.1, 2.4, 0.12), v3(1.05, -1.5, frontRound(roll, radius, 1.05) - 0.1), c.Paper, v3(0, -30, 6))
+	add(kit, "Block", v3(1.1, 0.06, 0.14), v3(1.05, -1.9, frontRound(roll, radius, 1.05) - 0.12), c.Perforation, v3(0, -30, 6))
+
+	-- Гордое лицо: полуприкрытые веки (полоса цвета бумаги на верхней половине глаза)
+	for _, e in ipairs({ { X = 0.7, Size = 0.95 }, { X = -0.7, Size = 0.8 } }) do
+		local z = frontRound(roll, radius, e.X)
+		eye(kit, v3(e.X, 0.25, z), e.Size, v2(0, 0.1))
+		add(kit, "Oval", v3(e.Size * 1.05, e.Size * 0.5, e.Size * 0.6), v3(e.X, 0.25 + e.Size * 0.28, z - 0.1), c.Lid)
+	end
+	mouth(kit, v3(0.7, 0.2, 0.25), v3(0.1, -0.6, frontRound(roll, radius, 0.1)), v3(0, 0, -8))
+	blush(kit, v3(0.55, 0.3, 0.2), v3(1.25, -0.25, frontRound(roll, radius, 1.25) - 0.05))
+	blush(kit, v3(0.55, 0.3, 0.2), v3(-1.25, -0.25, frontRound(roll, radius, -1.25) - 0.1))
+
+	-- Корона: обруч, пять зубцов-шариков, камень спереди
+	add(kit, "Cylinder", v3(0.6, 2.5, 2.5), v3(0, 1.6, 0), c.Crown, UP)
+	for k = 0, 4 do
+		local a = math.rad(-90 + k * 72)
+		add(kit, "Ball", v3(0.5, 0.5, 0.5), v3(math.cos(a) * 1.1, 2.05, math.sin(a) * 1.1), c.Crown)
+	end
+	add(kit, "Ball", v3(0.5, 0.5, 0.5), v3(0, 1.6, -1.25), c.Jewel)
+
+	-- Мантия сзади и горностаевый воротник (белый с чёрными хвостиками)
+	add(kit, "Oval", v3(4.4, 4.4, 1.2), v3(0, -0.8, 1.5), c.Mantle)
+	add(kit, "Cylinder", v3(0.7, 4.1, 4.1), v3(0, 0.9, 0.15), c.Ermine, UP)
+	for k = 0, 5 do
+		local a = math.rad(-150 + k * 60)
+		add(kit, "Oval", v3(0.18, 0.35, 0.18), v3(math.cos(a) * 2.05, 0.9, math.sin(a) * 2.05 + 0.15), c.ErmineTips)
+	end
+	for _, x in ipairs({ 0.8, -0.8 }) do
+		add(kit, "Oval", v3(1, 0.5, 1.1), v3(x, -2.45, -0.4), c.Paper)
+	end
+end
+
+-- 19. Cosmic Burrito (Legendary): буррито-космонавт — лепёшка с начинкой сверху, костюм с кнопками,
+-- реактивный ранец со светящимся огнём; яркая черта — прозрачный шлем-пузырь с антенной
+function Builders.CosmicBurrito(kit: Kit)
+	local c = Colors.CosmicBurrito
+	local center, size = v3(0, -0.2, 0), v3(3.4, 4.8, 3.4)
+	add(kit, "Oval", size, center, c.Tortilla)
+	shade(kit, "Oval", v3(3.3, 4.7, 3.3), v3(-0.2, -0.22, 0.02), c.Tortilla)
+	add(kit, "Cylinder", v3(0.45, 3.45, 3.45), v3(0, 1.05, 0), c.Fold, UP) -- складка лепёшки
+	-- Начинка торчит сверху
+	for _, f in ipairs({ { P = v3(0.5, 2.05, 0.1), C = c.Lettuce }, { P = v3(-0.45, 2.1, -0.15), C = c.Tomato }, { P = v3(0, 2.25, 0.3), C = c.Rice } }) do
+		add(kit, "Oval", v3(1, 0.6, 1), f.P, f.C)
+	end
+
+	-- Лицо (под шлемом)
+	eye(kit, v3(0.65, 0.3, front(center, size, 0.65, 0.3)), 0.95, v2(0.2, 0.4))
+	eye(kit, v3(-0.65, 0.35, front(center, size, -0.65, 0.35)), 0.8, v2(0.2, 0.4))
+	mouth(kit, v3(0.9, 0.45, 0.25), v3(0, -0.45, front(center, size, 0, -0.45)))
+	blush(kit, v3(0.55, 0.3, 0.2), v3(1.1, -0.15, front(center, size, 1.1, -0.15) - 0.05))
+	blush(kit, v3(0.55, 0.3, 0.2), v3(-1.1, -0.15, front(center, size, -1.1, -0.15) - 0.1))
+
+	-- Костюм: воротник шлема, нагрудная панель с кнопками, пухлые руки и ботинки
+	add(kit, "Cylinder", v3(0.5, 3.7, 3.7), v3(0, -0.85, 0), c.Suit, UP)
+	local panelZ = front(center, size, 0, -1.55) - 0.05
+	add(kit, "Block", v3(1.4, 0.9, 0.3), v3(0, -1.55, panelZ), c.Suit)
+	for i, x in ipairs({ -0.4, 0, 0.4 }) do
+		local button = add(kit, "Ball", v3(0.25, 0.25, 0.25), v3(x, -1.55, panelZ - 0.2), c.Buttons[i])
+		button.Material = StyleConfig.GlowMaterial
+	end
+	for _, x in ipairs({ 1, -1 }) do
+		add(kit, "Oval", v3(0.9, 1.6, 0.9), v3(x * 2, -1.0, -0.2), c.Suit, v3(0, 0, x * -25))
+		add(kit, "Oval", v3(1.1, 0.5, 1.2), v3(x * 0.8, -2.4, -0.3), c.Suit)
+	end
+
+	-- Шлем-пузырь вокруг головы, антенна с огоньком
+	local helmet = add(kit, "Ball", v3(3.9, 3.9, 3.9), v3(0, 0.75, 0), c.Glass)
+	helmet.Transparency = 0.6
+	gloss(kit, v3(0.9, 0.4, 0.2), v3(1.0, 2.0, -1.2), v3(30, 0, -35))
+	add(kit, "Cylinder", v3(1, 0.15, 0.15), v3(-0.6, 3.0, 0.2), c.Suit, UP)
+	local tip = add(kit, "Ball", v3(0.45, 0.45, 0.45), v3(-0.6, 3.55, 0.2), c.Buttons[1])
+	tip.Material = StyleConfig.GlowMaterial
+
+	-- Реактивный ранец сзади: два баллона и неоновый огонь под ними
+	for _, x in ipairs({ 0.6, -0.6 }) do
+		add(kit, "Cylinder", v3(2.2, 0.9, 0.9), v3(x, -0.6, 2.0), c.Jetpack, UP)
+		local fire = add(kit, "Oval", v3(0.6, 1.1, 0.6), v3(x, -2.1, 2.0), c.JetFire)
+		fire.Material = StyleConfig.GlowMaterial
+	end
+end
+
+-- ── Задача 7.6: ещё 3 мемлинга Golden Zone ─────────────────────────────────
+
+-- 20. Diamond Donut (Rare): пончик на ребре — жемчужная глазурь с золотой посыпкой, лицо вокруг дырки;
+-- яркая черта — светящийся бриллиант на макушке
+function Builders.DiamondDonut(kit: Kit)
+	local c = Colors.DiamondDonut
+	local ring = v3(0, -0.4, 0)
+	add(kit, "Cylinder", v3(1.6, 4.4, 4.4), ring, c.Dough, ALONG_Z)
+	shade(kit, "Cylinder", v3(1.56, 4.2, 4.2), v3(-0.25, -0.42, 0.02), c.Dough, ALONG_Z)
+	add(kit, "Cylinder", v3(0.3, 3.9, 3.9), v3(0, -0.35, -0.8), c.Frosting, ALONG_Z)
+	add(kit, "Cylinder", v3(1.7, 1.3, 1.3), ring, c.Hole, ALONG_Z)
+	gloss(kit, v3(1, 0.3, 0.15), v3(0.9, 1.0, -1.0), v3(0, 0, -35))
+	for _, p in ipairs({ v2(-1.3, 0.6), v2(1.4, -0.9), v2(-1.0, -1.6), v2(0.5, 1.2), v2(-1.6, -0.5) }) do
+		add(kit, "Block", v3(0.35, 0.12, 0.1), v3(p.X, p.Y, -1.0), c.Sprinkles, v3(0, 0, p.X * 40))
+	end
+
+	-- Лицо: глаза над дыркой, улыбка под ней
+	eye(kit, v3(0.75, 0.9, -1.05), 0.85, v2(0, 0.3))
+	eye(kit, v3(-0.75, 0.9, -1.05), 0.7, v2(0, 0.3))
+	mouth(kit, v3(0.9, 0.35, 0.2), v3(0, -1.55, -1.0))
+	blush(kit, v3(0.5, 0.28, 0.15), v3(1.35, 0.25, -1.0))
+	blush(kit, v3(0.5, 0.28, 0.15), v3(-1.35, 0.25, -1.0))
+
+	-- Бриллиант: огранка-«корона» и острый низ, светится
+	local gemY = 2.55
+	local top = add(kit, "Cylinder", v3(0.5, 1.6, 1.6), v3(0, gemY, 0), c.Diamond, UP)
+	top.Material = StyleConfig.GlowMaterial
+	local bottom = add(kit, "Block", v3(1.1, 1.1, 1.1), v3(0, gemY - 0.55, 0), c.Diamond, v3(45, 0, 45))
+	bottom.Material = StyleConfig.GlowMaterial
+	add(kit, "Ball", v3(0.3, 0.3, 0.3), v3(0.4, gemY + 0.35, -0.6), StyleConfig.Memeling.Face.Glint)
+
+	-- Ножки и сзади — золотые полоски глазури
+	for _, x in ipairs({ 0.8, -0.8 }) do
+		add(kit, "Oval", v3(0.8, 0.5, 0.9), v3(x, -2.45, -0.2), c.Dough)
+	end
+	for _, y in ipairs({ 0.6, -0.6 }) do
+		add(kit, "Block", v3(3.2, 0.2, 0.12), v3(0, y, 0.82), c.Sprinkles, v3(0, 0, y * 10))
+	end
+end
+
+-- 21. Trophy Turtle (Epic): черепаха, у которой панцирь — золотой кубок с ручками и звездой;
+-- голова и лапки торчат из-под кубка, сзади хвостик
+function Builders.TrophyTurtle(kit: Kit)
+	local c = Colors.TrophyTurtle
+	add(kit, "Oval", v3(4.2, 1.4, 4.4), v3(0, -1.9, 0.2), c.Belly)
+	for _, p in ipairs({ v3(1.7, -2.25, -1.2), v3(-1.7, -2.25, -1.2), v3(1.7, -2.25, 1.5), v3(-1.7, -2.25, 1.5) }) do
+		add(kit, "Oval", v3(1, 0.7, 1.1), p, c.Skin)
+	end
+	add(kit, "Oval", v3(0.8, 0.5, 1), v3(0, -1.9, 2.5), c.Skin) -- хвостик
+
+	-- Кубок-панцирь: чаша, стенки, светлый ободок, тёмная середина
+	local cup = v3(0, 0.3, 0.3)
+	add(kit, "Oval", v3(4, 2.6, 4), v3(0, -0.8, 0.3), c.Gold)
+	add(kit, "Cylinder", v3(1.6, 3.9, 3.9), cup, c.Gold, UP)
+	shade(kit, "Cylinder", v3(1.56, 3.6, 3.6), v3(-0.22, 0.28, 0.32), c.Gold, UP)
+	gloss(kit, v3(0.4, 1.4, 0.25), v3(1.2, 0.1, frontRound(cup, 1.95, 1.2) - 0.05), v3(0, -35, 0))
+	add(kit, "Cylinder", v3(0.3, 4.2, 4.2), v3(0, 1.15, 0.3), c.GoldLight, UP)
+	add(kit, "Cylinder", v3(0.1, 3.4, 3.4), v3(0, 1.31, 0.3), c.GoldDark, UP)
+	-- Ручки кубка по бокам: золотой диск с тёмной «дыркой»
+	for _, x in ipairs({ 2.3, -2.3 }) do
+		add(kit, "Cylinder", v3(0.35, 1.7, 1.7), v3(x, 0.4, 0.3), c.Gold, ALONG_Z)
+		add(kit, "Cylinder", v3(0.37, 0.8, 0.8), v3(x, 0.4, 0.3), c.GoldDark, ALONG_Z)
+	end
+	-- Звезда спереди: два повёрнутых квадрата
+	local starZ = frontRound(cup, 1.95, 0) - 0.05
+	add(kit, "Block", v3(0.8, 0.8, 0.12), v3(0, 0.35, starZ), c.Star)
+	add(kit, "Block", v3(0.8, 0.8, 0.12), v3(0, 0.35, starZ), c.Star, v3(0, 0, 45))
+
+	-- Голова выглядывает спереди из-под кубка
+	local head, headSize = v3(0, -1.0, -2.3), v3(1.9, 1.7, 1.8)
+	add(kit, "Oval", headSize, head, c.Skin)
+	shade(kit, "Oval", v3(1.85, 1.65, 1.75), v3(-0.12, -1.02, -2.28), c.Skin)
+	eye(kit, v3(0.45, -0.75, front(head, headSize, 0.45, -0.75)), 0.65, v2(0, 0.4))
+	eye(kit, v3(-0.45, -0.75, front(head, headSize, -0.45, -0.75)), 0.55, v2(0, 0.4))
+	mouth(kit, v3(0.6, 0.18, 0.2), v3(0, -1.35, front(head, headSize, 0, -1.35)))
+	blush(kit, v3(0.35, 0.2, 0.12), v3(0.7, -1.15, front(head, headSize, 0.7, -1.15)))
+	blush(kit, v3(0.35, 0.2, 0.12), v3(-0.7, -1.15, front(head, headSize, -0.7, -1.15) - 0.05))
+end
+
+-- 22. Sir Moneybags (Legendary): мешок денег, перевязанный верёвкой, золотая монета на животе,
+-- закрученные усы, рядом стопка монет; яркая черта — цилиндр и монокль на цепочке
+function Builders.SirMoneybags(kit: Kit)
+	local c = Colors.SirMoneybags
+	local center, size = v3(0, -0.7, 0), v3(4.4, 3.8, 4.2)
+	add(kit, "Oval", size, center, c.Sack)
+	shade(kit, "Oval", v3(4.3, 3.7, 4.1), v3(-0.25, -0.72, 0.02), c.Sack)
+	gloss(kit, v3(1.1, 0.35, 0.2), v3(1.2, 0.5, front(center, size, 1.2, 0.5) - 0.03), v3(0, 0, -30))
+	add(kit, "Cylinder", v3(0.55, 1.7, 1.7), v3(0, 1.3, 0), c.Rope, UP)
+	add(kit, "Oval", v3(2.6, 0.9, 2.6), v3(0, 1.75, 0), c.Sack) -- собранный верх мешка
+
+	-- Цилиндр: поля, тулья, золотая лента
+	add(kit, "Cylinder", v3(0.2, 2.9, 2.9), v3(0, 2.2, 0), c.Hat, UP)
+	add(kit, "Cylinder", v3(1.7, 1.9, 1.9), v3(0, 3.1, 0), c.Hat, UP)
+	add(kit, "Cylinder", v3(0.35, 1.95, 1.95), v3(0, 2.5, 0), c.Gold, UP)
+
+	-- Лицо: глаз с моноклем больше, закрученные усы
+	local monocleX, eyeY = 0.8, -0.05
+	eye(kit, v3(monocleX, eyeY, front(center, size, monocleX, eyeY)), 1.0, v2(-0.2, 0.1))
+	eye(kit, v3(-0.8, eyeY, front(center, size, -0.8, eyeY)), 0.75, v2(-0.2, 0.1))
+	local monocleZ = front(center, size, monocleX, eyeY) - 0.4
+	add(kit, "Cylinder", v3(0.15, 1.4, 1.4), v3(monocleX, eyeY, monocleZ), c.Gold, ALONG_Z)
+	local glass = add(kit, "Cylinder", v3(0.12, 1.15, 1.15), v3(monocleX, eyeY, monocleZ - 0.02), c.Glass, ALONG_Z)
+	glass.Transparency = 0.6
+	add(kit, "Cylinder", v3(1.7, 0.08, 0.08), v3(monocleX + 0.45, eyeY - 1.0, monocleZ + 0.15), c.Gold, v3(0, 0, 70)) -- цепочка
+	for _, x in ipairs({ 1, -1 }) do
+		add(kit, "Oval", v3(1.1, 0.35, 0.35), v3(x * 0.55, -0.75, front(center, size, x * 0.55, -0.75) - 0.1), c.Mustache, v3(0, 0, x * 15))
+		add(kit, "Ball", v3(0.35, 0.35, 0.35), v3(x * 1.1, -0.55, front(center, size, x * 1.1, -0.55) - 0.1), c.Mustache)
+	end
+	blush(kit, v3(0.6, 0.3, 0.2), v3(1.5, -0.45, front(center, size, 1.5, -0.45) - 0.05))
+	blush(kit, v3(0.6, 0.3, 0.2), v3(-1.5, -0.45, front(center, size, -1.5, -0.45) - 0.15))
+
+	-- Золотая монета на животе и стопка монет рядом
+	local coinZ = front(center, size, 0, -1.7) - 0.05
+	add(kit, "Cylinder", v3(0.2, 1.3, 1.3), v3(0, -1.7, coinZ), c.Gold, v3(-20, 90, 0))
+	add(kit, "Cylinder", v3(0.22, 0.8, 0.8), v3(0, -1.7, coinZ - 0.03), c.GoldLight, v3(-20, 90, 0))
+	for i = 0, 2 do
+		add(kit, "Cylinder", v3(0.3, 1.1, 1.1), v3(-2.3, -2.45 + i * 0.32, -1.0 + i * 0.05), c.Gold, UP)
+	end
+	-- Ножки и сзади — заплатка на мешке
+	for _, x in ipairs({ 0.9, -0.9 }) do
+		add(kit, "Oval", v3(1.1, 0.5, 1.2), v3(x, -2.45, -0.3), c.Rope)
+	end
+	add(kit, "Block", v3(1.1, 1, 0.2), v3(0.6, -0.6, back(center, size, 0.6, -0.6) - 0.05), c.Patch, v3(0, 0, 12))
 end
 
 local MemelingBuilders = {}

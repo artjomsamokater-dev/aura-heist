@@ -12,7 +12,7 @@ print("BountyRule")
 
 test("кандидаты — все мемлинги зон, Secret никогда", function()
 	local candidates = BountyRule.Candidates(MemelingConfig.Memelings :: any, "Secret")
-	equal(#candidates, 13, "8 Meme Zone + 5 Golden Zone")
+	equal(#candidates, 21, "13 Meme Zone + 8 Golden Zone")
 	equal(table.find(candidates, "Error404Kitten"), nil, "Secret не охотятся")
 end)
 
@@ -30,7 +30,7 @@ test("10 000 выборов: не Secret, не тот же подряд, каж�
 		previous = id
 	end
 	for _, id in ipairs(candidates) do
-		equal((seen[id] or 0) > 500, true, id .. " выпадает")
+		equal((seen[id] or 0) > 300, true, id .. " выпадает") -- в среднем ~476 из 10 000
 	end
 	equal(BountyRule.Pick({ "Solo" }, "Solo", 0.5), "Solo", "один кандидат — он же")
 	equal(BountyRule.Pick({}, nil, 0.5), nil, "кандидатов нет")

@@ -26,6 +26,19 @@ print(
 	)
 )
 
+-- Правило зон (задача 7.6): в каждой зоне есть хотя бы один Legendary
+for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+	local hasLegendary = false
+	for _, memeling in MemelingConfig.Memelings do
+		if memeling.Zone == zoneId and memeling.Rarity == "Legendary" then
+			hasLegendary = true
+		end
+	end
+	if not hasLegendary then
+		warn(string.format("[Config] В зоне %s нет ни одного Legendary — добавь его в MemelingConfig.Memelings", zoneId))
+	end
+end
+
 local Services = script.Services
 local LightingSetup = require(Services.LightingSetup)
 local MapBuilder = require(Services.MapBuilder)

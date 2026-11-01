@@ -45,28 +45,38 @@ MemelingConfig.Rarities = {
 local GOLDEN_INCOME = 5
 MemelingConfig.GoldenIncomeMultiplier = GOLDEN_INCOME
 
--- 8 оригинальных мемлингов MVP (Meme Zone): 3 Common, 2 Rare, 2 Epic, 1 Legendary; 5 — Golden Zone.
+-- Мемлинги Meme Zone: 8 из MVP + 5 из задачи 7.6 (5 Common, 3 Rare, 3 Epic, 2 Legendary);
+-- Golden Zone: 5 + 3 из задачи 7.6 (3 Rare, 3 Epic, 2 Legendary). В каждой зоне есть хотя бы один Legendary
+-- (проверяют тест RarityRoll и сервер при старте).
 -- Id никогда не меняем (он попадёт в сохранения). Имена для игрока — в TextConfig.MemelingNames.
 MemelingConfig.Memelings = {
 	-- Meme Zone. Common
 	ToastPaw = { Rarity = "Common", Zone = "Meme" },
 	SirWobbleton = { Rarity = "Common", Zone = "Meme" },
 	Grumbloaf = { Rarity = "Common", Zone = "Meme" },
+	SoggyCereal = { Rarity = "Common", Zone = "Meme" },
+	ChonkyDumpling = { Rarity = "Common", Zone = "Meme" },
 	-- Rare
 	NoodleNinja = { Rarity = "Rare", Zone = "Meme" },
 	CaptainSockbeard = { Rarity = "Rare", Zone = "Meme" },
+	SpicyNugget = { Rarity = "Rare", Zone = "Meme" },
 	-- Epic
 	DiscoPickle = { Rarity = "Epic", Zone = "Meme" },
 	ProfessorBonk = { Rarity = "Epic", Zone = "Meme" },
+	ToiletPaperPrince = { Rarity = "Epic", Zone = "Meme" },
 	-- Legendary
 	MegaSnoozeasaurus = { Rarity = "Legendary", Zone = "Meme" },
+	CosmicBurrito = { Rarity = "Legendary", Zone = "Meme" },
 
 	-- Golden Zone: только там, доход на постаменте ×GOLDEN_INCOME от базы своей редкости
 	BubbleTeaBandit = { Rarity = "Rare", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
 	CactusCrooner = { Rarity = "Rare", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
+	DiamondDonut = { Rarity = "Rare", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
 	PizzaPigeon = { Rarity = "Epic", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
 	RoboDuck = { Rarity = "Epic", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
+	TrophyTurtle = { Rarity = "Epic", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
 	KingWaffleton = { Rarity = "Legendary", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
+	SirMoneybags = { Rarity = "Legendary", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
 
 	-- Награда за секретный паркур в хабе (в зонах не появляется)
 	Error404Kitten = { Rarity = "Secret" },

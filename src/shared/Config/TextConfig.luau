@@ -212,6 +212,15 @@ TextConfig.MemelingNames = {
 	RoboDuck = "Robo Duck",
 	KingWaffleton = "King Waffleton",
 	Error404Kitten = "Error 404 Kitten",
+	-- Задача 7.6
+	SoggyCereal = "Soggy Cereal",
+	ChonkyDumpling = "Chonky Dumpling",
+	SpicyNugget = "Spicy Nugget",
+	ToiletPaperPrince = "Toilet Paper Prince",
+	CosmicBurrito = "Cosmic Burrito",
+	DiamondDonut = "Diamond Donut",
+	TrophyTurtle = "Trophy Turtle",
+	SirMoneybags = "Sir Moneybags",
 } :: { [string]: string }
 
 return deepFreeze(TextConfig)

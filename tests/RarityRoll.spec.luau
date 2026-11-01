@@ -67,12 +67,21 @@ test("Meme Zone как раньше: Safe 80/20 Common/Rare, Danger 55/38/7 Rare
 	equal(ZoneConfig.Zones.Meme.Tutorial, true)
 end)
 
-test("Meme Zone как раньше: те же 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary)", function()
-	local counts = { Common = 3, Rare = 2, Epic = 2, Legendary = 1 }
+test("Meme Zone: 8 мемлингов MVP + 5 из задачи 7.6 (5 Common, 3 Rare, 3 Epic, 2 Legendary)", function()
+	local counts = { Common = 5, Rare = 3, Epic = 3, Legendary = 2 }
 	for rarity, count in counts do
 		equal(#ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Meme", rarity), count, rarity)
 	end
-	equal(ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Meme", "Legendary")[1], "MegaSnoozeasaurus")
+	local legendary = ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Meme", "Legendary")
+	equal(table.find(legendary, "MegaSnoozeasaurus") ~= nil, true)
+	equal(table.find(legendary, "CosmicBurrito") ~= nil, true)
+end)
+
+test("в каждой зоне есть хотя бы один Legendary, и он может появиться (шанс в опасной части > 0)", function()
+	for _, zoneId in ipairs(ZoneConfig.ZoneOrder) do
+		equal(#ZoneRule.MemelingsOf(MemelingConfig.Memelings, zoneId, "Legendary") >= 1, true, zoneId)
+		equal((ZoneConfig.Zones[zoneId].SpawnChances.Danger.Legendary or 0) > 0, true, zoneId)
+	end
 end)
 
 test("каждая зона из ZoneOrder описана, у мемлинга — существующая зона или никакой (в зонах не появляется)", function()
@@ -93,8 +102,8 @@ test("Golden Zone: без Common, вход 25 000 Aura, туториала не�
 	equal(golden.Tutorial, false)
 end)
 
-test("Golden Zone: свои 5 мемлингов (2 Rare, 2 Epic, 1 Legendary), доход ×5, в Meme Zone их нет", function()
-	local counts = { Common = 0, Rare = 2, Epic = 2, Legendary = 1 }
+test("Golden Zone: свои 8 мемлингов (3 Rare, 3 Epic, 2 Legendary), доход ×5, в Meme Zone их нет", function()
+	local counts = { Common = 0, Rare = 3, Epic = 3, Legendary = 2 }
 	for rarity, count in counts do
 		local ids = ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Golden", rarity)
 		equal(#ids, count, rarity)
