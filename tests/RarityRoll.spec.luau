@@ -115,6 +115,29 @@ test("Golden Zone: свои 8 мемлингов (3 Rare, 3 Epic, 2 Legendary), 
 	equal(ZoneRule.IncomeMultiplier(MemelingConfig.Memelings.ToastPaw), 1, "у мемлингов Meme Zone доход как раньше")
 end)
 
+test("Candy Chaos: свои 5 мемлингов (2 Rare, 2 Epic, 1 Legendary), доход ×20, шансы 50 / 38 / 12, вход 250 000", function()
+	local counts = { Common = 0, Rare = 2, Epic = 2, Legendary = 1 }
+	for rarity, count in counts do
+		local ids = ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Candy", rarity)
+		equal(#ids, count, rarity)
+		for _, id in ipairs(ids) do
+			equal(ZoneRule.IncomeMultiplier(MemelingConfig.Memelings[id]), 20, id)
+		end
+	end
+	equal(ZoneRule.MemelingsOf(MemelingConfig.Memelings, "Candy", "Legendary")[1], "ChocoKing")
+	local candy = ZoneConfig.Zones.Candy
+	for _, part in ipairs({ "Safe", "Danger" }) do
+		local chances = candy.SpawnChances[part]
+		equal(chances.Common, 0, part)
+		equal(chances.Rare, 50, part)
+		equal(chances.Epic, 38, part)
+		equal(chances.Legendary, 12, part)
+	end
+	equal(candy.AccessCost, 250000)
+	equal(candy.Tutorial, false)
+	equal(ZoneConfig.ZoneOrder[3], "Candy")
+end)
+
 test("доступ: бесплатная зона открыта всем, платная — только купившим", function()
 	equal(ZoneRule.HasAccess(nil, nil, "Meme"), true)
 	equal(ZoneRule.HasAccess(25000, nil, "Golden"), false)

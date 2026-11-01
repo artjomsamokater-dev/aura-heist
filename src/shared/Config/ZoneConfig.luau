@@ -24,7 +24,7 @@ export type Zone = {
 }
 
 -- Порядок зон (у словаря порядка нет): первая — стартовая
-ZoneConfig.ZoneOrder = { "Meme", "Golden" }
+ZoneConfig.ZoneOrder = { "Meme", "Golden", "Candy" }
 
 ZoneConfig.Zones = {
 	Meme = {
@@ -42,6 +42,16 @@ ZoneConfig.Zones = {
 			Danger = { Common = 0, Rare = 40, Epic = 45, Legendary = 15 },
 		},
 		AccessCost = 25000, -- доступ навсегда, покупка через Economy (сервис ZoneAccess)
+		Tutorial = false,
+	},
+	-- Candy Chaos (задача 7.7): свои 5 мемлингов (доход ×20 — MemelingConfig), Common нет, Legendary 12%
+	-- в обеих частях; враги — мармеладные GummyBrute (EnemyConfig.Zones.Candy)
+	Candy = {
+		SpawnChances = {
+			Safe = { Common = 0, Rare = 50, Epic = 38, Legendary = 12 },
+			Danger = { Common = 0, Rare = 50, Epic = 38, Legendary = 12 },
+		},
+		AccessCost = 250000,
 		Tutorial = false,
 	},
 } :: { [string]: Zone }

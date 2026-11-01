@@ -22,6 +22,7 @@ TextConfig.ClaimPlot = "Join to claim!" -- табличка посреди св�
 TextConfig.PortalInfos = {
 	Meme = "Danger zone inside!\nBring loot back to EXTRACT",
 	Golden = "Golden memelings: x5 income!\nUnlock once, keep forever",
+	Candy = "Candy memelings: x20 income!\nWatch out for Gummy Brutes",
 } :: { [string]: string }
 TextConfig.UnlockAction = "Unlock" -- кнопка у золотых ворот (цена — PriceTag)
 TextConfig.SecretHint = "?" -- маленький знак у входа в секретный паркур (других подсказок нет)
@@ -89,7 +90,7 @@ TextConfig.Portal = "MEME ZONE"
 TextConfig.BestHaulTitle = "BEST HAUL"
 TextConfig.BestHaulEmpty = "BEST HAUL\nBring back something rare!"
 TextConfig.BestHaulOwner = "%s\nby %s" -- имя мемлинга, ник игрока
-TextConfig.ZoneNames = { Meme = "MEME ZONE", Golden = "GOLDEN ZONE" } :: { [string]: string } -- название зоны по Id
+TextConfig.ZoneNames = { Meme = "MEME ZONE", Golden = "GOLDEN ZONE", Candy = "CANDY CHAOS" } :: { [string]: string } -- название зоны по Id
 TextConfig.ZoneDanger = "DANGER"
 TextConfig.Entry = "Entry"
 TextConfig.Extraction = "EXTRACT"
@@ -221,6 +222,12 @@ TextConfig.MemelingNames = {
 	DiamondDonut = "Diamond Donut",
 	TrophyTurtle = "Trophy Turtle",
 	SirMoneybags = "Sir Moneybags",
+	-- Задача 7.7: Candy Chaos
+	CottonCandyCloud = "Cotton Candy Cloud",
+	LollipopLlama = "Lollipop Llama",
+	GummyWormGang = "Gummy Worm Gang",
+	MarshmallowMage = "Marshmallow Mage",
+	ChocoKing = "Choco King",
 } :: { [string]: string }
 
 return deepFreeze(TextConfig)

@@ -396,6 +396,8 @@ StyleConfig.Zone = {
 	GiantCan = { Body = Palette.Mint, Band = Palette.CreamLight, Top = Palette.CreamDark },
 	GiantPopsicle = { Ice = Palette.PlumLight, Bite = Palette.CreamLight, Stick = Palette.CreamDark },
 	GiantDonut = { Dough = Color3.fromHex("D9A866"), Frosting = Palette.Mint, Hole = Palette.PlumDark },
+	-- Гигантский леденец на палочке (уступ Candy Chaos): спираль из колец по очереди
+	GiantLollipop = { Stick = Palette.CreamLight, Swirl = { Palette.Mint, Palette.CreamLight, Palette.PlumLight } },
 }
 
 -- Оформление по зонам (Id — ZoneConfig.ZoneOrder): своя тема на основе StyleConfig.Zone (поменяны только цвета).
@@ -438,6 +440,46 @@ StyleConfig.ZoneThemes = {
 			Transparency = 0.78,
 		},
 		DangerLight = { Color = Color3.fromRGB(230, 120, 60), Brightness = 1.3, Range = 45 },
+	}),
+	-- Candy Chaos (задача 7.7): розово-голубая. Безопасная часть — небесно-голубой пол, розовые холмы
+	-- «сахарной ваты» и грибы-леденцы; опасная — тёмная малина с розовым туманом; по краю — леденцы
+	Candy = themeFrom({
+		SafeFloor = Color3.fromHex("7FC4EC"),
+		DangerFloor = Color3.fromHex("5A1446"),
+		Path = Color3.fromHex("FFD6EA"),
+		EntryGate = Color3.fromHex("FF8FC8"),
+		GateCaps = Palette.CreamLight,
+		MushroomStem = Palette.CreamLight,
+		MushroomCap = Color3.fromHex("FF7EB9"),
+		MushroomDots = Palette.CreamLight,
+		Crystal = Color3.fromHex("9FE3FF"),
+		Hill = Color3.fromHex("FFB8DC"),
+		ShelterStem = Palette.CreamLight,
+		ShelterCap = Color3.fromHex("8FD3FF"),
+		ShelterDots = Color3.fromHex("FF7EB9"),
+		MemelingPath = Color3.fromHex("FFE6F2"),
+		FloorTextureColor = Palette.CreamLight,
+		EdgeRim = Color3.fromHex("FFB8DC"),
+		EdgeRock = Color3.fromHex("C9A6F0"),
+		EdgeRockDark = Color3.fromHex("9A72D0"),
+		EdgeFence = Palette.CreamLight,
+		EdgeFencePost = Color3.fromHex("FF8FC8"),
+		EdgeCrystal = Color3.fromHex("9FE3FF"),
+		Cloud = Color3.fromHex("FFE6F2"),
+		GiantPopsicle = { Ice = Color3.fromHex("8FD3FF"), Bite = Palette.CreamLight, Stick = Color3.fromHex("E8C99A") },
+		GiantDonut = { Dough = Color3.fromHex("E0A75E"), Frosting = Color3.fromHex("FF8FC8"), Hole = Palette.PlumDark },
+		GiantLollipop = { Stick = Palette.CreamLight, Swirl = { Color3.fromHex("FF5C8A"), Palette.CreamLight, Color3.fromHex("5CC8FF") } },
+		DangerTile = Color3.fromHex("FF4FA3"),
+		DangerFog = {
+			Texture = "rbxasset://textures/particles/smoke_main.dds",
+			Color = Color3.fromHex("E070C0"),
+			Rate = 1.2,
+			Lifetime = NumberRange.new(5, 7),
+			Speed = NumberRange.new(0.3, 0.8),
+			Size = 14,
+			Transparency = 0.78,
+		},
+		DangerLight = { Color = Color3.fromHex("FF4FA3"), Brightness = 1.3, Range = 45 },
 	}),
 } :: { [string]: typeof(StyleConfig.Zone) }
 
@@ -692,6 +734,48 @@ StyleConfig.Characters = {
 		Glass = hex("DDF3FF"),
 		Mustache = hex("3B2414"),
 	},
+	-- Задача 7.7: Candy Chaos
+	CottonCandyCloud = {
+		Pink = hex("FFB3D9"),
+		Blue = hex("A8DDFF"),
+		Stick = hex("FFF8EC"),
+		Line = hex("2A1638"),
+		Sparkle = hex("FFFFFF"),
+	},
+	LollipopLlama = {
+		Wool = hex("FFF4E6"),
+		Snout = hex("F2D3B8"),
+		Legs = hex("FF8FC8"),
+		Stripes = hex("FFFFFF"),
+		Stick = hex("FFFFFF"),
+		Swirl = { hex("FF5C8A"), hex("FFFFFF"), hex("5CC8FF") },
+	},
+	GummyWormGang = {
+		Middle = { hex("FF4A5A"), hex("57D16B") },
+		Left = { hex("FF9A1F"), hex("FFE14D") },
+		Right = { hex("4AA8FF"), hex("FF7EB9") },
+		Glasses = hex("231C2B"),
+		Sugar = hex("FFFFFF"),
+	},
+	MarshmallowMage = {
+		Marshmallow = hex("FFF6FA"),
+		Toasted = hex("E8B27A"),
+		Hat = hex("6A4BD6"),
+		Star = hex("FFE45C"),
+		Cream = hex("FFFFFF"),
+		Staff = hex("B98A5A"),
+		Orb = hex("FF7EB9"),
+	},
+	ChocoKing = {
+		Chocolate = hex("6B3A1E"),
+		Drizzle = hex("A8673A"),
+		Foil = hex("F2B632"),
+		FoilDark = hex("C98A1A"),
+		Crown = hex("FFD24A"),
+		Gumdrops = { hex("FF4A5A"), hex("57D16B"), hex("4AA8FF"), hex("FFE14D"), hex("FF7EB9") },
+		CaneRed = hex("FF3B4A"),
+		CaneWhite = hex("FFFFFF"),
+	},
 	Grumblob = { Body = hex("7BD13A"), Brow = hex("2A1638") }, -- враг: зелёный желейный шар
 	-- враг Candy Chaos: розовый мармеладный громила (тело чуть просвечивает)
 	GummyBrute = { Body = hex("FF5C8A"), Belly = hex("FFA3C0"), Brow = hex("2A1638"), Teeth = hex("FFFFFF"), Sugar = hex("FFFFFF") },
@@ -775,6 +859,13 @@ StyleConfig.PortalThemes = {
 		Core = Palette.PlumDark,
 		RingColors = { Palette.CreamLight, Palette.SunDark },
 		VortexColor = Palette.SunLight,
+	},
+	-- Candy Chaos: розовая воронка, кольцо из белых и голубых бусин-конфет
+	Candy = {
+		Color = Color3.fromHex("FF8FC8"),
+		Core = Palette.PlumDark,
+		RingColors = { Palette.CreamLight, Color3.fromHex("5CC8FF") },
+		VortexColor = Color3.fromHex("FFD6EA"),
 	},
 } :: { [string]: { Color: Color3, Core: Color3, RingColors: { Color3 }, VortexColor: Color3 } }
 

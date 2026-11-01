@@ -965,6 +965,196 @@ function Builders.SirMoneybags(kit: Kit)
 	add(kit, "Block", v3(1.1, 1, 0.2), v3(0.6, -0.6, back(center, size, 0.6, -0.6) - 0.05), c.Patch, v3(0, 0, 12))
 end
 
+-- ── Задача 7.7: мемлинги Candy Chaos ───────────────────────────────────────
+
+-- 23. Cotton Candy Cloud (Rare): облако сахарной ваты из розовых и голубых «пушков» на палочке,
+-- сонное довольное лицо на переднем пушке; яркая черта — двухцветная пушистая шапка-облако
+function Builders.CottonCandyCloud(kit: Kit)
+	local c = Colors.CottonCandyCloud
+	add(kit, "Cylinder", v3(2.8, 0.45, 0.45), v3(0, -1.6, 0), c.Stick, UP) -- палочка
+	add(kit, "Cylinder", v3(0.5, 1.6, 1.6), v3(0, -2.75, 0), c.Stick, UP) -- подставка
+	-- Пушки облака: крупный передний (с лицом) и вокруг — поменьше, два цвета по очереди
+	local face, faceSize = v3(0, 0.6, -0.4), v3(3.2, 3, 3)
+	add(kit, "Oval", faceSize, face, c.Pink)
+	for i, p in ipairs({ v3(1.6, 1.2, 0.4), v3(-1.6, 1.0, 0.5), v3(0.4, 2.1, 0.6), v3(-0.9, 2.0, 0.2), v3(1.9, -0.1, 0.6), v3(-1.9, -0.2, 0.4), v3(0, 0.9, 1.4) }) do
+		add(kit, "Ball", Vector3.one * (2.2 - (i % 3) * 0.3), p, if i % 2 == 0 then c.Pink else c.Blue)
+	end
+	shade(kit, "Oval", v3(3.1, 2.9, 2.9), v3(-0.18, 0.58, -0.38), c.Pink)
+	gloss(kit, v3(0.9, 0.35, 0.2), v3(0.8, 1.6, front(face, faceSize, 0.8, 1.6) - 0.02), v3(0, 0, -30))
+
+	-- Сонные глаза-дуги вниз и улыбка, крупный румянец
+	for _, x in ipairs({ 0.6, -0.6 }) do
+		add(kit, "Oval", v3(0.7, 0.22, 0.2), v3(x, 0.85, front(face, faceSize, x, 0.85) - 0.02), c.Line, v3(0, 0, x * 25))
+	end
+	mouth(kit, v3(0.6, 0.35, 0.25), v3(0, 0.1, front(face, faceSize, 0, 0.1)))
+	blush(kit, v3(0.75, 0.4, 0.2), v3(1.05, 0.35, front(face, faceSize, 1.05, 0.35) - 0.05))
+	blush(kit, v3(0.75, 0.4, 0.2), v3(-1.05, 0.35, front(face, faceSize, -1.05, 0.35) - 0.1))
+	-- Сахарные искорки вокруг облака
+	for _, p in ipairs({ v3(2.4, 2.2, -0.4), v3(-2.5, 1.6, -0.2), v3(0.9, 3.2, 0) }) do
+		local sparkle = add(kit, "Block", v3(0.3, 0.3, 0.3), p, c.Sparkle, v3(45, 45, 0))
+		sparkle.Material = StyleConfig.GlowMaterial
+	end
+end
+
+-- 24. Lollipop Llama (Rare): пушистая лама на полосатых ножках, длинная шея, уши торчком, чёлка;
+-- яркая черта — огромный леденец-спираль, закреплённый на спине, как седло
+function Builders.LollipopLlama(kit: Kit)
+	local c = Colors.LollipopLlama
+	local body, bodySize = v3(0, -0.8, 0.5), v3(3.4, 2.2, 3.8)
+	add(kit, "Oval", bodySize, body, c.Wool)
+	shade(kit, "Oval", v3(3.3, 2.1, 3.7), v3(-0.2, -0.82, 0.52), c.Wool)
+	for _, p in ipairs({ v2(1.1, -0.6), v2(-1.1, -0.6), v2(1.1, 1.6), v2(-1.1, 1.6) }) do
+		add(kit, "Cylinder", v3(1.2, 0.6, 0.6), v3(p.X, -2.1, p.Y), c.Legs, UP)
+		add(kit, "Cylinder", v3(0.3, 0.64, 0.64), v3(p.X, -2.2, p.Y), c.Stripes, UP)
+	end
+	-- Шея и голова
+	add(kit, "Oval", v3(1.3, 2.4, 1.3), v3(0, 0.6, -1.0), c.Wool)
+	local head, headSize = v3(0, 1.8, -1.4), v3(1.9, 1.7, 2.1)
+	add(kit, "Oval", headSize, head, c.Wool)
+	add(kit, "Oval", v3(1.2, 0.9, 1.0), v3(0, 1.45, front(head, headSize, 0, 1.45) + 0.15), c.Snout)
+	gloss(kit, v3(0.5, 0.2, 0.15), v3(0.5, 2.35, front(head, headSize, 0.5, 2.35) - 0.02), v3(0, 0, -30))
+	for _, x in ipairs({ 0.6, -0.6 }) do
+		add(kit, "Oval", v3(0.4, 1.1, 0.35), v3(x, 2.9, -1.3), c.Wool, v3(0, 0, x * -25))
+		add(kit, "Oval", v3(0.2, 0.7, 0.2), v3(x, 2.9, -1.45), c.Snout, v3(0, 0, x * -25))
+	end
+	add(kit, "Ball", v3(1, 1, 1), v3(0.15, 2.55, -1.6), c.Wool) -- чёлка
+	eye(kit, v3(0.45, 1.95, front(head, headSize, 0.45, 1.95)), 0.6, v2(0.2, 0.2))
+	eye(kit, v3(-0.45, 1.95, front(head, headSize, -0.45, 1.95)), 0.5, v2(0.2, 0.2))
+	mouth(kit, v3(0.4, 0.15, 0.15), v3(0, 1.3, front(head, headSize, 0, 1.3) - 0.3))
+
+	-- Леденец на спине: палочка вверх и круг-спираль из колец трёх цветов, смотрит вперёд
+	add(kit, "Cylinder", v3(1.6, 0.25, 0.25), v3(0, 0.6, 1.4), c.Stick, UP)
+	for i, diameter in ipairs({ 2.8, 2.1, 1.4, 0.7 }) do
+		add(kit, "Cylinder", v3(0.35 + i * 0.03, diameter, diameter), v3(0, 2.2, 1.4), c.Swirl[(i - 1) % #c.Swirl + 1], ALONG_Z)
+	end
+	add(kit, "Oval", v3(0.5, 0.5, 1.1), v3(0, -0.4, 2.5), c.Wool, v3(-30, 0, 0)) -- хвостик
+end
+
+-- 25. Gummy Worm Gang (Epic): банда из трёх мармеладных червячков разных цветов — средний самый высокий,
+-- у боковых тёмные очки; яркая черта — полупрозрачные двухцветные полосатые тела
+function Builders.GummyWormGang(kit: Kit)
+	local c = Colors.GummyWormGang
+	local worms = {
+		{ X = 0, Z = -0.2, Height = 4.6, Colors = c.Middle, Cool = false },
+		{ X = 1.7, Z = 0.4, Height = 3.4, Colors = c.Left, Cool = true },
+		{ X = -1.7, Z = 0.4, Height = 3.0, Colors = c.Right, Cool = true },
+	}
+	for w, worm in ipairs(worms) do
+		-- Тело — три сегмента, чуть изогнуто, цвета по очереди
+		local segment = (worm.Height - 1.2) / 3
+		for s = 1, 3 do
+			local y = -2.6 + segment * (s - 0.5)
+			local sway = (if s == 2 then 0.25 else -0.1) * (if w == 3 then -1 else 1)
+			local part = add(kit, "Oval", v3(1.3, segment + 0.4, 1.3), v3(worm.X + sway, y, worm.Z), worm.Colors[(s - 1) % 2 + 1])
+			part.Transparency = 0.12
+		end
+		local headY = -2.6 + worm.Height - 0.7
+		local head, headSize = v3(worm.X, headY, worm.Z), v3(1.45, 1.4, 1.45)
+		local headPart = add(kit, "Oval", headSize, head, worm.Colors[1])
+		headPart.Transparency = 0.08
+		if worm.Cool then
+			add(kit, "Block", v3(1.3, 0.35, 0.2), v3(worm.X, headY + 0.15, front(head, headSize, worm.X, headY + 0.15) - 0.05), c.Glasses)
+			mouth(kit, v3(0.4, 0.12, 0.15), v3(worm.X + 0.1, headY - 0.3, front(head, headSize, worm.X + 0.1, headY - 0.3)), v3(0, 0, -15))
+		else
+			eye(kit, v3(worm.X + 0.32, headY + 0.15, front(head, headSize, worm.X + 0.32, headY + 0.15)), 0.55, v2(0, 0.2))
+			eye(kit, v3(worm.X - 0.32, headY + 0.15, front(head, headSize, worm.X - 0.32, headY + 0.15)), 0.45, v2(0, 0.2))
+			mouth(kit, v3(0.5, 0.25, 0.15), v3(worm.X, headY - 0.35, front(head, headSize, worm.X, headY - 0.35)))
+		end
+	end
+	-- Сахарная посыпка на среднем
+	for _, p in ipairs({ v3(0.55, 0.2, -0.85), v3(-0.5, -0.8, -0.85), v3(0.4, -1.7, -0.85) }) do
+		add(kit, "Block", v3(0.18, 0.18, 0.18), p, c.Sugar, v3(30, 45, 0))
+	end
+end
+
+-- 26. Marshmallow Mage (Epic): маршмеллоу-волшебник — поджаренная макушка, борода из взбитых сливок;
+-- яркая черта — высокая звёздная шляпа и посох со светящейся конфетой
+function Builders.MarshmallowMage(kit: Kit)
+	local c = Colors.MarshmallowMage
+	local body, radius = v3(0, -0.7, 0), 1.9
+	add(kit, "Cylinder", v3(3.6, radius * 2, radius * 2), body, c.Marshmallow, UP)
+	shade(kit, "Cylinder", v3(3.56, 3.6, 3.6), v3(-0.22, -0.72, 0.02), c.Marshmallow, UP)
+	add(kit, "Cylinder", v3(0.5, 3.9, 3.9), v3(0, 1.0, 0), c.Toasted, UP) -- поджаренный край
+	gloss(kit, v3(0.4, 1.6, 0.25), v3(1.1, -0.6, frontRound(body, radius, 1.1) - 0.05), v3(0, -35, 0))
+
+	-- Шляпа: поля и три яруса-«конус», звезда на кончике светится
+	add(kit, "Cylinder", v3(0.25, 4.4, 4.4), v3(0, 1.35, 0), c.Hat, UP)
+	for i, tier in ipairs({ { Y = 1.9, D = 2.8 }, { Y = 2.75, D = 1.9 }, { Y = 3.5, D = 1.0 } }) do
+		add(kit, "Cylinder", v3(0.95, tier.D, tier.D), v3(0.15 * i, tier.Y, 0.1 * i), c.Hat, UP)
+	end
+	local star = add(kit, "Block", v3(0.6, 0.6, 0.2), v3(0.5, 4.15, 0.3), c.Star, v3(0, 0, 45))
+	star.Material = StyleConfig.GlowMaterial
+	for _, p in ipairs({ v3(0.7, 2.0, -1.4), v3(-0.6, 2.4, -0.8) }) do
+		add(kit, "Ball", v3(0.35, 0.35, 0.35), p, c.Star) -- звёздочки на шляпе
+	end
+
+	-- Лицо: мудрые глаза, брови, борода из взбитых сливок
+	eye(kit, v3(0.65, 0.3, frontRound(body, radius, 0.65)), 0.85, v2(0.3, 0.2))
+	eye(kit, v3(-0.65, 0.3, frontRound(body, radius, -0.65)), 0.75, v2(0.3, 0.2))
+	for _, x in ipairs({ 0.65, -0.65 }) do
+		add(kit, "Oval", v3(0.8, 0.22, 0.25), v3(x, 0.85, frontRound(body, radius, x) - 0.05), c.Cream, v3(0, 0, x * 12))
+	end
+	for i, p in ipairs({ v3(0, -0.6, 0), v3(0.55, -0.9, 0.1), v3(-0.55, -0.9, 0.1), v3(0, -1.4, 0.1) }) do
+		add(kit, "Ball", Vector3.one * (1.1 - i * 0.08), v3(p.X, p.Y, frontRound(body, radius, p.X) - 0.2 + p.Z), c.Cream)
+	end
+	blush(kit, v3(0.55, 0.3, 0.2), v3(1.25, -0.05, frontRound(body, radius, 1.25) - 0.05))
+
+	-- Посох в правой руке со светящейся конфетой
+	add(kit, "Oval", v3(0.7, 1.3, 0.7), v3(-2.05, -0.6, -0.3), c.Marshmallow, v3(0, 0, 25))
+	add(kit, "Cylinder", v3(5, 0.25, 0.25), v3(-2.4, 0, -0.5), c.Staff, UP)
+	local orb = add(kit, "Ball", v3(0.9, 0.9, 0.9), v3(-2.4, 2.7, -0.5), c.Orb)
+	orb.Material = StyleConfig.GlowMaterial
+	-- Сзади — плащ цвета шляпы
+	add(kit, "Oval", v3(3.6, 3.4, 0.8), v3(0, -1.0, 1.75), c.Hat)
+end
+
+-- 27. Choco King (Legendary): шоколадный трюфель в золотой рифлёной формочке, с подтёками глазури;
+-- яркая черта — корона с мармеладками на зубцах и посох-карамельная трость
+function Builders.ChocoKing(kit: Kit)
+	local c = Colors.ChocoKing
+	-- Формочка: рифлёный золотой стаканчик снизу
+	add(kit, "Cylinder", v3(1.5, 4.4, 4.4), v3(0, -1.85, 0), c.Foil, UP)
+	for k = 0, 7 do
+		local a = math.rad(k * 45 + 22.5)
+		add(kit, "Block", v3(0.35, 1.5, 0.35), v3(math.cos(a) * 2.2, -1.85, math.sin(a) * 2.2), c.FoilDark, v3(0, -k * 45 - 22.5, 0))
+	end
+	local body, bodySize = v3(0, -0.1, 0), v3(4.2, 3.6, 4.2)
+	add(kit, "Oval", bodySize, body, c.Chocolate)
+	shade(kit, "Oval", v3(4.1, 3.5, 4.1), v3(-0.25, -0.12, 0.02), c.Chocolate)
+	gloss(kit, v3(1.1, 0.35, 0.2), v3(1.1, 1.0, front(body, bodySize, 1.1, 1.0) - 0.03), v3(0, 0, -30))
+	-- Глазурь-полоски поперёк макушки
+	for _, y in ipairs({ 1.15, 0.75 }) do
+		add(kit, "Oval", v3(3.4 - (1.15 - y) * 2, 0.25, 3.4), v3(0, y, 0), c.Drizzle)
+	end
+
+	-- Лицо: важные глаза, улыбка, румянец
+	eye(kit, v3(0.75, 0.15, front(body, bodySize, 0.75, 0.15)), 1.0, v2(0, 0.3))
+	eye(kit, v3(-0.75, 0.15, front(body, bodySize, -0.75, 0.15)), 0.85, v2(0, 0.3))
+	mouth(kit, v3(1.1, 0.35, 0.25), v3(0, -0.75, front(body, bodySize, 0, -0.75)))
+	blush(kit, v3(0.7, 0.35, 0.2), v3(1.4, -0.35, front(body, bodySize, 1.4, -0.35) - 0.05))
+	blush(kit, v3(0.7, 0.35, 0.2), v3(-1.4, -0.35, front(body, bodySize, -1.4, -0.35) - 0.15))
+
+	-- Корона: обруч и пять зубцов, на каждом — мармеладка своего цвета
+	add(kit, "Cylinder", v3(0.7, 2.6, 2.6), v3(0, 1.9, 0), c.Crown, UP)
+	for k = 0, 4 do
+		local a = math.rad(-90 + k * 72)
+		local p = v3(math.cos(a) * 1.15, 2.4, math.sin(a) * 1.15)
+		add(kit, "Block", v3(0.45, 0.6, 0.45), p, c.Crown, v3(0, k * 72, 0))
+		add(kit, "Ball", v3(0.5, 0.5, 0.5), p + v3(0, 0.45, 0), c.Gumdrops[k % #c.Gumdrops + 1])
+	end
+
+	-- Посох-карамельная трость: красно-белые кольца и крючок
+	for i = 0, 4 do
+		add(kit, "Cylinder", v3(0.75, 0.4, 0.4), v3(2.55, -1.8 + i * 0.75, -0.4), if i % 2 == 0 then c.CaneRed else c.CaneWhite, UP)
+	end
+	add(kit, "Cylinder", v3(1, 0.4, 0.4), v3(2.2, 2.0, -0.4), c.CaneRed, v3(0, 0, 0))
+	add(kit, "Oval", v3(0.8, 1.6, 0.8), v3(2.15, -0.2, -0.3), c.Chocolate, v3(0, 0, -20)) -- рука
+	-- Сзади — подтёки шоколада по спине
+	for _, x in ipairs({ -1, 0.2, 1.1 }) do
+		add(kit, "Oval", v3(0.5, 1.1, 0.4), v3(x, 0.2, back(body, bodySize, x, 0.2) - 0.1), c.Drizzle)
+	end
+end
+
 local MemelingBuilders = {}
 
 -- Строит мемлинга по Id. Вернёт false, если строителя для такого Id нет

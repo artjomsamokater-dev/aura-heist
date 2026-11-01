@@ -4,7 +4,7 @@
 --   • хаб: уступ с травой, скала до моря, крупные камни по кругу, плотная стена деревьев и кустов;
 --   • участок: скала под полом с камнями по бокам и пена у воды;
 --   • зона: каменное «дно» уступами, уступ вокруг пола, забор по краю, камни, кристаллы и мемные
---     великаны на уступе, облака ниже края — видно, что это парящий остров.
+--     великаны на уступе (банка, эскимо, пончик, леденец), облака ниже края — видно, что это парящий остров.
 -- Места — MapConfig.HubEdge и MapConfig.Zones[Id].Edge, цвета — StyleConfig.Background и тема зоны.
 -- Крупные формы вместо множества мелких, теней нет ни у чего.
 
@@ -250,6 +250,19 @@ local function buildDonut(base: CFrame, style: ZoneTheme, parent: Instance)
 	part("Hole", "Cylinder", Vector3.new(4.6, 4.4, 4.4), wheel, colors.Hole, parent)
 end
 
+-- Гигантский леденец на палочке (Candy Chaos): палочка воткнута в уступ, круг-леденец смотрит на центр зоны,
+-- спираль — кольца трёх цветов по очереди, чуть выступают друг над другом
+local function buildLollipop(base: CFrame, style: ZoneTheme, parent: Instance)
+	local colors = style.GiantLollipop
+	local tilt = base * CFrame.Angles(math.rad(-6), 0, math.rad(8))
+	part("Stick", "Cylinder", Vector3.new(14, 1.3, 1.3), tilt * CFrame.new(0, 7, 0) * UPRIGHT, colors.Stick, parent)
+	local disc = tilt * CFrame.new(0, 19, 0) * CFrame.Angles(0, math.rad(90), 0) -- ось цилиндра (X) смотрит на центр
+	for i, diameter in ipairs({ 13, 10, 7, 4 }) do
+		local color = colors.Swirl[(i - 1) % #colors.Swirl + 1]
+		part("Swirl" .. i, "Cylinder", Vector3.new(1.8 + i * 0.08, diameter, diameter), disc, color, parent)
+	end
+end
+
 function IslandEdges.BuildZone(zone: ZoneMap, style: ZoneTheme, parent: Instance)
 	local edge = zone.Edge
 	local root = folder("Edge", parent)
@@ -317,6 +330,8 @@ function IslandEdges.BuildZone(zone: ZoneMap, style: ZoneTheme, parent: Instance
 			buildPopsicle(base, style, model)
 		elseif kind == "Donut" then
 			buildDonut(base, style, model)
+		elseif kind == "Lollipop" then
+			buildLollipop(base, style, model)
 		end
 		model.Parent = props
 	end

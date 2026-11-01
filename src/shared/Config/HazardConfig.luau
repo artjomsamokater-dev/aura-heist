@@ -82,6 +82,24 @@ HazardConfig.Zones = {
 			Vector3.new(102, 0, 88),
 		},
 	},
+	-- Candy Chaos: как Golden, планки быстрее (самая дорогая зона — самая опасная)
+	Candy = {
+		Lasers = {
+			{ Size = Vector3.new(40, 1, 1), TrackStart = Vector3.new(40, 2.5, -100), TrackEnd = Vector3.new(40, 2.5, 100), SweepSeconds = 5 },
+			{ Size = Vector3.new(1, 1, 40), TrackStart = Vector3.new(20, 2.5, -65), TrackEnd = Vector3.new(105, 2.5, -65), SweepSeconds = 4 },
+			{ Size = Vector3.new(1, 1, 40), TrackStart = Vector3.new(105, 2.5, 65), TrackEnd = Vector3.new(20, 2.5, 65), SweepSeconds = 4 },
+		},
+		Plates = {
+			Vector3.new(35, 0, -25),
+			Vector3.new(35, 0, 25),
+			Vector3.new(62, 0, -30),
+			Vector3.new(62, 0, 40),
+			Vector3.new(85, 0, -80),
+			Vector3.new(85, 0, 75),
+			Vector3.new(102, 0, -88),
+			Vector3.new(102, 0, 88),
+		},
+	},
 } :: { [string]: ZoneHazards }
 
 return deepFreeze(HazardConfig)

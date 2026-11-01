@@ -33,11 +33,13 @@ MapConfig.Hub = {
 	-- Дорожки от центрального круга: к порталу и витрине (сюда) и к каждому мостику (MapBuilder сам)
 	Paths = {
 		{ Angle = 90, To = 27 }, -- к подиуму портала
-		{ Angle = 0, To = 24.5 }, -- к витрине BEST HAUL
+		{ Angle = 0, To = 27 }, -- к подиуму портала Candy Chaos
 		{ Angle = 270, To = 27 }, -- к подиуму золотого портала
 	},
-	BestHaul = { -- витрина «BEST HAUL»: подиум с копией самого редкого вынесенного за сессию мемлинга
-		Offset = polar(0, 30),
+	-- Витрина «BEST HAUL»: подиум с копией самого редкого вынесенного за сессию мемлинга.
+	-- С задачи 7.7 — в секторе 45° (на 0° теперь портал Candy Chaos), на месте гигантского телефона
+	BestHaul = {
+		Offset = polar(45, 34),
 		Tiers = { { Height = 1.2, Diameter = 11 }, { Height = 1.2, Diameter = 8.5 } }, -- ступени подиума снизу вверх
 		SignHeight = 13, -- подпись «BEST HAUL» над подиумом
 	},
@@ -45,7 +47,6 @@ MapConfig.Hub = {
 	Props = {
 		{ Kind = "Mug", Offset = polar(180, 36) },
 		{ Kind = "Cheese", Offset = polar(315, 37) },
-		{ Kind = "Phone", Offset = polar(45, 38) },
 		{ Kind = "Banana", Offset = polar(135, 38) },
 		{ Kind = "Duck", Offset = polar(225, 37) },
 	},
@@ -68,8 +69,8 @@ MapConfig.Hub = {
 			{ Angle = 194, Radius = 44 },
 			{ Angle = 246, Radius = 44 }, -- в стороне от подиума золотого портала (270°)
 			{ Angle = 294, Radius = 44 },
-			{ Angle = 346, Radius = 44 },
-			{ Angle = 14, Radius = 44 },
+			{ Angle = 336, Radius = 44 }, -- в стороне от подиума портала Candy Chaos (0°)
+			{ Angle = 24, Radius = 44 },
 		},
 		FlowerBeds = { -- клумбы: круглая грядка и крупные цветы
 			{ Angle = 45, Radius = 17 },
@@ -225,6 +226,7 @@ MapConfig.Portal = {
 		Ids = {
 			Meme = { "ToastPaw", "NoodleNinja", "CaptainSockbeard", "Grumbloaf" },
 			Golden = { "BubbleTeaBandit", "PizzaPigeon", "RoboDuck", "CactusCrooner" },
+			Candy = { "CottonCandyCloud", "GummyWormGang", "MarshmallowMage", "LollipopLlama" },
 		} :: { [string]: { string } },
 	},
 	Arrow = { Z = { 22.6, 24.8 }, ArmLength = 2.8, ArmWidth = 0.7 }, -- две «галочки» ^ на полу перед подиумом
@@ -285,8 +287,8 @@ MapConfig.Obby = {
 }
 
 -- Порталы зон в хабе: один и тот же портал (всё выше — для стартовой зоны на 90°), повёрнутый вокруг
--- центра площади на столько градусов. Golden — напротив, на 270°
-MapConfig.PortalRotations = { Meme = 0, Golden = 180 } :: { [string]: number }
+-- центра площади на столько градусов. Golden — напротив, на 270°; Candy Chaos — на 0° (+90°: с +Z на +X)
+MapConfig.PortalRotations = { Meme = 0, Golden = 180, Candy = 90 } :: { [string]: number }
 
 -- Участки баз (студии): стоят кольцом вокруг хаба, лицом к нему.
 -- Смещения ниже — относительно центра участка: -Z смотрит на хаб, +Z — от хаба.
@@ -378,7 +380,8 @@ MapConfig.Plots = {
 -- здесь — геометрия: у всех зон одна раскладка (zoneLayout) относительно центра верхней грани пола.
 local ZONE_FLOOR_Y = 300 -- высота нижней грани пола зоны
 
-local function zoneLayout(ZONE_TOP: Vector3)
+-- edgeKinds — какие великаны стоят на уступе по краю (виды — server/Visual/IslandEdges); nil — обычные
+local function zoneLayout(ZONE_TOP: Vector3, edgeKinds: { string }?)
 	return {
 	Center = ZONE_TOP - Vector3.new(0, 0.5, 0),
 	Size = Vector3.new(224, 1, 224), -- смещения X и Z от −112 до 112
@@ -417,7 +420,7 @@ local function zoneLayout(ZONE_TOP: Vector3)
 		FencePostStep = 16, -- крупные столбы реже, между ними две перекладины
 		FencePostSize = 1.4,
 		PropOffsets = { -96, -64, -32, 0, 32, 64, 96 }, -- места великанов вдоль стороны (по очереди виды из Kinds)
-		Kinds = { "Rocks", "Crystal", "Can", "Rocks", "Popsicle", "Crystal", "Donut" },
+		Kinds = edgeKinds or { "Rocks", "Crystal", "Can", "Rocks", "Popsicle", "Crystal", "Donut" },
 		PropFromEdge = 5, -- центр великана: на столько дальше края пола (на уступе, за невидимой стеной)
 		Clouds = 18, -- облаков по кругу ниже края
 		CloudRadius = { 150, 175 }, -- от центра зоны (через раз)
@@ -540,10 +543,16 @@ local function zoneLayout(ZONE_TOP: Vector3)
 	}
 end
 
--- Геометрия зон по Id (Id и порядок — ZoneConfig.ZoneOrder). Meme — восточнее хаба, Golden — западнее
+-- Геометрия зон по Id (Id и порядок — ZoneConfig.ZoneOrder). Meme — восточнее хаба, Golden — западнее,
+-- Candy — севернее. Зоны разнесены на 500 студов: края и облака (до ~175 от центра) не пересекаются
 MapConfig.Zones = {
 	Meme = zoneLayout(Vector3.new(500, ZONE_FLOOR_Y + 1, 0)),
 	Golden = zoneLayout(Vector3.new(-500, ZONE_FLOOR_Y + 1, 0)),
+	-- Candy Chaos — севернее хаба (+Z); по краю — гигантские леденцы
+	Candy = zoneLayout(
+		Vector3.new(0, ZONE_FLOOR_Y + 1, 500),
+		{ "Lollipop", "Crystal", "Lollipop", "Donut", "Lollipop", "Popsicle", "Lollipop" }
+	),
 }
 
 return deepFreeze(MapConfig)

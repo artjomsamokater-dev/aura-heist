@@ -44,9 +44,12 @@ MemelingConfig.Rarities = {
 -- Мемлинги Golden Zone приносят на постаменте в столько раз больше Aura, чем база их редкости
 local GOLDEN_INCOME = 5
 MemelingConfig.GoldenIncomeMultiplier = GOLDEN_INCOME
+-- Мемлинги Candy Chaos (задача 7.7) — во столько раз больше базы своей редкости
+local CANDY_INCOME = 20
+MemelingConfig.CandyIncomeMultiplier = CANDY_INCOME
 
 -- Мемлинги Meme Zone: 8 из MVP + 5 из задачи 7.6 (5 Common, 3 Rare, 3 Epic, 2 Legendary);
--- Golden Zone: 5 + 3 из задачи 7.6 (3 Rare, 3 Epic, 2 Legendary). В каждой зоне есть хотя бы один Legendary
+-- Golden Zone: 5 + 3 из задачи 7.6 (3 Rare, 3 Epic, 2 Legendary); Candy Chaos: 5 (2 Rare, 2 Epic, 1 Legendary). В каждой зоне есть хотя бы один Legendary
 -- (проверяют тест RarityRoll и сервер при старте).
 -- Id никогда не меняем (он попадёт в сохранения). Имена для игрока — в TextConfig.MemelingNames.
 MemelingConfig.Memelings = {
@@ -77,6 +80,13 @@ MemelingConfig.Memelings = {
 	TrophyTurtle = { Rarity = "Epic", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
 	KingWaffleton = { Rarity = "Legendary", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
 	SirMoneybags = { Rarity = "Legendary", Zone = "Golden", IncomeMultiplier = GOLDEN_INCOME },
+
+	-- Candy Chaos (задача 7.7): только там, доход ×CANDY_INCOME от базы своей редкости
+	CottonCandyCloud = { Rarity = "Rare", Zone = "Candy", IncomeMultiplier = CANDY_INCOME },
+	LollipopLlama = { Rarity = "Rare", Zone = "Candy", IncomeMultiplier = CANDY_INCOME },
+	GummyWormGang = { Rarity = "Epic", Zone = "Candy", IncomeMultiplier = CANDY_INCOME },
+	MarshmallowMage = { Rarity = "Epic", Zone = "Candy", IncomeMultiplier = CANDY_INCOME },
+	ChocoKing = { Rarity = "Legendary", Zone = "Candy", IncomeMultiplier = CANDY_INCOME },
 
 	-- Награда за секретный паркур в хабе (в зонах не появляется)
 	Error404Kitten = { Rarity = "Secret" },
