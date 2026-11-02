@@ -478,7 +478,8 @@ MVP: 8 мемлингов (3 Common, 2 Rare, 2 Epic, 1 Legendary). Имена �
   Active = true. PromptController: BillboardGui.Active и Button.Active = true, удержание — InputBegan на кнопке
   (Touch + MouseButton1) → InputHoldBegin, конец — InputEnded на кнопке или где угодно в игре (UserInputService)
   → InputHoldEnd. Действует на все кнопки: Pick up, Collect, Sell, Buy, Unlock, Rebirth, Reserve, Open shop.
-  Запасной путь: StyleConfig.Hud.PromptDefaultOnTouch = true — на телефоне стандартные кнопки Roblox.
+  StyleConfig.Hud.PromptDefaultOnTouch = true (по умолчанию, решение автора) — на телефоне стандартные кнопки
+  Roblox, на ПК свои плашки; false — свои плашки везде.
 
 Проверка кода без Studio: `powershell -ExecutionPolicy Bypass -File scripts/check.ps1` —
 luau-lsp analyze с типами Roblox, проверка кодировки (.luau без BOM и без «кракозябр»),
